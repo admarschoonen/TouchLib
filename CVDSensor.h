@@ -37,10 +37,22 @@
 #include "WConstants.h"
 #endif
 #include <avr/io.h>
+#include <math.h>
 
 struct CvdStruct {
 	enum ButtonState {
-		buttonStateCalibrating,
+		/*
+		 * Button states.
+		 * buttonStateReleased and buttonStateReleasedToPressed can be
+		 * regarded as "released" or "not touched".
+		 * buttonStatePressed and buttonStatePressedToReleased can be
+		 * regarded as "pressed" or "touched".
+		 *
+		 * In application code, this can be simplified by considering a
+		 * button as "pressed" or "touched" if the button state is equal
+		 * to or larger than buttonStatePressed.
+		 */
+		buttonStateCalibrating = 0,
 		buttonStateReleased,
 		buttonStateReleasedToPressed,
 		buttonStatePressed,
@@ -48,11 +60,35 @@ struct CvdStruct {
 	};
 
 	enum Direction {
+		/*
+		 * directionPositive means the capacitance is increased when a
+		 * user touches the button (this is the default behaviour).
+		 * directionNegative means the capacitance is decreased when a
+		 * user touches the button (not very common).
+		 */
 		directionNegative,
 		directionPositive
 	};
 
 	enum SampleType {
+		/*
+		 * SampleType specifies the way samples are taken.
+		 * sampleTypeNormal means the sensor is first discharged and
+		 * reference capacitor is charged. sampleTypeInverted means the
+		 * sensor is first charged and the reference capacitor is
+		 * discharged. sampleTypeDifferential means that both normal and
+		 * inverted samples must be taken and the difference between
+		 * those must be computed.
+		 *
+		 * sampleTypeDifferential is slower but more robust against
+		 * interference. sampleTypeDifferential is default.
+		 *
+		 * Note: do not change values associated with these types!
+		 *
+ 		 * sampleTypeNormal must be binary 01 and sampletypeInverted
+ 		 * must be binary 10 so that sampleTypeDifferential is equal to
+ 		 * sampleTypeNormal | sampleTypeInverted.
+		 */
 		sampleTypeNormal = 1,
 		sampleTypeInverted = 2,
 		sampleTypeDifferential = 3
@@ -60,6 +96,11 @@ struct CvdStruct {
 
 	/* These members should be set by the user. */
 	int pin;
+
+	/*
+	 * These members are set to defaults upon initialization but can be
+	 * overruled by the user.
+	 */
 	enum Direction direction;
 	enum SampleType sampleType;
 	int32_t releasedToPressedThreshold;
@@ -71,18 +112,30 @@ struct CvdStruct {
 	unsigned long pressedTimeout;
 	bool forceCalibrationAfterRelease;
 
+	/*
+	 * Set enableTouchStateMachine to false to only use a sensor for
+	 * capacitive sensing. After startup, sensor will be in state
+	 * buttonStateCalibrating and after calibration switch to
+	 * buttonStateReleased and stay there.
+	 */
+	bool enableTouchStateMachine;
+
 	/* These members will be set by the init / sample methods. */
 	uint8_t nSensors;
 	uint8_t nMeasurementsPerSensor;
 	int32_t raw;
+	int32_t capacitance;
+	int32_t distance;
 	int32_t avg;
-	int32_t  delta;
+	int32_t delta;
 	enum ButtonState buttonState;
 	uint32_t counter;
 	uint32_t recalCounter;
 	uint8_t nCharges;
+	uint8_t nChargesNext;
 	unsigned long lastSampledAtTime;
 	unsigned long stateChangedAtTime;
+	bool slewrateFirstSample;
 };
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
@@ -121,13 +174,15 @@ class CvdSensors
 		int8_t addChannel(uint8_t ch);
 		void addSample(uint8_t ch, int32_t sample);
 		int sampleHalf(uint16_t pos, bool inv);
-		bool pressed(CvdStruct * d);
-		bool released(CvdStruct * d);
+		bool isPressed(CvdStruct * d);
+		bool isReleased(CvdStruct * d);
+		void updateAvg(CvdStruct * d);
 		void processStateCalibrating(CvdStruct * d);
 		void processStateReleased(CvdStruct * d);
 		void processStateReleasedToPressed(CvdStruct * d);
 		void processStatePressed(CvdStruct * d);
 		void processStatePressedToReleased(CvdStruct * d);
+		void correctSample(uint8_t ch);
 		void processSample(uint8_t ch);
 		void updateNCharges(uint8_t ch);
 		void initScanOrder(void);
@@ -135,8 +190,8 @@ class CvdSensors
 
 /* Actual implementation */
 #define CVD_SENSOR_DEFAULT_N_CHARGES			2
-#define CVD_RELEASED_TO_PRESSED_THRESHOLD_DEFAULT	20
-#define CVD_PRESSED_TO_RELEASED_THRESHOLD_DEFAULT	20
+#define CVD_RELEASED_TO_PRESSED_THRESHOLD_DEFAULT	500
+#define CVD_PRESSED_TO_RELEASED_THRESHOLD_DEFAULT	500
 #define CVD_RELEASED_TO_PRESSED_TIME_DEFAULT		20
 #define CVD_PRESSED_TO_RELEASED_TIME_DEFAULT		20
 #define CVD_ENABLE_SLEW_RATE_LIMITER_DEFAULT		false
@@ -144,6 +199,9 @@ class CvdSensors
 #define CVD_PRESSED_TIMEOUT_DEFAULT			300000
 #define CVD_FORCE_CALIBRATION_AFTER_RELEASE_DEFAULT	false
 #define CVD_USE_CUSTOM_SCAN_ORDER_DEFAULT		false
+#define CVD_ADC_RESOLUTION_BIT				10
+#define CVD_ADC_MAX					((1 << CVD_ADC_RESOLUTION_BIT) - 1)
+#define CVD_N_CHARGES_MAX				5
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addChannel(uint8_t ch)
@@ -152,8 +210,7 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addChannel(uint8_t ch)
 	uint16_t n, pos, length;
 	int8_t err = -1;
 
-	length = ((uint16_t) nSensors) * ((uint16_t)
-		nMeasurementsPerSensor);
+	length = ((uint16_t) nSensors) * ((uint16_t) nMeasurementsPerSensor);
 	
 	r = random(0, length);
 
@@ -230,7 +287,7 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 
 		for (n = 0; n < nSensors; n++) {
 			data[n].pin = n;
-			data[n].direction = CvdStruct::directionNegative;
+			data[n].direction = CvdStruct::directionPositive;
 			data[n].sampleType = CvdStruct::sampleTypeDifferential;
 			data[n].releasedToPressedThreshold =
 				CVD_RELEASED_TO_PRESSED_THRESHOLD_DEFAULT;
@@ -248,6 +305,7 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 				CVD_PRESSED_TIMEOUT_DEFAULT;
 			data[n].forceCalibrationAfterRelease =
 				CVD_FORCE_CALIBRATION_AFTER_RELEASE_DEFAULT;
+			data[n].enableTouchStateMachine = true;
 		}
 	}
 
@@ -307,9 +365,11 @@ CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::CvdSensors(void)
 				CvdStruct::buttonStateCalibrating;
 			data[n].counter = 0;
 			data[n].raw = 0;
+			data[n].capacitance = 0;
 			data[n].avg = 0;
 			data[n].delta = 0;
 			data[n].nCharges = CVD_SENSOR_DEFAULT_N_CHARGES;
+			data[n].nChargesNext = CVD_SENSOR_DEFAULT_N_CHARGES;
 			data[n].stateChangedAtTime = now;
 			data[n].lastSampledAtTime = 0;
 		}
@@ -439,8 +499,9 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addSample(uint8_t ch, int
 
 	if (data[ch].enableSlewrateLimiter) {
 		inc = 0;
-		if (data[ch].raw == 0) {
+		if (data[ch].slewrateFirstSample) {
 			data[ch].raw = sample;
+			data[ch].slewrateFirstSample = false;
 		} else {
 			if (sample > data[ch].raw) {
 				data[ch].raw++;
@@ -455,37 +516,44 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addSample(uint8_t ch, int
 }
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
-bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::pressed(CvdStruct * d)
+bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isPressed(CvdStruct * d)
 {
-	bool pressed = false;
+	bool isPressed = false;
 
 	if ((d->direction == CvdStruct::directionPositive) &&
 			(d->delta >= d->releasedToPressedThreshold)) {
-		pressed = true;
+		isPressed = true;
 	}
 	if ((d->direction == CvdStruct::directionNegative) &&
 			(-d->delta >= d->releasedToPressedThreshold)) {
-		pressed = true;
+		isPressed = true;
 	}
 
-	return pressed;
+	return isPressed;
 }
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
-bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::released(CvdStruct * d)
+bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isReleased(CvdStruct * d)
 {
-	bool released = false;
+	bool isReleased = false;
 
 	if ((d->direction == CvdStruct::directionPositive) &&
 			(d->delta <= d->pressedToReleasedThreshold)) {
-		released = true;
+		isReleased = true;
 	}
 	if ((d->direction == CvdStruct::directionNegative) &&
 			(-d->delta <= d->pressedToReleasedThreshold)) {
-		released = true;
+		isReleased = true;
 	}
 
-	return released;
+	return isReleased;
+}
+
+template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(CvdStruct * d)
+{
+	d->avg = ((d->counter - 1) * d->avg + d->capacitance + d->counter / 2) /
+		d->counter;
 }
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
@@ -493,7 +561,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateCalibrating(C
 {
 	if (d->lastSampledAtTime - d->stateChangedAtTime < d->calibrationTime) {
 		d->avg = (d->counter * d->avg + 
-			d->raw + (d->counter + 1) / 2) / (d->counter + 1);
+			d->capacitance + (d->counter + 1) / 2) / (d->counter + 1);
 		d->counter++;
 	} else {
 		d->stateChangedAtTime = d->lastSampledAtTime;
@@ -504,12 +572,15 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateCalibrating(C
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateReleased(CvdStruct * d)
 {
-	if (pressed(d)) {
-		d->stateChangedAtTime = d->lastSampledAtTime;
-		d->buttonState = CvdStruct::buttonStateReleasedToPressed;
+	if (d->enableTouchStateMachine) {
+		if (isPressed(d)) {
+			d->stateChangedAtTime = d->lastSampledAtTime;
+			d->buttonState = CvdStruct::buttonStateReleasedToPressed;
+		} else {
+			updateAvg(d);
+		}
 	} else {
-		d->avg = ((d->counter - 1) * d->avg +
-			d->raw + d->counter / 2) / d->counter;
+		updateAvg(d);
 	}
 }
 
@@ -518,7 +589,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateReleasedToPre
 {
 	/* Do not update average in this state. */
 
-	if (pressed(d)) {
+	if (isPressed(d)) {
 		if (d->lastSampledAtTime - d->stateChangedAtTime >=
 				d->releasedToPressedTime) {
 			d->stateChangedAtTime = d->lastSampledAtTime;
@@ -533,7 +604,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateReleasedToPre
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressed(CvdStruct * d)
 {
-	if (released(d)) {
+	if (isReleased(d)) {
 		d->stateChangedAtTime = d->lastSampledAtTime;
 		d->buttonState = CvdStruct::buttonStatePressedToReleased;
 	} else {
@@ -550,7 +621,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressed(CvdSt
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressedToReleased(CvdStruct * d)
 {
-	if (released(d)) {
+	if (isReleased(d)) {
 		if (d->lastSampledAtTime - d->stateChangedAtTime >= 
 				d->pressedToReleasedTime) {
 			d->stateChangedAtTime = d->lastSampledAtTime;
@@ -574,7 +645,8 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processSample(uint8_t ch)
 	CvdStruct * d;
 
 	d = &(data[ch]);
-	d->delta = d->raw - d->avg;
+
+	d->delta = d->capacitance - d->avg;
 
 	switch (d->buttonState) {
 	case CvdStruct::buttonStateCalibrating:
@@ -596,13 +668,29 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processSample(uint8_t ch)
 }
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::correctSample(uint8_t ch)
+{
+	CvdStruct * d;
+	float tmp, scale;
+
+	d = &(data[ch]);
+
+	scale = ((float) nMeasurementsPerSensor) * ((float) (CVD_ADC_MAX + 1));
+	tmp = 1 - ((float) d->raw) / scale;
+
+	tmp = pow(tmp, -((float) 1) / ((float) d->nCharges)) - ((float) 1);
+	tmp = ((float) 1) / tmp;
+	d->nChargesNext = (int32_t) (ceilf(tmp));
+	d->capacitance = (int32_t) (scale * tmp);
+}
+
+template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateNCharges(uint8_t ch)
 {
 	CvdStruct * d;
 
 	d = &(data[ch]);
-
-#warning "update nCharges here"
+	d->nCharges = d->nChargesNext;
 }
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
@@ -610,7 +698,7 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 {
 	uint16_t length, pos;
 	uint8_t ch;
-	int sample1, sample2;
+	int sample1 = 0, sample2 = 0;
 	int32_t sum;
 	unsigned long now;
 
@@ -619,18 +707,18 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 
 	for (ch = 0; ch < nSensors; ch++) {
 		data[ch].raw = 0;
+		data[ch].slewrateFirstSample = true;
 	}
 
 	for (pos = 0; pos < length; pos++) {
-		if (data[scanOrder[pos]].sampleType | CvdStruct::sampleTypeNormal) {
+		if (data[scanOrder[pos]].sampleType & CvdStruct::sampleTypeNormal) {
 			sample1 = sampleHalf(pos, false);
 		}
-		if (data[scanOrder[pos]].sampleType | CvdStruct::sampleTypeInverted) {
+		if (data[scanOrder[pos]].sampleType & CvdStruct::sampleTypeInverted) {
 			sample2 = sampleHalf(pos, true);
 		}
 		
-		/* Subtract 512 since samples are 10 bit. */
-		sum = 32768 - 512 + sample1 - sample2;
+		sum = sample1 - sample2;
 		addSample(scanOrder[pos], sum);
 	}
 	
@@ -638,6 +726,7 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 
 	for (ch = 0; ch < nSensors; ch++) {
 		data[ch].lastSampledAtTime = now;
+		correctSample(ch);
 		processSample(ch);
 	}
 
@@ -645,7 +734,6 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 		updateNCharges(ch);
 	}
 
-		
 	return error;
 }
 
