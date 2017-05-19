@@ -27,12 +27,12 @@ void setup()
 	Serial.begin(115200);
 
 	cvdSensors.data[0].pin = 0; /* Analog pin 0 */
-	cvdSensors.data[0].enableSlewrateLimiter = false;
+	cvdSensors.data[0].enableSlewrateLimiter = true;
 	cvdSensors.data[0].sampleType = CvdStruct::sampleTypeNormal;
 	cvdSensors.data[0].setParallelCapacitanceManually = true;
 
 	cvdSensors.data[1].pin = 1; /* Analog pin 1 */
-	cvdSensors.data[1].enableSlewrateLimiter = false;
+	cvdSensors.data[1].enableSlewrateLimiter = true;
 	cvdSensors.data[1].sampleType = CvdStruct::sampleTypeNormal;
 	cvdSensors.data[1].setParallelCapacitanceManually = true;
 

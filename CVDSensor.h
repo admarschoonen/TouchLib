@@ -744,8 +744,12 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::correctSample(uint8_t ch)
 	 * well (except for sampleTypeDifferential, since that type has factor 2
 	 * built in).
 	 */
-	scale = ((float) (nMeasurementsPerSensor << 1)) *
-		((float) (CVD_ADC_MAX + 1));
+	if (d->enableSlewrateLimiter) {
+		scale = (float) ((CVD_ADC_MAX + 1) << 2);
+	} else {
+		scale = ((float) (nMeasurementsPerSensor << 1)) *
+			((float) (CVD_ADC_MAX + 1));
+	}
 
 	tmp = 1 - ((float) d->raw) / scale;
 	tmp = pow(tmp, -((float) 1) / ((float) d->nCharges)) - ((float) 1);
