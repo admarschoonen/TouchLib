@@ -29,10 +29,12 @@ void setup()
 	cvdSensors.data[0].pin = 0; /* Analog pin 0 */
 	cvdSensors.data[0].enableSlewrateLimiter = false;
 	cvdSensors.data[0].sampleType = CvdStruct::sampleTypeNormal;
+	cvdSensors.data[0].setParallelCapacitanceManually = true;
 
 	cvdSensors.data[1].pin = 1; /* Analog pin 1 */
 	cvdSensors.data[1].enableSlewrateLimiter = false;
 	cvdSensors.data[1].sampleType = CvdStruct::sampleTypeNormal;
+	cvdSensors.data[1].setParallelCapacitanceManually = true;
 
 	cvdSensors.printScanOrder();
 }
@@ -43,32 +45,32 @@ void loop()
 	int now;
 
 	cvdSensors.sample();
-	Serial.print("raw[0]: ");
-	Serial.print(cvdSensors.data[0].raw);
+	/*Serial.print("raw[0]: ");
+	Serial.print(cvdSensors.data[0].raw);*/
 	Serial.print("; \t\tcapacitance[0]: ");
 	Serial.print(cvdSensors.data[0].capacitance);
 	Serial.print(", \tavg: ");
 	Serial.print(cvdSensors.data[0].avg);
-	/*Serial.print(", \tdelta: ");
+	Serial.print(", \tdelta: ");
 	Serial.print(cvdSensors.data[0].delta);
 	Serial.print(", \tstate: ");
-	Serial.print(cvdSensors.data[0].buttonState);*/
-	Serial.print(", \tnCharges: ");
+	Serial.print(cvdSensors.data[0].buttonState);
+	/*Serial.print(", \tnCharges: ");
 	Serial.print(cvdSensors.data[0].nCharges);
-	/*Serial.print(", \tcounter: ");
+	Serial.print(", \tcounter: ");
 	Serial.print(cvdSensors.data[0].counter);*/
 
-	Serial.print("; \t\traw[1]: ");
-	Serial.print(cvdSensors.data[1].raw);
+	/*Serial.print("; \t\traw[1]: ");
+	Serial.print(cvdSensors.data[1].raw);*/
 	Serial.print("; \t\tcapacitance[1]: ");
 	Serial.print(cvdSensors.data[1].capacitance);
 	Serial.print(", \tavg: ");
 	Serial.print(cvdSensors.data[1].avg);
-	/*Serial.print(", \tdelta: ");
+	Serial.print(", \tdelta: ");
 	Serial.print(cvdSensors.data[1].delta);
 	Serial.print(", \tstate: ");
-	Serial.print(cvdSensors.data[1].buttonState);*/
-	Serial.print(", \tnCharges: ");
+	Serial.print(cvdSensors.data[1].buttonState);
+	/*Serial.print(", \tnCharges: ");
 	Serial.print(cvdSensors.data[1].nCharges);
 	/*Serial.print(", \tcounter: ");
 	Serial.print(cvdSensors.data[1].counter);*/

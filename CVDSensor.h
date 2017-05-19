@@ -40,6 +40,7 @@
 #include <math.h>
 
 struct CvdStruct {
+	/* enum definitions */
 	enum ButtonState {
 		/*
 		 * Button states.
@@ -111,6 +112,14 @@ struct CvdStruct {
 	unsigned long calibrationTime;
 	unsigned long pressedTimeout;
 	bool forceCalibrationAfterRelease;
+	bool setParallelCapacitanceManually;
+	float referenceCapacitance; /* in femto Farad (pF) */
+	float parallelCapacitance; /* in femto Farad (pF) */
+	float capacitanceScaleFactor;
+	float distanceOffset;
+	float distanceScaleFactor;
+	float relativePermittivity;
+	float area; /* in mm^2 */
 
 	/*
 	 * Set enableTouchStateMachine to false to only use a sensor for
@@ -124,10 +133,10 @@ struct CvdStruct {
 	uint8_t nSensors;
 	uint8_t nMeasurementsPerSensor;
 	int32_t raw;
-	int32_t capacitance;
-	int32_t distance;
-	int32_t avg;
-	int32_t delta;
+	float capacitance; /* in femto Farad (pF) */
+	float distance;
+	float avg;
+	float delta;
 	enum ButtonState buttonState;
 	uint32_t counter;
 	uint32_t recalCounter;
@@ -190,8 +199,8 @@ class CvdSensors
 
 /* Actual implementation */
 #define CVD_SENSOR_DEFAULT_N_CHARGES			2
-#define CVD_RELEASED_TO_PRESSED_THRESHOLD_DEFAULT	500
-#define CVD_PRESSED_TO_RELEASED_THRESHOLD_DEFAULT	500
+#define CVD_RELEASED_TO_PRESSED_THRESHOLD_DEFAULT	50
+#define CVD_PRESSED_TO_RELEASED_THRESHOLD_DEFAULT	50
 #define CVD_RELEASED_TO_PRESSED_TIME_DEFAULT		20
 #define CVD_PRESSED_TO_RELEASED_TIME_DEFAULT		20
 #define CVD_ENABLE_SLEW_RATE_LIMITER_DEFAULT		false
@@ -202,6 +211,20 @@ class CvdSensors
 #define CVD_ADC_RESOLUTION_BIT				10
 #define CVD_ADC_MAX					((1 << CVD_ADC_RESOLUTION_BIT) - 1)
 #define CVD_N_CHARGES_MAX				5
+#define CVD_ENABLE_TOUCH_STATE_MACHINE_DEFAULT		true
+
+#define CVD_REFERENCE_CAPACITANCE_DEFAULT		((float) 15) /* 15 pF */
+#define CVD_CAPACITANCE_SCALE_FACTOR_DEFAULT		((float) 1)
+#define CVD_PARALLEL_CAPACITANCE_DEFAULT		((float) 1000) /* pF */
+
+#define CVD_DISTANCE_SCALE_FACTOR_DEFAULT		((float) 1)
+#define CVD_DISTANCE_OFFSET_DEFAULT			((float) 0)
+
+#define CVD_PERMITTIVITY_VACUUM				((float) (8.85E-12*1E12/1E3))
+#define CVD_RELATIVE_PERMITTIVITY_DEFAULT		((float) 1)
+#define CVD_AREA_DEFAULT				(10*10) /* 100 mm^2 */
+
+#define CVD_SET_PARALLEL_CAPACITANCE_MANUALLY_DEFAULT	true
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addChannel(uint8_t ch)
@@ -305,7 +328,30 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 				CVD_PRESSED_TIMEOUT_DEFAULT;
 			data[n].forceCalibrationAfterRelease =
 				CVD_FORCE_CALIBRATION_AFTER_RELEASE_DEFAULT;
-			data[n].enableTouchStateMachine = true;
+			data[n].enableTouchStateMachine = 
+				CVD_ENABLE_TOUCH_STATE_MACHINE_DEFAULT;
+			data[n].parallelCapacitance =
+				CVD_PARALLEL_CAPACITANCE_DEFAULT;
+			data[n].referenceCapacitance =
+				CVD_REFERENCE_CAPACITANCE_DEFAULT;
+			data[n].capacitanceScaleFactor =
+				CVD_CAPACITANCE_SCALE_FACTOR_DEFAULT;
+			data[n].distanceScaleFactor =
+				CVD_DISTANCE_SCALE_FACTOR_DEFAULT;
+			data[n].relativePermittivity =
+				CVD_RELATIVE_PERMITTIVITY_DEFAULT;
+			data[n].distanceOffset = CVD_DISTANCE_OFFSET_DEFAULT;
+			data[n].area = CVD_AREA_DEFAULT;
+			data[n].setParallelCapacitanceManually =
+				CVD_SET_PARALLEL_CAPACITANCE_MANUALLY_DEFAULT;
+
+			if (data[n].setParallelCapacitanceManually) {
+				/*
+				 * Set parallelCapacitance to 0; will be updated
+				 * after calibration.
+				 */
+				data[n].parallelCapacitance = 0;
+			}
 		}
 	}
 
@@ -552,20 +598,23 @@ bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isReleased(CvdStruct * d)
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(CvdStruct * d)
 {
-	d->avg = ((d->counter - 1) * d->avg + d->capacitance + d->counter / 2) /
-		d->counter;
+	d->avg = ((d->counter - 1) * d->avg + d->capacitance) / d->counter;
 }
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateCalibrating(CvdStruct * d)
 {
 	if (d->lastSampledAtTime - d->stateChangedAtTime < d->calibrationTime) {
-		d->avg = (d->counter * d->avg + 
-			d->capacitance + (d->counter + 1) / 2) / (d->counter + 1);
+		d->avg = (d->counter * d->avg + d->capacitance) /
+			(d->counter + 1);
 		d->counter++;
 	} else {
 		d->stateChangedAtTime = d->lastSampledAtTime;
 		d->buttonState = CvdStruct::buttonStateReleased;
+
+		if (!d->setParallelCapacitanceManually) {
+			d->parallelCapacitance = d->avg;
+		}
 	}
 }
 
@@ -614,6 +663,14 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressed(CvdSt
 			d->avg = 0;
 			d->stateChangedAtTime = d->lastSampledAtTime;
 			d->buttonState = CvdStruct::buttonStateCalibrating;
+
+			if (!d->setParallelCapacitanceManually) {
+				/*
+				 * Set parallelCapacitance to 0; will be updated
+				 * after calibration.
+				 */
+				d->parallelCapacitance = 0;
+			}
 		}
 	}
 }
@@ -628,6 +685,13 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressedToRele
 			if (d->forceCalibrationAfterRelease) {
 				d->buttonState =
 					CvdStruct::buttonStateCalibrating;
+				if (!d->setParallelCapacitanceManually) {
+					/*
+					 * Set parallelCapacitance to 0; will be
+					 * updated after calibration.
+					 */
+					d->parallelCapacitance = 0;
+				}
 			} else {
 				d->buttonState = CvdStruct::buttonStateReleased;
 			}
@@ -675,13 +739,38 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::correctSample(uint8_t ch)
 
 	d = &(data[ch]);
 
-	scale = ((float) nMeasurementsPerSensor) * ((float) (CVD_ADC_MAX + 1));
-	tmp = 1 - ((float) d->raw) / scale;
+	/*
+	 * Multiply nMeasurementsPerSensor by 2 since sample() scaled it by 2 as
+	 * well (except for sampleTypeDifferential, since that type has factor 2
+	 * built in).
+	 */
+	scale = ((float) (nMeasurementsPerSensor << 1)) *
+		((float) (CVD_ADC_MAX + 1));
 
+	tmp = 1 - ((float) d->raw) / scale;
 	tmp = pow(tmp, -((float) 1) / ((float) d->nCharges)) - ((float) 1);
 	tmp = ((float) 1) / tmp;
+
 	d->nChargesNext = (int32_t) (ceilf(tmp));
-	d->capacitance = (int32_t) (scale * tmp);
+	if (d->nChargesNext < 1) {
+		d->nChargesNext = 1;
+	}
+	if (d->nChargesNext > CVD_N_CHARGES_MAX) {
+		d->nChargesNext = CVD_N_CHARGES_MAX;
+	}
+
+	tmp = scale * tmp * d->capacitanceScaleFactor /
+		d->referenceCapacitance - d->parallelCapacitance;
+	d->capacitance = tmp;
+	if (d->capacitance < 0) {
+		d->capacitance = 0;
+	}
+
+	d->distance = (d->distanceScaleFactor * CVD_PERMITTIVITY_VACUUM *
+		d->relativePermittivity * d->area / tmp) - d->distanceOffset;
+	if (d->distance < 0) {
+		d->distance = 0;
+	}
 }
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
@@ -711,13 +800,28 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 	}
 
 	for (pos = 0; pos < length; pos++) {
-		if (data[scanOrder[pos]].sampleType & CvdStruct::sampleTypeNormal) {
+		if (data[scanOrder[pos]].sampleType &
+				CvdStruct::sampleTypeNormal) {
 			sample1 = sampleHalf(pos, false);
 		}
-		if (data[scanOrder[pos]].sampleType & CvdStruct::sampleTypeInverted) {
+		if (data[scanOrder[pos]].sampleType &
+				CvdStruct::sampleTypeInverted) {
 			sample2 = sampleHalf(pos, true);
 		}
-		
+
+		/*
+		 * For sampleTypeNormal and sampleTypeInverted: scale by factor
+		 * 2 to get same amplitude as with sampleTypeDifferential.
+		 */
+		if (data[scanOrder[pos]].sampleType ==
+				CvdStruct::sampleTypeNormal) {
+			sample1 = sample1 << 1;
+		}
+		if (data[scanOrder[pos]].sampleType ==
+				CvdStruct::sampleTypeInverted) {
+			sample2 = sample2 << 1;
+		}
+
 		sum = sample1 - sample2;
 		addSample(scanOrder[pos], sum);
 	}
