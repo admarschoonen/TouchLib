@@ -1,0 +1,23 @@
+Things to do or ideas to implement:
+* fix inverted / differential measurement
+* distance measurement
+* setParallelCapacitanceManually
+* allow negative capacitance (in case parallelCapacitance is calibrated
+  correctly, capacitance under test is small and there is some noise)
+* correct gain and / or offset in normal / inverted modes?
+* gestures (wheel / slider / touchpad / keyboard)
+* sample type invert: 1023 - sample
+* example code with button to measure SNR
+* auto enable slewrate based on noise variance?
+* IIR filter
+* charge pin when number of sensors is 1 (provides speed up of almost 2 x)
+* documentation (manual + presentation)
+* update paper on nCharges based on capacitance instead of distance
+* example code with wireless communication to measure common mode noise?
+* combine multiple sensors for proximity sensing?
+* add option for RC guard
+* make N_MEASUREMENTS_PER_SENSOR optional (default to 16)?
+* allow shorter time for recalibration if forceCalibrationAfterRelease is set?
+* move some parameters from per sensor to CvdSensor object
+* add wireless to debug conducted noise immunity
+

@@ -53,7 +53,8 @@ struct CvdStruct {
 		 * button as "pressed" or "touched" if the button state is equal
 		 * to or larger than buttonStatePressed.
 		 */
-		buttonStateCalibrating = 0,
+		buttonStatePreCalibrating = 0,
+		buttonStateCalibrating,
 		buttonStateReleased,
 		buttonStateReleasedToPressed,
 		buttonStatePressed,
@@ -109,12 +110,14 @@ struct CvdStruct {
 	uint32_t releasedToPressedTime;
 	uint32_t pressedToReleasedTime;
 	bool enableSlewrateLimiter;
+	unsigned long preCalibrationTime;
 	unsigned long calibrationTime;
 	unsigned long pressedTimeout;
+	uint16_t filterCoeff;
 	bool forceCalibrationAfterRelease;
 	bool setParallelCapacitanceManually;
-	float referenceCapacitance; /* in femto Farad (pF) */
-	float parallelCapacitance; /* in femto Farad (pF) */
+	float referenceCapacitance; /* in pico Farad (pF) */
+	float parallelCapacitance; /* in pico Farad (pF) */
 	float capacitanceScaleFactor;
 	float distanceOffset;
 	float distanceScaleFactor;
@@ -124,8 +127,9 @@ struct CvdStruct {
 	/*
 	 * Set enableTouchStateMachine to false to only use a sensor for
 	 * capacitive sensing. After startup, sensor will be in state
-	 * buttonStateCalibrating and after calibration switch to
-	 * buttonStateReleased and stay there.
+	 * buttonStatePreCalibrating followed by buttonStateCalibrating and
+	 * after calibration the state will switch to buttonStateReleased and
+	 * stay there.
 	 */
 	bool enableTouchStateMachine;
 
@@ -133,7 +137,7 @@ struct CvdStruct {
 	uint8_t nSensors;
 	uint8_t nMeasurementsPerSensor;
 	int32_t raw;
-	float capacitance; /* in femto Farad (pF) */
+	float capacitance; /* in pico Farad (pF) */
 	float distance;
 	float avg;
 	float delta;
@@ -186,6 +190,7 @@ class CvdSensors
 		bool isPressed(CvdStruct * d);
 		bool isReleased(CvdStruct * d);
 		void updateAvg(CvdStruct * d);
+		void processStatePreCalibrating(CvdStruct * d);
 		void processStateCalibrating(CvdStruct * d);
 		void processStateReleased(CvdStruct * d);
 		void processStateReleasedToPressed(CvdStruct * d);
@@ -204,7 +209,9 @@ class CvdSensors
 #define CVD_RELEASED_TO_PRESSED_TIME_DEFAULT		20
 #define CVD_PRESSED_TO_RELEASED_TIME_DEFAULT		20
 #define CVD_ENABLE_SLEW_RATE_LIMITER_DEFAULT		false
+#define CVD_PRE_CALIBRATION_TIME_DEFAULT		100
 #define CVD_CALIBRATION_TIME_DEFAULT			500
+#define CVD_FILTER_COEFF_DEFAULT			128
 #define CVD_PRESSED_TIMEOUT_DEFAULT			300000
 #define CVD_FORCE_CALIBRATION_AFTER_RELEASE_DEFAULT	false
 #define CVD_USE_CUSTOM_SCAN_ORDER_DEFAULT		false
@@ -322,8 +329,12 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 				CVD_PRESSED_TO_RELEASED_TIME_DEFAULT;
 			data[n].enableSlewrateLimiter = 
 				CVD_ENABLE_SLEW_RATE_LIMITER_DEFAULT;
+			data[n].preCalibrationTime =
+				CVD_PRE_CALIBRATION_TIME_DEFAULT;
 			data[n].calibrationTime =
 				CVD_CALIBRATION_TIME_DEFAULT;
+			data[n].filterCoeff =
+				CVD_FILTER_COEFF_DEFAULT;
 			data[n].pressedTimeout =
 				CVD_PRESSED_TIMEOUT_DEFAULT;
 			data[n].forceCalibrationAfterRelease =
@@ -408,7 +419,7 @@ CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::CvdSensors(void)
 
 		for (n = 0; n < nSensors; n++) {
 			data[n].buttonState = 
-				CvdStruct::buttonStateCalibrating;
+				CvdStruct::buttonStatePreCalibrating;
 			data[n].counter = 0;
 			data[n].raw = 0;
 			data[n].capacitance = 0;
@@ -598,16 +609,27 @@ bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isReleased(CvdStruct * d)
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(CvdStruct * d)
 {
-	d->avg = ((d->counter - 1) * d->avg + d->capacitance) / d->counter;
+	d->avg = (d->counter * d->avg + d->capacitance) / (d->counter + 1);
+
+	if (d->counter < d->filterCoeff - 1) {
+		d->counter++;
+	}
+}
+
+template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePreCalibrating(CvdStruct * d)
+{
+	if (d->lastSampledAtTime - d->stateChangedAtTime >= d->preCalibrationTime) {
+		d->stateChangedAtTime = d->lastSampledAtTime;
+		d->buttonState = CvdStruct::buttonStateCalibrating;
+	}
 }
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateCalibrating(CvdStruct * d)
 {
 	if (d->lastSampledAtTime - d->stateChangedAtTime < d->calibrationTime) {
-		d->avg = (d->counter * d->avg + d->capacitance) /
-			(d->counter + 1);
-		d->counter++;
+		updateAvg(d);
 	} else {
 		d->stateChangedAtTime = d->lastSampledAtTime;
 		d->buttonState = CvdStruct::buttonStateReleased;
@@ -713,6 +735,9 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processSample(uint8_t ch)
 	d->delta = d->capacitance - d->avg;
 
 	switch (d->buttonState) {
+	case CvdStruct::buttonStatePreCalibrating:
+		processStatePreCalibrating(d);
+		break;
 	case CvdStruct::buttonStateCalibrating:
 		processStateCalibrating(d);
 		break;
@@ -766,15 +791,11 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::correctSample(uint8_t ch)
 	tmp = scale * tmp * d->capacitanceScaleFactor /
 		d->referenceCapacitance - d->parallelCapacitance;
 	d->capacitance = tmp;
-	if (d->capacitance < 0) {
-		d->capacitance = 0;
-	}
+	/* Capacitance can be negative due to noise! */
 
 	d->distance = (d->distanceScaleFactor * CVD_PERMITTIVITY_VACUUM *
 		d->relativePermittivity * d->area / tmp) - d->distanceOffset;
-	if (d->distance < 0) {
-		d->distance = 0;
-	}
+	/* Distance can be negative due to noise! */
 }
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
@@ -810,7 +831,7 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 		}
 		if (data[scanOrder[pos]].sampleType &
 				CvdStruct::sampleTypeInverted) {
-			sample2 = sampleHalf(pos, true);
+			sample2 = CVD_ADC_MAX - sampleHalf(pos, true);
 		}
 
 		/*
@@ -826,7 +847,7 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 			sample2 = sample2 << 1;
 		}
 
-		sum = sample1 - sample2;
+		sum = sample1 + sample2;
 		addSample(scanOrder[pos], sum);
 	}
 	
