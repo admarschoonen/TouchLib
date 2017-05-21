@@ -1,6 +1,7 @@
 Things to do or ideas to implement:
 * distance measurement
 * add approaching state
+* add state summary (only calibrating / released / approached / pressed)
 * add option to disable updating averages if any button is touched
 * add virtual sensor (combine multiple / all sensors) to use as distance sensor
 * correct gain and / or offset in normal / inverted modes?
@@ -20,4 +21,7 @@ Things to do or ideas to implement:
 * add wireless to debug conducted noise immunity
 * add reportedCapaticance and reportedDistance which are equal to capacitance
   and distance when capacitance and distance are larger than 0, and 0 elsewhere.
-
+* overload constructor with custom scanorder
+* use better logic for isPressed() / isReleased() that uses tresholds
+  corresponding to current state
+* force recalibration if average is too low (too much negative)?
