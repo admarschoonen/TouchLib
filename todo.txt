@@ -1,12 +1,10 @@
 Things to do or ideas to implement:
-* fix inverted / differential measurement
 * distance measurement
-* setParallelCapacitanceManually
-* allow negative capacitance (in case parallelCapacitance is calibrated
-  correctly, capacitance under test is small and there is some noise)
+* add approaching state
+* add option to disable updating averages if any button is touched
+* add virtual sensor (combine multiple / all sensors) to use as distance sensor
 * correct gain and / or offset in normal / inverted modes?
 * gestures (wheel / slider / touchpad / keyboard)
-* sample type invert: 1023 - sample
 * example code with button to measure SNR
 * auto enable slewrate based on noise variance?
 * IIR filter

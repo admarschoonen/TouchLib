@@ -27,14 +27,10 @@ void setup()
 	Serial.begin(115200);
 
 	cvdSensors.data[0].pin = 0; /* Analog pin 0 */
-	cvdSensors.data[0].enableSlewrateLimiter = true;
-	cvdSensors.data[0].sampleType = CvdStruct::sampleTypeDifferential;
-	cvdSensors.data[0].setParallelCapacitanceManually = true;
+	cvdSensors.data[0].setParallelCapacitanceManually = false;
 
 	cvdSensors.data[1].pin = 1; /* Analog pin 1 */
-	cvdSensors.data[1].enableSlewrateLimiter = true;
-	cvdSensors.data[1].sampleType = CvdStruct::sampleTypeDifferential;
-	cvdSensors.data[1].setParallelCapacitanceManually = true;
+	cvdSensors.data[1].setParallelCapacitanceManually = false;
 
 	cvdSensors.printScanOrder();
 }
@@ -57,8 +53,8 @@ void loop()
 	Serial.print(cvdSensors.data[0].buttonState);
 	/*Serial.print(", \tnCharges: ");
 	Serial.print(cvdSensors.data[0].nCharges);*/
-	Serial.print(", \tcounter: ");
-	Serial.print(cvdSensors.data[0].counter);
+	Serial.print(", \tpcap: ");
+	Serial.print(cvdSensors.data[0].parallelCapacitance);
 
 	/*Serial.print("; \t\traw[1]: ");
 	Serial.print(cvdSensors.data[1].raw);*/
@@ -72,8 +68,8 @@ void loop()
 	Serial.print(cvdSensors.data[1].buttonState);
 	/*Serial.print(", \tnCharges: ");
 	Serial.print(cvdSensors.data[1].nCharges);*/
-	Serial.print(", \tcounter: ");
-	Serial.print(cvdSensors.data[1].counter);
+	Serial.print(", \tpcap: ");
+	Serial.print(cvdSensors.data[1].parallelCapacitance);
 	Serial.print("; \tLoop time: ");
 	now = millis();
 	Serial.println(now - prev);

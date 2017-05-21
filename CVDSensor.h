@@ -231,7 +231,7 @@ class CvdSensors
 #define CVD_RELATIVE_PERMITTIVITY_DEFAULT		((float) 1)
 #define CVD_AREA_DEFAULT				(10*10) /* 100 mm^2 */
 
-#define CVD_SET_PARALLEL_CAPACITANCE_MANUALLY_DEFAULT	true
+#define CVD_SET_PARALLEL_CAPACITANCE_MANUALLY_DEFAULT	false
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addChannel(uint8_t ch)
@@ -705,6 +705,8 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressedToRele
 				d->pressedToReleasedTime) {
 			d->stateChangedAtTime = d->lastSampledAtTime;
 			if (d->forceCalibrationAfterRelease) {
+				d->counter = 0;
+				d->avg = 0;
 				d->buttonState =
 					CvdStruct::buttonStateCalibrating;
 				if (!d->setParallelCapacitanceManually) {
