@@ -131,6 +131,8 @@ struct CvdStruct {
 	bool forceCalibrationAfterApproached;
 	bool forceCalibrationAfterPressed;
 	bool setParallelCapacitanceManually;
+	bool disableUpdateIfAnyButtonIsApproached;
+	bool disableUpdateIfAnyButtonIsPressed;
 	float referenceCapacitance; /* in pico Farad (pF) */
 	float parallelCapacitance; /* in pico Farad (pF) */
 	float capacitanceScaleFactor;
@@ -143,7 +145,7 @@ struct CvdStruct {
 	 * Set enableTouchStateMachine to false to only use a sensor for
 	 * capacitive sensing. After startup, sensor will be in state
 	 * buttonStatePreCalibrating followed by buttonStateCalibrating and
-	 * after calibration the state will switch to buttonStateApproached and
+	 * after calibration the state will switch to buttonStateReleased and
 	 * stay there.
 	 */
 	bool enableTouchStateMachine;
@@ -195,6 +197,8 @@ class CvdSensors
 
 	private:
 		bool useCustomScanOrder;
+		bool anyButtonIsApproached;
+		bool anyButtonIsPressed;
 
 		bool hasMux5(void);
 		uint8_t channelToReference(uint8_t ch);
@@ -257,6 +261,8 @@ class CvdSensors
 #define CVD_AREA_DEFAULT				(10*10) /* 100 mm^2 */
 
 #define CVD_SET_PARALLEL_CAPACITANCE_MANUALLY_DEFAULT	false
+#define DISABLE_UPDATE_IF_ANY_BUTTON_IS_APPROACHED	false
+#define DISABLE_UPDATE_IF_ANY_BUTTON_IS_PRESSED		false
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addChannel(uint8_t ch)
@@ -311,12 +317,16 @@ template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 {
 	uint8_t n;
-	unsigned long now;
 	
 	error = 0;
 
 	if (nSensors < 2) {
 		error = -1;
+	}
+
+	if (error == 0) {
+		this->anyButtonIsApproached = false;
+		this->anyButtonIsPressed = false;
 	}
 
 #ifdef NUM_ANALOG_PINS
@@ -338,8 +348,6 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 	}
 
 	if (error == 0) {
-		now = millis();
-
 		for (n = 0; n < nSensors; n++) {
 			data[n].pin = n;
 			data[n].direction = CvdStruct::directionPositive;
@@ -392,6 +400,10 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 			data[n].area = CVD_AREA_DEFAULT;
 			data[n].setParallelCapacitanceManually =
 				CVD_SET_PARALLEL_CAPACITANCE_MANUALLY_DEFAULT;
+			data[n].disableUpdateIfAnyButtonIsApproached =
+				DISABLE_UPDATE_IF_ANY_BUTTON_IS_APPROACHED;
+			data[n].disableUpdateIfAnyButtonIsPressed =
+				DISABLE_UPDATE_IF_ANY_BUTTON_IS_PRESSED;
 
 			if (data[n].setParallelCapacitanceManually) {
 				/*
@@ -589,10 +601,7 @@ int CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sampleHalf(uint16_t pos, b
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addSample(uint8_t ch, int32_t sample)
 {
-	int32_t inc;
-
 	if (data[ch].enableSlewrateLimiter) {
-		inc = 0;
 		if (data[ch].slewrateFirstSample) {
 			data[ch].raw = sample;
 			data[ch].slewrateFirstSample = false;
@@ -663,6 +672,15 @@ bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isPressed(CvdStruct * d)
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(CvdStruct * d)
 {
+	if (d->disableUpdateIfAnyButtonIsApproached &&
+			this->anyButtonIsApproached) {
+		return;
+	}
+	if (d->disableUpdateIfAnyButtonIsPressed &&
+			this->anyButtonIsPressed) {
+		return;
+	}
+
 	d->avg = (d->counter * d->avg + d->capacitance) / (d->counter + 1);
 
 	if (d->counter < d->filterCoeff - 1) {
@@ -999,7 +1017,15 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 		processSample(ch);
 	}
 
+	this->anyButtonIsApproached = false;
+	this->anyButtonIsPressed = false;
 	for (ch = 0; ch < nSensors; ch++) {
+		if (data[ch].buttonState >= CvdStruct::buttonStateApproached) {
+			this->anyButtonIsApproached = true;
+		}
+		if (data[ch].buttonState >= CvdStruct::buttonStatePressed) {
+			this->anyButtonIsPressed = true;
+		}
 		updateNCharges(ch);
 	}
 

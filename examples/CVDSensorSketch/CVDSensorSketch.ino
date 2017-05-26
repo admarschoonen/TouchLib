@@ -53,8 +53,8 @@ void loop()
 	Serial.print(cvdSensors.data[0].buttonState);
 	/*Serial.print(", \tnCharges: ");
 	Serial.print(cvdSensors.data[0].nCharges);*/
-	Serial.print(", \tpcap: ");
-	Serial.print(cvdSensors.data[0].parallelCapacitance);
+	/*Serial.print(", \tpcap: ");
+	Serial.print(cvdSensors.data[0].parallelCapacitance);*/
 
 	/*Serial.print("; \t\traw[1]: ");
 	Serial.print(cvdSensors.data[1].raw);*/
@@ -68,8 +68,8 @@ void loop()
 	Serial.print(cvdSensors.data[1].buttonState);
 	/*Serial.print(", \tnCharges: ");
 	Serial.print(cvdSensors.data[1].nCharges);*/
-	Serial.print(", \tpcap: ");
-	Serial.print(cvdSensors.data[1].parallelCapacitance);
+	/*Serial.print(", \tpcap: ");
+	Serial.print(cvdSensors.data[1].parallelCapacitance);*/
 	Serial.print("; \tLoop time: ");
 	now = millis();
 	Serial.println(now - prev);

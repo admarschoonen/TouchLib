@@ -2,7 +2,6 @@ Things to do or ideas to implement:
 * distance measurement
 * add approaching state
 * add state summary (only calibrating / released / approached / pressed)
-* add option to disable updating averages if any button is touched
 * add virtual sensor (combine multiple / all sensors) to use as distance sensor
 * correct gain and / or offset in normal / inverted modes?
 * gestures (wheel / slider / touchpad / keyboard)
