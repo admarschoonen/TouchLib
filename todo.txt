@@ -24,3 +24,16 @@ Things to do or ideas to implement:
 * use better logic for isPressed() / isReleased() that uses tresholds
   corresponding to current state
 * force recalibration if average is too low (too much negative)?
+* convert floating point to fixed point operations
+* use unused analog input to calibrate parasitic capacitance (C_c); can also be
+  used to track temperature drift (if necessary)
+* make charge / discharge delays function of nCharges? (bigger capacitors need
+  longer charge times)
+
+* merge sensors: charge C_a, discharge in several sensors then measure voltage.
+  Alternatively: charge sensors, discharge in C_a
+* coded sensing: charge C_a, discharge in several sensors then measure voltage.
+  Do this N times, each time selecting a different sensor to charge ADC and thus
+  also a different discharge order.
+
+* enable slewrate limiter by default

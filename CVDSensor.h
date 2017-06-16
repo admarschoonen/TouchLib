@@ -140,6 +140,11 @@ struct CvdStruct {
 	float distanceScaleFactor;
 	float relativePermittivity;
 	float area; /* in mm^2 */
+	uint32_t nChargesMin;
+	uint32_t nChargesMax;
+	bool useNChargesPadding;
+	uint16_t chargeDelaySensor; /* delay to charge sensor in microseconds (us) */
+	uint16_t chargeDelayADC; /* delay to charge ADC in microseconds (us) */
 
 	/*
 	 * Set enableTouchStateMachine to false to only use a sensor for
@@ -161,8 +166,8 @@ struct CvdStruct {
 	enum ButtonState buttonState;
 	uint32_t counter;
 	uint32_t recalCounter;
-	uint8_t nCharges;
-	uint8_t nChargesNext;
+	uint32_t nCharges;
+	uint32_t nChargesNext;
 	unsigned long lastSampledAtTime;
 	unsigned long stateChangedAtTime;
 	bool slewrateFirstSample;
@@ -205,6 +210,11 @@ class CvdSensors
 		void setAdcReferencePin(int pin);
 		int8_t addChannel(uint8_t ch);
 		void addSample(uint8_t ch, int32_t sample);
+		void chargeADC(uint8_t ch, int ref_pin);
+		void chargeSensor(uint8_t ch, int ch_pin);
+		void charge(uint8_t ch, int ch_pin, int ref_pin);
+		void setSensorAndReferencePins(int ch_pin, int ref_pin, bool
+			inv);
 		int sampleHalf(uint16_t pos, bool inv);
 		bool isPressed(CvdStruct * d);
 		bool isApproached(CvdStruct * d);
@@ -226,7 +236,6 @@ class CvdSensors
 };
 
 /* Actual implementation */
-#define CVD_SENSOR_DEFAULT_N_CHARGES			2
 #define CVD_RELEASED_TO_APPROACHED_THRESHOLD_DEFAULT	50
 #define CVD_APPROACHED_TO_RELEASED_THRESHOLD_DEFAULT	40
 #define CVD_APPROACHED_TO_PRESSED_THRESHOLD_DEFAULT	150
@@ -246,7 +255,11 @@ class CvdSensors
 #define CVD_USE_CUSTOM_SCAN_ORDER_DEFAULT		false
 #define CVD_ADC_RESOLUTION_BIT				10
 #define CVD_ADC_MAX					((1 << CVD_ADC_RESOLUTION_BIT) - 1)
-#define CVD_N_CHARGES_MAX				5
+#define CVD_N_CHARGES_MIN_DEFAULT			1
+#define CVD_N_CHARGES_MAX_DEFAULT			5
+#define CVD_USE_N_CHARGES_PADDING_DEFAULT		true
+#define CVD_CHARGE_DELAY_SENSOR_DEFAULT			0
+#define CVD_CHARGE_DELAY_ADC_DEFAULT			0
 #define CVD_ENABLE_TOUCH_STATE_MACHINE_DEFAULT		true
 
 #define CVD_REFERENCE_CAPACITANCE_DEFAULT		((float) 15) /* 15 pF */
@@ -474,8 +487,14 @@ CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::CvdSensors(void)
 			data[n].capacitance = 0;
 			data[n].avg = 0;
 			data[n].delta = 0;
-			data[n].nCharges = CVD_SENSOR_DEFAULT_N_CHARGES;
-			data[n].nChargesNext = CVD_SENSOR_DEFAULT_N_CHARGES;
+			data[n].nCharges = CVD_N_CHARGES_MIN_DEFAULT;
+			data[n].nChargesNext = CVD_N_CHARGES_MIN_DEFAULT;
+			data[n].nChargesMin = CVD_N_CHARGES_MIN_DEFAULT;
+			data[n].nChargesMax = CVD_N_CHARGES_MAX_DEFAULT;
+			data[n].useNChargesPadding =
+				CVD_USE_N_CHARGES_PADDING_DEFAULT;
+			data[n].chargeDelaySensor = CVD_CHARGE_DELAY_SENSOR_DEFAULT;
+			data[n].chargeDelayADC = CVD_CHARGE_DELAY_ADC_DEFAULT;
 			data[n].stateChangedAtTime = now;
 			data[n].lastSampledAtTime = 0;
 		}
@@ -545,17 +564,9 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setAdcReferencePin(int pi
 }
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
-int CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sampleHalf(uint16_t pos, bool inv)
+void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setSensorAndReferencePins(
+		int ch_pin, int ref_pin, bool inv)
 {
-	uint8_t ch, ref;
-	int ch_pin, ref_pin, sample;
-	uint8_t i;
-
-	ch = scanOrder[pos];
-	ref = channelToReference(ch);
-	ch_pin = data[ch].pin;
-	ref_pin = data[ref].pin;
-
 	/* Set reference pin as output and high. */
 	pinMode(A0 + ref_pin, OUTPUT);
 	if (inv) {
@@ -571,25 +582,83 @@ int CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sampleHalf(uint16_t pos, b
 	} else {
 		digitalWrite(A0 + ch_pin, LOW);
 	}
+}
+
+template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::chargeADC(uint8_t ch,
+		int ref_pin)
+{
+	/* Set ADC to reference pin (charge Chold). */
+	setAdcReferencePin(ref_pin);
+
+	if (data[ch].chargeDelayADC) {
+		delayMicroseconds(data[ch].chargeDelayADC);
+	}
+}
+
+template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::chargeSensor(uint8_t ch,
+		int ch_pin)
+{
+	/*
+	 * Set ADC to sensor pin (transfer charge from Chold to Csense).
+	 */
+	setAdcReferencePin(ch_pin);
+
+	if (data[ch].chargeDelaySensor) {
+		delayMicroseconds(data[ch].chargeDelaySensor);
+	}
+}
+
+template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::charge(uint8_t ch,
+		int ch_pin, int ref_pin)
+{
+	chargeADC(ch, ref_pin);
+	chargeSensor(ch, ch_pin);
+}
+
+template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+int CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sampleHalf(uint16_t pos,
+		bool inv)
+{
+	uint8_t ch, ref;
+	int ch_pin, ref_pin, sample;
+	uint8_t i;
+
+	ch = scanOrder[pos];
+	ref = channelToReference(ch);
+	ch_pin = data[ch].pin;
+	ref_pin = data[ref].pin;
+
+	setSensorAndReferencePins(ch_pin, ref_pin, inv);
 
 	/* Set sensor pin as analog input. */
 	pinMode(A0 + ch_pin, INPUT);
 
+	/*
+	 * Charge nCharges - 1 times to account for the charge during the
+	 * analogRead() below.
+	 */
 	for (i = 0; i < data[ch].nCharges - 1; i++) {
-		/* Set ADC to reference pin (charge internal capacitor). */
-		setAdcReferencePin(ref_pin);
-		/*
-		 * Set ADC to sensor pin (transfer charge from Chold to 
-		 * Csense).
-		 */
-		setAdcReferencePin(ch_pin);
+		charge(ch, ch_pin, ref_pin);
 	}
 
 	/* Set ADC to reference pin (charge internal capacitor). */
-	setAdcReferencePin(ref_pin);
+	chargeADC(ch, ref_pin);
 
 	/* Read sensor. */
 	sample = analogRead(ch_pin);
+
+	if (data[ch].useNChargesPadding) {
+		/*
+		 * Increment i before starting the loop to account for the
+		 * charge during the analogRead() above.
+		 */
+		for (++i; i < data[ch].nChargesMax; i++) {
+			charge(ch, ch_pin, ref_pin);
+		}
+	}
 
 	/* Discharge sensor. */
 	pinMode(A0 + ch_pin, OUTPUT);
@@ -939,11 +1008,11 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::correctSample(uint8_t ch)
 	tmp = ((float) 1) / tmp;
 
 	d->nChargesNext = (int32_t) (ceilf(tmp));
-	if (d->nChargesNext < 1) {
-		d->nChargesNext = 1;
+	if (d->nChargesNext < CVD_N_CHARGES_MIN_DEFAULT) {
+		d->nChargesNext = CVD_N_CHARGES_MIN_DEFAULT;
 	}
-	if (d->nChargesNext > CVD_N_CHARGES_MAX) {
-		d->nChargesNext = CVD_N_CHARGES_MAX;
+	if (d->nChargesNext > CVD_N_CHARGES_MAX_DEFAULT) {
+		d->nChargesNext = CVD_N_CHARGES_MAX_DEFAULT;
 	}
 
 	tmp = scale * tmp * d->capacitanceScaleFactor /
