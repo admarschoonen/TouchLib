@@ -39,6 +39,13 @@
 #include <avr/io.h>
 #include <math.h>
 
+/* These strings are for human readability */
+const char * const CVDButtonStateLabels[] = {
+	"PreCalibrating", "Calibrating", "Released", "ReleasedToApproached",
+	"Approached", "ApproachedToPressed", "ApproachedToReleased", "Pressed",
+	"PressedToApproached"
+};
+
 struct CvdStruct {
 	/* enum definitions */
 	enum ButtonState {
@@ -162,6 +169,11 @@ struct CvdStruct {
 	float avg;
 	float delta;
 	enum ButtonState buttonState;
+	const char * buttonStateLabel; /* human readable label */
+	bool buttonIsCalibrating; /* use this to see if button is calibrating */
+	bool buttonIsReleased; /* use this to see if button is released */
+	bool buttonIsApproached; /* use this to see if button is approached */
+	bool buttonIsPressed; /* use this to see if button is pressed */
 	uint32_t counter;
 	uint32_t recalCounter;
 	uint32_t nCharges;
@@ -228,6 +240,7 @@ class CvdSensors
 		void correctSample(uint8_t ch);
 		void processSample(uint8_t ch);
 		void updateNCharges(uint8_t ch);
+		void resetButtonStateSummaries(uint8_t ch);
 		void initScanOrder(void);
 };
 
@@ -476,8 +489,11 @@ CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::CvdSensors(void)
 		now = millis();
 
 		for (n = 0; n < nSensors; n++) {
+			resetButtonStateSummaries(n);
 			data[n].buttonState = 
 				CvdStruct::buttonStatePreCalibrating;
+			data[n].buttonStateLabel =
+				CVDButtonStateLabels[data[n].buttonState];
 			data[n].counter = 0;
 			data[n].raw = 0;
 			data[n].capacitance = 0;
@@ -977,6 +993,8 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processSample(uint8_t ch)
 		processStatePressedToApproached(d);
 		break;
 	}
+
+	d->buttonStateLabel = CVDButtonStateLabels[d->buttonState];
 }
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
@@ -987,11 +1005,6 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::correctSample(uint8_t ch)
 
 	d = &(data[ch]);
 
-	/*
-	 * Multiply nMeasurementsPerSensor by 2 since sample() scaled it by 2 as
-	 * well (except for sampleTypeDifferential, since that type has factor 2
-	 * built in).
-	 */
 	if (d->enableSlewrateLimiter) {
 		scale = (float) ((CVD_ADC_MAX + 1) << 2);
 	} else {
@@ -1028,6 +1041,15 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateNCharges(uint8_t ch
 
 	d = &(data[ch]);
 	d->nCharges = d->nChargesNext;
+}
+
+template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::resetButtonStateSummaries(uint8_t ch)
+{
+	data[ch].buttonIsCalibrating = false;
+	data[ch].buttonIsReleased = false;
+	data[ch].buttonIsApproached = false;
+	data[ch].buttonIsPressed = false;
 }
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
@@ -1085,10 +1107,21 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 	this->anyButtonIsApproached = false;
 	this->anyButtonIsPressed = false;
 	for (ch = 0; ch < nSensors; ch++) {
+		resetButtonStateSummaries(ch);
+		if (data[ch].buttonState <= CvdStruct::buttonStateCalibrating) {
+			data[ch].buttonIsCalibrating = true;
+		}
+		if ((data[ch].buttonState >= CvdStruct::buttonStateReleased) &&
+				(data[ch].buttonState <=
+				CvdStruct::buttonStateReleasedToApproached)) {
+			data[ch].buttonIsReleased = true;
+		}
 		if (data[ch].buttonState >= CvdStruct::buttonStateApproached) {
+			data[ch].buttonIsApproached = true;
 			this->anyButtonIsApproached = true;
 		}
 		if (data[ch].buttonState >= CvdStruct::buttonStatePressed) {
+			data[ch].buttonIsPressed = true;
 			this->anyButtonIsPressed = true;
 		}
 		updateNCharges(ch);
