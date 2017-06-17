@@ -24,25 +24,29 @@ CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> cvdSensors;
 
 void setup()                    
 {
+	int n;
+
 	Serial.begin(9600);
 
-	/*
-	 * The parameter N_MEASUREMENTS_PER_SENSOR (see above) determines the
-	 * number of measurements per sensor per measurement cycle. CVDSensor
-	 * uses a pseudo-random sampling order to spread noise randomly over
-	 * multiple samples. A higher value uses more samples and thus more
-	 * noise reduction. However, a higher value also makes the total
-	 * measurement cycle longer.
-	 *
-	 * Emperically, a value of 16 seems to be a reasonable setting for many
-	 * projects. However, for projects where the sensors are affected by a
-	 * lot of noise, a higher value might be preferrable. On the other
-	 * hands, for projects where a very fast response time is required, a
-	 * smaller value might be required.
-	 *
-	 * Adjust the setting above and observe the difference in measurement
-	 * time.
-	 */
+	/* Change time that sensor must be in pressed transitioning states */
+	for (n = 0; n < N_SENSORS; n++) {
+		/* 
+		 * approachedToPressedTime is set to 10 ms by default. Set to
+		 * larger value to make sensor more robust against noise (at the
+		 * cost of increasing the response time of the sensor).
+		 *
+		 * Change the value here and below and observe the difference in
+		 * response time.
+		 */
+		cvdSensors.data[n].approachedToPressedTime = 100;
+
+		/*
+		 * pressedToApproachedTime is set to 10 ms by default. Set to
+		 * larger value to make sensor more robust against noise (at the
+		 * cost of increasing the response time of the sensor).
+		 */
+		cvdSensors.data[n].pressedToApproachedTime = 100;
+	}
 }
 
 void loop()
@@ -58,20 +62,17 @@ void loop()
 	cvdSensors.sample();
 	t_stop = millis();
 
-	/* 
-	 * For each button, print current value, background value and button
- 	 * state label. Also print the time it takes to do a complete loop
- 	 * cycle.
+	/*
+	 * For each button, print current value and if button is approached or
+	 * not
 	 */
 	for (n = 0; n < N_SENSORS; n++) {
 		Serial.print("button[");
 		Serial.print(n);
 		Serial.print("]: current value: ");
 		Serial.print(cvdSensors.data[n].capacitance);
-		Serial.print(", background value: ");
-		Serial.print(cvdSensors.data[n].avg);
-		Serial.print(", buttonStateLabel: ");
-		Serial.print(cvdSensors.data[n].buttonStateLabel);
+		Serial.print(", approached: ");
+		Serial.print(cvdSensors.data[n].buttonIsApproached);
 		if (n < N_SENSORS - 1) {	
 			Serial.print("\t ");
 		}
