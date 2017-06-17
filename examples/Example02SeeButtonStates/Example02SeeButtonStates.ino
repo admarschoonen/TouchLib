@@ -55,30 +55,30 @@ void loop()
 	 *                     PreCalibrating
 	 *                           |
 	 *                           V
-	 *                      Calibrating
-	 *                           |
-	 *                           V
-	 *                       Released
-	 *                      __.    .__
-	 *                       /|    |\
-	 *                      /        \
-	 *                     /        __\|
-	 * ApproachedToReleased             ReleasedToApproached
-	 *                    .__
-	 *                    |\          /
-	 *                      \        /
-	 *                     __\|    |/__
-	 *                       Approached
-	 *                      __.    .__
-	 *                       /|    |\
-	 *                      /        \
-	 *                     /        __\|
-         *  PressedToApproached             ApproachedToPressed
-	 *                    .__
-	 *                    |\          /
-	 *                      \        /
-	 *                     __\|    |/__
-	 *                        Pressed
+	 *                      Calibrating <---------------------+
+	 *                           |                            |
+	 *                           V                            |
+	 *                       Released                         |
+	 *                      __.    .__                        |
+	 *                       /|    |\                         |
+	 *                      /        \                        |
+	 *                     /        __\|                      |
+	 * ApproachedToReleased             ReleasedToApproached  |
+	 *                    .__                                 |
+	 *                    |\          /                       |
+	 *                      \        /                        |
+	 *                     __\|    |/__                       |
+	 *                       Approached --------------------->*
+	 *                      __.    .__                        ^
+	 *                       /|    |\                         |
+	 *                      /        \                        |
+	 *                     /        __\|                      |
+         *  PressedToApproached             ApproachedToPressed   |
+	 *                    .__                                 |
+	 *                    |\          /                       |
+	 *                      \        /                        |
+	 *                     __\|    |/__                       |
+	 *                        Pressed ------------------------+
 	 *
 	 * Since it is difficult to directly determine from the state if a
 	 * button is approached or pressed, the following booleans are available
