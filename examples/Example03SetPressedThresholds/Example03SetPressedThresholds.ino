@@ -26,7 +26,7 @@ void setup()
 {
 	int n;
 
-	Serial.begin(115200);
+	Serial.begin(9600);
 
 	/* Change approached threshold for each sensor */
 	for (n = 0; n < N_SENSORS; n++) {

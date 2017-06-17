@@ -28,39 +28,30 @@ void setup()
 
 	Serial.begin(9600);
 
-	for (n = 0; n < N_SENSORS; n++) {
-		/*
-		 * By default, the slewrate limiting filter is selected. This is
-		 * a very robust filter especially in case of conducted noise
-		 * (when the Arduino is supplied with a phone charger for
-		 * example).
-		 *
-		 * However, it is also a bit slow and can make the sensor less
-		 * sensitive to small changes. It is therefore not very well
-		 * suited if the sensor is used as a distance sensor. If the
-		 * system is battery powered or if the system ground is
-		 * connected to earth ground, an exponential filter can be used
-		 * instead.
-		 *
-		 * Select an exponential filter by disabling the slewrate
-		 * limiter.
-		 */
-		cvdSensors.data[n].enableSlewrateLimiter = false;
-
-		/*
-		 * The exponential filter can be controlled with parameter
-		 * filterCoeff. The default value is 128. Set to a larger value
-		 * to use stronger filtering. Stronger filtering results in more
-		 * accurate average calculation but it also makes the system
-		 * slower to adjust to small changes in the background signal.
-		 */
-		cvdSensors.data[n].filterCoeff = 16;
-	}
+	/*
+	 * The parameter N_MEASUREMENTS_PER_SENSOR (see above) determines the
+	 * number of measurements per sensor per measurement cycle. CVDSensor
+	 * uses a pseudo-random sampling order to spread noise randomly over
+	 * multiple samples. A higher value uses more samples and thus more
+	 * noise reduction. However, a higher value also makes the total
+	 * measurement cycle longer.
+	 *
+	 * Emperically, a value of 16 seems to be a reasonable setting for many
+	 * projects. However, for projects where the sensors are affected by a
+	 * lot of noise, a higher value might be preferrable. On the other
+	 * hands, for projects where a very fast response time is required, a
+	 * smaller value might be required.
+	 *
+	 * Adjust the setting above and observe the difference in response time.
+	 */
 }
 
 void loop()
 {
 	int n;
+	static int prev = millis();
+	int now;
+
 
 	/* 
 	 * Call cvdSensors.sample() take do a new measurement cycle for all
@@ -70,7 +61,8 @@ void loop()
 
 	/* 
 	 * For each button, print current value, background value and button
- 	 * state label
+ 	 * state label. Also print the time it takes to do a complete loop
+ 	 * cycle.
 	 */
 	for (n = 0; n < N_SENSORS; n++) {
 		Serial.print("button[");
@@ -83,8 +75,10 @@ void loop()
 		Serial.print(cvdSensors.data[n].buttonStateLabel);
 		if (n < N_SENSORS - 1) {	
 			Serial.print("\t ");
-		} else {
-			Serial.println("");
 		}
 	}
+	Serial.print(", \tLoop time: ");
+	now = millis();
+	Serial.println(now - prev);
+	prev = now;
 }

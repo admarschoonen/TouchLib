@@ -24,7 +24,7 @@ CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> cvdSensors;
 
 void setup()                    
 {
-	Serial.begin(115200);
+	Serial.begin(9600);
 }
 
 void loop()
