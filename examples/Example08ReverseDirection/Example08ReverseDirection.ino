@@ -24,44 +24,43 @@ CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> cvdSensors;
 
 void setup()                    
 {
+	int n;
+
 	Serial.begin(9600);
 
-	/*
-	 * The parameter N_MEASUREMENTS_PER_SENSOR (see above) determines the
-	 * number of measurements per sensor per measurement cycle. CVDSensor
-	 * uses a pseudo-random sampling order to spread noise randomly over
-	 * multiple samples. A higher value uses more samples and thus more
-	 * noise reduction. However, a higher value also makes the total
-	 * measurement cycle longer.
-	 *
-	 * Emperically, a value of 16 seems to be a reasonable setting for many
-	 * projects. However, for projects where the sensors are affected by a
-	 * lot of noise, a higher value might be preferrable. On the other
-	 * hands, for projects where a very fast response time is required, a
-	 * smaller value might be required.
-	 *
-	 * Adjust the setting above and observe the difference in measurement
-	 * time.
-	 */
+	for (n = 0; n < N_SENSORS; n++) {
+		/*
+		 * By default, CVDSensor assumes that the signal to be measured
+		 * causes an increase in capacitance. For some sensors however,
+		 * the signal causes a decrease in capacitance. For such
+		 * sensors, set the direction property to
+		 * CvdStruct::directionNegative.
+		 *
+		 * To test this out, use sensors with some insulation on top
+		 * (plastic sheet, paper, cotton, ...). Then, touch the sensors
+		 * before connecting, open the serial monitor and all the time
+		 * keep your hand on the sensor until the sensors are in state
+		 * Released. Then slowly raise your hand and observe that the
+		 * sensor switches to states Approached and Released. 
+		 */
+
+		cvdSensors.data[n].direction = CvdStruct::directionNegative;
+	}
 }
 
 void loop()
 {
 	int n;
-	unsigned long t_start, t_stop;
 
-	t_start = millis();
 	/* 
 	 * Call cvdSensors.sample() take do a new measurement cycle for all
 	 * sensors 
 	 */
 	cvdSensors.sample();
-	t_stop = millis();
 
 	/* 
 	 * For each button, print current value, background value and button
- 	 * state label. Also print the time it takes to do a complete loop
- 	 * cycle.
+ 	 * state label
 	 */
 	for (n = 0; n < N_SENSORS; n++) {
 		Serial.print("button[");
@@ -74,10 +73,8 @@ void loop()
 		Serial.print(cvdSensors.data[n].buttonStateLabel);
 		if (n < N_SENSORS - 1) {	
 			Serial.print("\t ");
+		} else {
+			Serial.println("");
 		}
 	}
-	Serial.print(", measurement time: ");
-	now = millis();
-	Serial.println(t_stop - t_start);
-	prev = now;
 }
