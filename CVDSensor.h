@@ -778,7 +778,9 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(CvdStruct * d)
 
 	d->avg = (d->counter * d->avg + d->capacitance) / (d->counter + 1);
 
-	if (d->enableNoisePowerMeasurement) {
+	/* Only perform noise measurement when not calibrating any more */
+	if ((d->enableNoisePowerMeasurement) && (d->buttonState >
+			CvdStruct::buttonStateCalibrating)) {
 		s = d->delta * d->delta;
 		d->noisePower = (d->counter * d->noisePower + s) / 
 			(d->counter + 1);
