@@ -26,7 +26,23 @@ void setup()
 {
 	int n;
 
+	/* Delay to make sure serial monitor receives first message */
+	delay(500);
 	Serial.begin(9600);
+	Serial.println();
+	Serial.println();
+	Serial.println("Switching baudrate to 115200. Make sure to adjust "
+		"baudrate in serial monitor as well!");
+	Serial.println();
+	Serial.println();
+	Serial.end();
+
+	/*
+	 * Switch baudrate to highest baudrate available. With higher baudrate,
+	 * CPU has more time left to do capacitive sensing and thus get better
+	 * signal quality.
+	 */
+	Serial.begin(115200);
 
 	for (n = 0; n < N_SENSORS; n++) {
 		/*
@@ -76,7 +92,7 @@ void loop()
 		Serial.print("button[");
 		Serial.print(n);
 		Serial.print("]: current value: ");
-		Serial.print(cvdSensors.data[n].capacitance);
+		Serial.print(cvdSensors.data[n].delta);
 		Serial.print(", background value: ");
 		Serial.print(cvdSensors.data[n].avg);
 		Serial.print(", buttonStateLabel: ");

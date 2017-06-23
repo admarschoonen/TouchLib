@@ -26,10 +26,37 @@ void setup()
 {
 	int n;
 
+	/* Delay to make sure serial monitor receives first message */
+	delay(500);
 	Serial.begin(9600);
+	Serial.println();
+	Serial.println();
+	Serial.println("Switching baudrate to 115200. Make sure to adjust "
+		"baudrate in serial monitor as well!");
+	Serial.println();
+	Serial.println();
+	Serial.end();
+
+	/*
+	 * Switch baudrate to highest baudrate available. With higher baudrate,
+	 * CPU has more time left to do capacitive sensing and thus get better
+	 * signal quality.
+	 */
+	Serial.begin(115200);
 
 	/* Change approached threshold for each sensor */
 	for (n = 0; n < N_SENSORS; n++) {
+		/*
+		 * Set state transition times to 0 to get more direct feedback
+		 * while tuning the threshold levels.
+		 */
+		cvdSensors.data[n].releasedToApproachedTime = 0;
+		cvdSensors.data[n].approachedToReleasedTime = 0;
+		cvdSensors.data[n].approachedToPressedTime = 0;
+		cvdSensors.data[n].pressedToApproachedTime = 0;
+
+		//cvdSensors.data[n].enableSlewrateLimiter = false;
+
 		/* 
 		 * releasedToApproachedThreshold is set to 50 by default. Set to
 		 * lower value to make sensor more sensitive.
@@ -63,7 +90,7 @@ void loop()
 		Serial.print("button[");
 		Serial.print(n);
 		Serial.print("]: current value: ");
-		Serial.print(cvdSensors.data[n].capacitance);
+		Serial.print(cvdSensors.data[n].delta);
 		Serial.print(", approached: ");
 		Serial.print(cvdSensors.data[n].buttonIsApproached);
 		if (n < N_SENSORS - 1) {	

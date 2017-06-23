@@ -796,13 +796,9 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateCalibrating(C
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateReleased(CvdStruct * d)
 {
-	if (d->enableTouchStateMachine) {
-		if (isApproached(d)) {
-			d->stateChangedAtTime = d->lastSampledAtTime;
-			d->buttonState = CvdStruct::buttonStateReleasedToApproached;
-		} else {
-			updateAvg(d);
-		}
+	if ((d->enableTouchStateMachine) && (isApproached(d))) {
+		d->stateChangedAtTime = d->lastSampledAtTime;
+		d->buttonState = CvdStruct::buttonStateReleasedToApproached;
 	} else {
 		updateAvg(d);
 	}
