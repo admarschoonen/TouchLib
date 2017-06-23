@@ -153,12 +153,18 @@ struct CvdStruct {
 
 	/*
 	 * Set enableTouchStateMachine to false to only use a sensor for
-	 * capacitive sensing. After startup, sensor will be in state
-	 * buttonStatePreCalibrating followed by buttonStateCalibrating and
-	 * after calibration the state will switch to buttonStateReleased and
-	 * stay there.
+	 * capacitive sensing or during tuning. After startup, sensor will be in
+	 * state buttonStatePreCalibrating followed by buttonStateCalibrating
+	 * and after calibration the state will switch to buttonStateReleased
+	 * and stay there.
 	 */
 	bool enableTouchStateMachine;
+
+	/*
+	 * Set enableNoisePowerMeasurement to true to measure noise power.
+	 * This is useful during tuning or debugging but adds processing time.
+	 */
+	bool enableNoisePowerMeasurement;
 
 	/* These members will be set by the init / sample methods. */
 	uint8_t nSensors;
@@ -168,6 +174,7 @@ struct CvdStruct {
 	float distance;
 	float avg;
 	float delta;
+	float noisePower;
 	enum ButtonState buttonState;
 	const char * buttonStateLabel; /* human readable label */
 	bool buttonIsCalibrating; /* use this to see if button is calibrating */
@@ -270,6 +277,7 @@ class CvdSensors
 #define CVD_CHARGE_DELAY_SENSOR_DEFAULT				0
 #define CVD_CHARGE_DELAY_ADC_DEFAULT				0
 #define CVD_ENABLE_TOUCH_STATE_MACHINE_DEFAULT			true
+#define CVD_ENABLE_NOISE_POWER_MEASUREMENT_DEFAULT		false
 
 #define CVD_REFERENCE_CAPACITANCE_DEFAULT			((float) 15) /* 15 pF */
 #define CVD_CAPACITANCE_SCALE_FACTOR_DEFAULT			((float) 1)
@@ -408,6 +416,8 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 				CVD_FORCE_CALIBRATION_AFTER_PRESSED_DEFAULT;
 			data[n].enableTouchStateMachine = 
 				CVD_ENABLE_TOUCH_STATE_MACHINE_DEFAULT;
+			data[n].enableNoisePowerMeasurement =
+				CVD_ENABLE_NOISE_POWER_MEASUREMENT_DEFAULT;
 			data[n].parallelCapacitance =
 				CVD_PARALLEL_CAPACITANCE_DEFAULT;
 			data[n].referenceCapacitance =
@@ -498,6 +508,7 @@ CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::CvdSensors(void)
 			data[n].raw = 0;
 			data[n].capacitance = 0;
 			data[n].avg = 0;
+			data[n].noisePower = 0;
 			data[n].delta = 0;
 			data[n].nCharges = CVD_N_CHARGES_MIN_DEFAULT;
 			data[n].nChargesNext = CVD_N_CHARGES_MIN_DEFAULT;
@@ -753,6 +764,8 @@ bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isPressed(CvdStruct * d)
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(CvdStruct * d)
 {
+	float s;
+
 	if (d->disableUpdateIfAnyButtonIsApproached &&
 			this->anyButtonIsApproached) {
 		return;
@@ -763,6 +776,12 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(CvdStruct * d)
 	}
 
 	d->avg = (d->counter * d->avg + d->capacitance) / (d->counter + 1);
+
+	if (d->enableNoisePowerMeasurement) {
+		s = d->delta * d->delta;
+		d->noisePower = (d->counter * d->noisePower + s) / 
+			(d->counter + 1);
+	}
 
 	if (d->counter < d->filterCoeff - 1) {
 		d->counter++;
@@ -840,6 +859,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproached(Cv
 			d->stateChangedAtTime > d->approachedTimeout)) {
 		d->counter = 0;
 		d->avg = 0;
+		d->noisePower = 0;
 		d->stateChangedAtTime = d->lastSampledAtTime;
 		d->buttonState = CvdStruct::buttonStateCalibrating;
 
@@ -886,6 +906,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproachedToR
 			if (d->forceCalibrationAfterApproached) {
 				d->counter = 0;
 				d->avg = 0;
+				d->noisePower = 0;
 				d->buttonState =
 					CvdStruct::buttonStateCalibrating;
 				if (!d->setParallelCapacitanceManually) {
@@ -918,6 +939,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressed(CvdSt
 				d->stateChangedAtTime > d->pressedTimeout)) {
 			d->counter = 0;
 			d->avg = 0;
+			d->noisePower = 0;
 			d->stateChangedAtTime = d->lastSampledAtTime;
 			d->buttonState = CvdStruct::buttonStateCalibrating;
 
@@ -952,6 +974,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressedToAppr
 			if (d->forceCalibrationAfterPressed) {
 				d->counter = 0;
 				d->avg = 0;
+				d->noisePower = 0;
 				d->buttonState =
 					CvdStruct::buttonStateCalibrating;
 				if (!d->setParallelCapacitanceManually) {
