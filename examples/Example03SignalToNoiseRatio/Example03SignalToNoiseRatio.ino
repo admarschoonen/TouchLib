@@ -52,12 +52,15 @@ void setup()
 		 * the main loop.
 		 */
 		cvdSensors.data[n].enableTouchStateMachine = false;
+
+		/* Enable noise power measurement */
+		cvdSensors.data[n].enableNoisePowerMeasurement = true;
 	}
 }
 
-void processSerialData(void)
+int processSerialData(int b)
 {
-	int n;
+	int n = -1;
 	char c;
 
 	while (Serial.available()) {
@@ -72,7 +75,7 @@ void processSerialData(void)
 		if ((c >= 'a') && (c <= 'f')) {
 			n = c - 'a' + 10;
 		}
-		if ((n >= 0) && (n <= N_SENSORS)) {
+		if ((n >= 0) && (n == b) && (n <= N_SENSORS)) {
 			/* toggle sensor pressed state */
 			if (cvdSensors.data[n].buttonState ==
 					CvdStruct::buttonStatePressed) {
@@ -87,13 +90,35 @@ void processSerialData(void)
 				CVDButtonStateLabels[cvdSensors.data[n].buttonState];
 		}
 	}
+
+	return n;
+}
+
+void floatToIntFrac(float f, int scale, int precision, int * iInt, int * iFrac)
+{
+	float fFrac;
+
+	if (f > 0) {
+		*iInt = scale * f;
+		fFrac = scale * f - *iInt;
+	} else {
+		*iInt = scale * f + 1;
+		fFrac = 1 - (scale * f - *iInt);
+	}
+	*iFrac = floor(pow(10, precision - 1) * fFrac);
 }
 
 void loop()
 {
+	static int b = 0;
+	char s[200] = {'\0'};
 	int n;
+	const char *buttonStateLabel;
+	float delta, noisePower, noiseAmp, snr;
+	int deltaInt, deltaFrac, noisePowerInt, noisePowerFrac, noiseAmpInt,
+		noiseAmpFrac, snrInt, snrFrac;
 
-	processSerialData();
+	n = processSerialData(b);
 
 	/*
 	 * Call cvdSensors.sample() take do a new measurement cycle for all
@@ -102,20 +127,38 @@ void loop()
 	cvdSensors.sample();
 
 	/*
-	 * For each button, print current value and if button is approached or
-	 * not
+	 * Only print statistics for selected button
 	 */
-	for (n = 0; n < N_SENSORS; n++) {
-		Serial.print("button[");
-		Serial.print(n);
-		Serial.print("]: current value: ");
-		Serial.print(cvdSensors.data[n].delta);
-		Serial.print(", state: ");
-		Serial.print(cvdSensors.data[n].buttonStateLabel);
-		if (n < N_SENSORS - 1) {
-			Serial.print("\t ");
-		} else {
-			Serial.println("");
-		}
+	if (n > -1) {
+		b = n;
 	}
+
+	delta = cvdSensors.data[b].delta;
+	noisePower = cvdSensors.data[b].noisePower;
+	noiseAmp = sqrt(noisePower);
+	snr = 10 * log10(delta * delta / noisePower);
+	buttonStateLabel = cvdSensors.data[b].buttonStateLabel;
+
+	floatToIntFrac(delta, 1, 2, &deltaInt, &deltaFrac);
+	floatToIntFrac(noisePower, 1, 2, &noisePowerInt, &noisePowerFrac);
+	floatToIntFrac(noiseAmp, 1, 2, &noiseAmpInt, &noiseAmpFrac);
+	floatToIntFrac(snr, 1, 2, &snrInt, &snrFrac);
+
+	snprintf(s, sizeof(s) -1, "button[%d]: current value: % 7d.%02d, noise:"
+		" % 7d.%02d, SNR: % 7d.%02d dB, state: %s\r\n", b, deltaInt,
+		deltaFrac, noiseAmpInt, noiseAmpFrac, snrInt, snrFrac,
+		buttonStateLabel);
+	Serial.print(s);
+	/*Serial.print("button[");
+	Serial.print(b);
+	Serial.print("]: current value: ");
+	Serial.print(cvdSensors.data[b].delta);
+	Serial.print(", noise: ");
+	Serial.print(sqrt(cvdSensors.data[b].noisePower));
+	Serial.print(", SNR: ");
+	Serial.print(10 * log10((cvdSensors.data[b].delta * 
+		cvdSensors.data[b].delta) / 
+		cvdSensors.data[b].noisePower));
+	Serial.print(" dB, state: ");
+	Serial.println(cvdSensors.data[b].buttonStateLabel);*/
 }
