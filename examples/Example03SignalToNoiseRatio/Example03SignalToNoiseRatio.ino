@@ -47,7 +47,6 @@ void setup()
 	Serial.println();
 
 	for (n = 0; n < N_SENSORS; n++) {
-		cvdSensors.data[n].enableSlewrateLimiter = false;
 		/*
 		 * Disable state machine so we can control updating average in
 		 * the main loop.
