@@ -170,7 +170,8 @@ struct CvdStruct {
 	uint8_t nSensors;
 	uint8_t nMeasurementsPerSensor;
 	int32_t raw;
-	float capacitance; /* in pico Farad (pF) */
+	/* Total capacitance (including parallelCapacitance) in pico Farad (pF) */
+	float capacitance;
 	float distance;
 	float avg;
 	float delta;
@@ -1062,7 +1063,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::correctSample(uint8_t ch)
 	}
 
 	tmp = scale * tmp * d->capacitanceScaleFactor /
-		d->referenceCapacitance - d->parallelCapacitance;
+		d->referenceCapacitance;
 	d->capacitance = tmp;
 	/* Capacitance can be negative due to noise! */
 
