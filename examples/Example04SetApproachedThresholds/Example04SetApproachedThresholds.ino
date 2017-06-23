@@ -43,6 +43,8 @@ void setup()
 	 * signal quality.
 	 */
 	Serial.begin(115200);
+	Serial.println();
+	Serial.println();
 
 	/* Change approached threshold for each sensor */
 	for (n = 0; n < N_SENSORS; n++) {

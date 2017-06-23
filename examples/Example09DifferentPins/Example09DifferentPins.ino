@@ -42,6 +42,8 @@ void setup()
 	 * signal quality.
 	 */
 	Serial.begin(115200);
+	Serial.println();
+	Serial.println();
 
 	/*
 	 * By default, pins are connected starting at A0 in successive order.

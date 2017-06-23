@@ -41,6 +41,8 @@ void setup()
 	 * signal quality.
 	 */
 	Serial.begin(115200);
+	Serial.println();
+	Serial.println();
 }
 
 void loop()

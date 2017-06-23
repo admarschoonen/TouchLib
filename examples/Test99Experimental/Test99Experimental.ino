@@ -41,6 +41,8 @@ void setup()
 	 * signal quality.
 	 */
 	Serial.begin(115200);
+	Serial.println();
+	Serial.println();
 
 	cvdSensors.data[0].pin = 0; /* Analog pin 0 */
 	cvdSensors.data[0].setParallelCapacitanceManually = false;

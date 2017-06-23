@@ -41,6 +41,8 @@ void setup()
 	 * signal quality.
 	 */
 	Serial.begin(115200);
+	Serial.println();
+	Serial.println();
 
 	/*
 	 * The parameter N_MEASUREMENTS_PER_SENSOR (see above) determines the
