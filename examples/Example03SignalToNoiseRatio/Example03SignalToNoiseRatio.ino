@@ -47,6 +47,7 @@ void setup()
 	Serial.println();
 
 	for (n = 0; n < N_SENSORS; n++) {
+		cvdSensors.data[n].enableSlewrateLimiter = false;
 		/*
 		 * Disable state machine so we can control updating average in
 		 * the main loop.
@@ -114,9 +115,9 @@ void loop()
 	char s[200] = {'\0'};
 	int n;
 	const char *buttonStateLabel;
-	float delta, noisePower, noiseAmp, snr;
-	int deltaInt, deltaFrac, noisePowerInt, noisePowerFrac, noiseAmpInt,
-		noiseAmpFrac, snrInt, snrFrac;
+	float avg, delta, noisePower, noiseAmp, snr;
+	int avgInt, avgFrac, deltaInt, deltaFrac, noisePowerInt, noisePowerFrac,
+		noiseAmpInt, noiseAmpFrac, snrInt, snrFrac;
 
 	n = processSerialData(b);
 
@@ -133,32 +134,22 @@ void loop()
 		b = n;
 	}
 
+	avg = cvdSensors.data[b].avg;
 	delta = cvdSensors.data[b].delta;
 	noisePower = cvdSensors.data[b].noisePower;
 	noiseAmp = sqrt(noisePower);
 	snr = 10 * log10(delta * delta / noisePower);
 	buttonStateLabel = cvdSensors.data[b].buttonStateLabel;
 
+	floatToIntFrac(avg, 1, 2, &avgInt, &avgFrac);
 	floatToIntFrac(delta, 1, 2, &deltaInt, &deltaFrac);
 	floatToIntFrac(noisePower, 1, 2, &noisePowerInt, &noisePowerFrac);
 	floatToIntFrac(noiseAmp, 1, 2, &noiseAmpInt, &noiseAmpFrac);
 	floatToIntFrac(snr, 1, 2, &snrInt, &snrFrac);
 
-	snprintf(s, sizeof(s) -1, "button[%d]: current value: % 7d.%02d, noise:"
-		" % 7d.%02d, SNR: % 7d.%02d dB, state: %s\r\n", b, deltaInt,
-		deltaFrac, noiseAmpInt, noiseAmpFrac, snrInt, snrFrac,
-		buttonStateLabel);
+	snprintf(s, sizeof(s) -1, "button[%d]: avg: % 7d.%02d, delta: "
+		"% 7d.%02d, noise: % 7d.%02d, SNR: % 7d.%02d dB, state: %s\r\n",
+		b, avgInt, avgFrac, deltaInt, deltaFrac, noiseAmpInt,
+		noiseAmpFrac, snrInt, snrFrac, buttonStateLabel);
 	Serial.print(s);
-	/*Serial.print("button[");
-	Serial.print(b);
-	Serial.print("]: current value: ");
-	Serial.print(cvdSensors.data[b].delta);
-	Serial.print(", noise: ");
-	Serial.print(sqrt(cvdSensors.data[b].noisePower));
-	Serial.print(", SNR: ");
-	Serial.print(10 * log10((cvdSensors.data[b].delta * 
-		cvdSensors.data[b].delta) / 
-		cvdSensors.data[b].noisePower));
-	Serial.print(" dB, state: ");
-	Serial.println(cvdSensors.data[b].buttonStateLabel);*/
 }
