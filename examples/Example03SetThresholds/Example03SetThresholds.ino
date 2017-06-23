@@ -24,6 +24,8 @@ CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> cvdSensors;
 
 void setup()                    
 {
+	int n;
+
 	/* Delay to make sure serial monitor receives first message */
 	delay(500);
 	Serial.begin(9600);
@@ -43,6 +45,63 @@ void setup()
 	Serial.begin(115200);
 	Serial.println();
 	Serial.println();
+
+	/* Change approached threshold for each sensor */
+	for (n = 0; n < N_SENSORS; n++) {
+		/*
+		 * Set state transition times to 0 to get more direct feedback
+		 * while tuning the threshold levels.
+		 */
+		cvdSensors.data[n].releasedToApproachedTime = 0;
+		cvdSensors.data[n].approachedToReleasedTime = 0;
+		cvdSensors.data[n].approachedToPressedTime = 0;
+		cvdSensors.data[n].pressedToApproachedTime = 0;
+
+		/* 
+		 * releasedToApproachedThreshold is the threshold above which
+		 * tracking the background value will stop (as it appears that
+		 * someone is about to touch the sensor). Its value is a float
+		 * and set to 50.0 by default. Set to lower value to make sensor
+		 * more sensitive.
+		 *
+		 * A good initial value is usually 0.5 * the delta value at the
+		 * distance that should be considered as "approached".
+		 */
+		cvdSensors.data[n].releasedToApproachedThreshold = 25.0;
+
+		/*
+		 * approachedToReleasedThreshold is the threshold below which
+		 * tracking the background value will continue again (as the
+		 * person who touched the sensor is now far enough removed to
+		 * not impact the background anymore). Its value is a float and
+		 * set to 40.0 by default. It should usually be a little lower
+		 * than releasedToApproachedThreshold to prevent button
+		 * instability (~ 10% lower is usually a good initial guess).
+		 */
+		cvdSensors.data[n].approachedToReleasedThreshold = 20.0;
+
+		/* 
+		 * approachedToPressedThreshold is the threshold above which a
+		 * touch is registered. Its value is set to 150.0 by default.
+		 * Set to lower value to make sensor more sensitive. Do not make
+		 * it smaller than releasedToApproachedThreshold.
+		 *
+		 * A good initial value is usually 0.5 * the delta value of the
+		 * lightest touch (usually with your little finger) that should
+		 * still be registered.
+		 */
+		cvdSensors.data[n].approachedToPressedThreshold = 75.0;
+
+		/*
+		 * pressedToApproachedThreshold is the threshold below which a
+		 * touch release is registered. Its value is set to 120.0 by
+		 * default. It should usually be a little lower than
+		 * approachedToPressedThreshold to prevent button instability (~
+		 * 10% lower is usually a good initial guess), but do not make
+		 * it smaller than approachedToReleasedThreshold.
+		 */
+		cvdSensors.data[n].pressedToApproachedThreshold = 60.0;
+	}
 }
 
 void loop()
