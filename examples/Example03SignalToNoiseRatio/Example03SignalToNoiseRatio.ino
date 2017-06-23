@@ -43,6 +43,8 @@ void setup()
 	 * signal quality.
 	 */
 	Serial.begin(115200);
+	Serial.println();
+	Serial.println();
 
 	for (n = 0; n < N_SENSORS; n++) {
 		/*
@@ -55,31 +57,34 @@ void setup()
 
 void processSerialData(void)
 {
-	int tmp;
+	int n;
+	char c;
 
 	while (Serial.available()) {
 		c = (char) Serial.read();
-		tmp = -1;
+		n = -1;
 		if ((c >= '0') && (c <= '9')) {
-			tmp = c - '0';
+			n = c - '0';
 		}
 		if ((c >= 'A') && (c <= 'F')) {
-			tmp = c - 'A';
+			n = c - 'A' + 10;
 		}
 		if ((c >= 'a') && (c <= 'f')) {
-			tmp = c - 'a';
+			n = c - 'a' + 10;
 		}
-		if ((tmp >= 0) && (tmp <= N_SENSORS)) {
+		if ((n >= 0) && (n <= N_SENSORS)) {
 			/* toggle sensor pressed state */
-			if (cvdSensors.data[tmp].buttonState ==
+			if (cvdSensors.data[n].buttonState ==
 					CvdStruct::buttonStatePressed) {
-				cvdSensors.data[tmp].buttonState ==
+				cvdSensors.data[n].buttonState =
 					CvdStruct::buttonStateReleased;
-			} else if (cvdSensors.data[tmp].buttonState ==
+			} else if (cvdSensors.data[n].buttonState ==
 					CvdStruct::buttonStateReleased) {
-				cvdSensors.data[tmp].buttonState ==
+				cvdSensors.data[n].buttonState =
 					CvdStruct::buttonStatePressed;
 			}
+			cvdSensors.data[n].buttonStateLabel =
+				CVDButtonStateLabels[cvdSensors.data[n].buttonState];
 		}
 	}
 }
@@ -87,7 +92,6 @@ void processSerialData(void)
 void loop()
 {
 	int n;
-	char c;
 
 	processSerialData();
 
@@ -106,8 +110,8 @@ void loop()
 		Serial.print(n);
 		Serial.print("]: current value: ");
 		Serial.print(cvdSensors.data[n].delta);
-		Serial.print(", approached: ");
-		Serial.print(cvdSensors.data[n].buttonIsApproached);
+		Serial.print(", state: ");
+		Serial.print(cvdSensors.data[n].buttonStateLabel);
 		if (n < N_SENSORS - 1) {
 			Serial.print("\t ");
 		} else {
