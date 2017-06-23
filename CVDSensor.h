@@ -809,6 +809,9 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateReleasedToApp
 {
 	/* Do not update average in this state. */
 
+	if (!d->enableTouchStateMachine)
+		return;
+
 	if (isApproached(d)) {
 		if (d->lastSampledAtTime - d->stateChangedAtTime >=
 				d->releasedToApproachedTime) {
@@ -824,6 +827,9 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateReleasedToApp
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproached(CvdStruct * d)
 {
+	if (!d->enableTouchStateMachine)
+		return;
+
 	if (isReleased(d)) {
 		d->stateChangedAtTime = d->lastSampledAtTime;
 		d->buttonState = CvdStruct::buttonStateApproachedToReleased;
@@ -852,6 +858,9 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproachedToP
 {
 	/* Do not update average in this state. */
 
+	if (!d->enableTouchStateMachine)
+		return;
+
 	if (isPressed(d)) {
 		if (d->lastSampledAtTime - d->stateChangedAtTime >=
 				d->approachedToPressedTime) {
@@ -867,6 +876,9 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproachedToP
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproachedToReleased(CvdStruct * d)
 {
+	if (!d->enableTouchStateMachine)
+		return;
+
 	if (isReleased(d)) {
 		if (d->lastSampledAtTime - d->stateChangedAtTime >=
 				d->approachedToReleasedTime) {
@@ -898,6 +910,9 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproachedToR
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressed(CvdStruct * d)
 {
+	if (!d->enableTouchStateMachine)
+		return;
+
 	if (isPressed(d)) {
 		if ((d->pressedTimeout > 0) && (d->lastSampledAtTime - 
 				d->stateChangedAtTime > d->pressedTimeout)) {
@@ -923,6 +938,9 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressed(CvdSt
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressedToApproached(CvdStruct * d)
 {
+	if (!d->enableTouchStateMachine)
+		return;
+
 	if (isPressed(d)) {
 		/* Do not set stateChangedAtTime here. */
 
