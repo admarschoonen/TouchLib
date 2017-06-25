@@ -38,6 +38,8 @@
 #endif
 #include <avr/io.h>
 #include <math.h>
+#include <avr/eeprom.h>
+#include <EEPROM.h>
 
 /* These strings are for human readability */
 const char * const CVDButtonStateLabels[] = {
@@ -199,6 +201,8 @@ class CvdSensors
 	public:
 		struct CvdStruct data[N_SENSORS];
 		uint8_t nSensors;
+		bool enableReadSettingsFromEeprom;
+		int eepromOffset;
 
 		/*
 		 * Ideally scanOrder would be a static const uint8_t array the
@@ -212,6 +216,7 @@ class CvdSensors
 		uint8_t	nMeasurementsPerSensor;
 		int8_t error;
 
+		void writeSettingsToEeprom(void);
 		int8_t setDefaults(void);
 		int8_t sample(void);
 		void printScanOrder(void);
@@ -224,6 +229,27 @@ class CvdSensors
 		bool anyButtonIsApproached;
 		bool anyButtonIsPressed;
 
+		uint16_t crcUpdate(uint16_t crc, unsigned char c);
+
+		/* 
+		 * Older versions of EEPROM library don't have length(). Add
+		 * method here for compatibility.
+		 */
+		uint16_t EEPROM_length();
+
+		/* 
+		 * Older versions of EEPROM library don't have update(). Add
+		 * method here for compatibility.
+		 */
+		void EEPROM_update(int addr, uint8_t b);
+
+		float readFloatFromEeprom(int * addr, uint16_t * crc);
+		void writeFloatToEeprom(float f, int * addr, uint16_t * crc);
+		void readSensorSettingFromEeprom(int n, int * addr, 
+			uint16_t * crc, bool applySettings);
+		void writeSensorSettingToEeprom(int n, int * addr, 
+			uint16_t * crc);
+		void readSettingsFromEeprom(void);
 		bool hasMux5(void);
 		uint8_t channelToReference(uint8_t ch);
 		void setAdcReferencePin(int pin);
@@ -298,8 +324,16 @@ class CvdSensors
 #define CVD_AREA_DEFAULT					(10*10) /* 100 mm^2 */
 
 #define CVD_SET_PARALLEL_CAPACITANCE_MANUALLY_DEFAULT		false
-#define DISABLE_UPDATE_IF_ANY_BUTTON_IS_APPROACHED_DEFAULT	false
-#define DISABLE_UPDATE_IF_ANY_BUTTON_IS_PRESSED_DEFAULT		false
+#define CVD_DISABLE_UPDATE_IF_ANY_BUTTON_IS_APPROACHED_DEFAULT	true
+#define CVD_DISABLE_UPDATE_IF_ANY_BUTTON_IS_PRESSED_DEFAULT	true
+#define CVD_ENABLE_READ_SETTINGS_FROM_EEPROM_DEFAULT		true
+#define CVD_EEPROM_OFFSET_DEFAULT				0
+#define CVD_EEPROM_KEY						0xC7
+#define CVD_EEPROM_FORMAT_VERSION				0
+#define CVD_EEPROM_FORMAT_MASK					0x7
+#define CVD_EEPROM_FORMAT_SHIFT					5
+#define CVD_EEPROM_N_SENSORS_MASK				0x1F
+#define CVD_EEPROM_N_SENSORS_SHIFT				0
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addChannel(uint8_t ch)
@@ -385,6 +419,12 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 	}
 
 	if (error == 0) {
+		this->enableReadSettingsFromEeprom =
+			CVD_ENABLE_READ_SETTINGS_FROM_EEPROM_DEFAULT;
+		this->eepromOffset = CVD_EEPROM_OFFSET_DEFAULT;
+	}
+
+	if (error == 0) {
 		for (n = 0; n < nSensors; n++) {
 			data[n].pin = n;
 			data[n].direction = CvdStruct::directionPositive;
@@ -440,9 +480,9 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 			data[n].setParallelCapacitanceManually =
 				CVD_SET_PARALLEL_CAPACITANCE_MANUALLY_DEFAULT;
 			data[n].disableUpdateIfAnyButtonIsApproached =
-				DISABLE_UPDATE_IF_ANY_BUTTON_IS_APPROACHED_DEFAULT;
+				CVD_DISABLE_UPDATE_IF_ANY_BUTTON_IS_APPROACHED_DEFAULT;
 			data[n].disableUpdateIfAnyButtonIsPressed =
-				DISABLE_UPDATE_IF_ANY_BUTTON_IS_PRESSED_DEFAULT;
+				CVD_DISABLE_UPDATE_IF_ANY_BUTTON_IS_PRESSED_DEFAULT;
 			data[n].noisePowerMeasurementComplete = false;
 
 			if (!data[n].setParallelCapacitanceManually) {
@@ -458,74 +498,257 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 	return error;
 }
 
+/**
+ * \file
+ * Functions and types for CRC checks.
+ *
+ * Generated on Sun Jun 25 21:01:32 2017
+ * by pycrc v0.9, https://pycrc.org
+ * using the configuration:
+ *  - Width         = 16
+ *  - Poly          = 0x1021
+ *  - XorIn         = 0x1d0f
+ *  - ReflectIn     = False
+ *  - XorOut        = 0x0000
+ *  - ReflectOut    = False
+ *  - Algorithm     = bit-by-bit-fast
+ */
+
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(CvdStruct * d,
-		enum CvdStruct::ButtonState newState)
+uint16_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::crcUpdate(uint16_t
+		crc, unsigned char c)
 {
-	bool setStateChangedAtTime = true;
+	unsigned int i;
+	bool bit;
 
-	/* 
-	 * When switching from approachedToReleased back to approached or from
-	 * pressedToApproached back to pressed, do not update
-	 * stateChangedAtTime. If it would be updated, button could be
-	 * erroneously in approached or pressed state and would never trigger a
-	 * recalibration.
-	 */
-	if (((d->buttonState == CvdStruct::buttonStateApproachedToReleased) &&
-			newState == CvdStruct::buttonStateApproached) ||
-			((d->buttonState == CvdStruct::buttonStatePressedToApproached) &&
-			newState == CvdStruct::buttonStatePressed)) {
-		setStateChangedAtTime = false;
+	for (i = 0x80; i > 0; i >>= 1) {
+		bit = crc & 0x8000;
+		if (c & i) {
+			bit = !bit;
+		}
+		crc <<= 1;
+		if (bit) {
+			crc ^= 0x1021;
+		}
 	}
+	crc &= 0xffff;
+	return crc & 0xffff;
+}
 
-	if (d->buttonState != newState) {
-		switch(newState) {
-		case CvdStruct::buttonStateCalibrating:
-			d->counter = 0;
-			d->avg = 0;
-			d->noisePower = 0;
-			d->noisePowerMeasurementComplete = false;
-	
-			if (!d->setParallelCapacitanceManually) {
-				/*
-				 * Set parallelCapacitance to 0; will be updated
-				 * after calibration.
-				 */
-				d->parallelCapacitance = 0;
-			}
-			break;
-		case CvdStruct::buttonStatePreCalibrating:
-			/* Intentional fall-through. */
-		case CvdStruct::buttonStateNoisePowerMeasurement:
-			/* Intentional fall-through. */
-		case CvdStruct::buttonStateReleased:
-			/* Intentional fall-through. */
-		case CvdStruct::buttonStateReleasedToApproached:
-			/* Intentional fall-through. */
-		case CvdStruct::buttonStateApproached:
-			/* Intentional fall-through. */
-		case CvdStruct::buttonStateApproachedToPressed:
-			/* Intentional fall-through. */
-		case CvdStruct::buttonStateApproachedToReleased:
-			/* Intentional fall-through. */
-		case CvdStruct::buttonStatePressed:
-			/* Intentional fall-through. */
-		case CvdStruct::buttonStatePressedToApproached:
-			break;
-		}
+/* 
+ * Older versions of EEPROM library don't have length(). Add function here for
+ * compatibility.
+ */
+template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+uint16_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::EEPROM_length(void)
+{
+	return E2END + 1;
+}
 
-		if (setStateChangedAtTime) {
-			d->stateChangedAtTime = d->lastSampledAtTime;
-		}
-		d->buttonState = newState; 
+/* 
+ * Older versions of EEPROM library don't have update(). Add function here for
+ * compatibility.
+ */
+template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::EEPROM_update(int
+		addr, uint8_t b)
+{
+	if (EEPROM.read(addr) != b) {
+		EEPROM.write(addr, b);
 	}
 }
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(int n,
-		enum CvdStruct::ButtonState newState)
+float CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readFloatFromEeprom(int
+		* addr, uint16_t * crc)
 {
-	setState(&(this->data[n]), newState);
+	float f;
+	uint32_t i = 0;
+	int k;
+	uint8_t tmp;
+
+	for (k = sizeof(float); k > 0; k--) {
+		tmp = EEPROM.read(*addr);
+		*crc = crcUpdate(*crc, tmp);
+		*addr = *addr + 1;
+		i |= (((uint32_t) tmp) << ((k - 1) << 3));
+	}
+
+	memcpy(&f, &i, sizeof(float));
+
+	return f;
+}
+
+template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeFloatToEeprom(float f,
+		int * addr, uint16_t * crc)
+{
+	int k;
+	uint32_t i;
+	uint8_t tmp;
+
+	memcpy(&i, &f, sizeof(float));
+
+	for (k = sizeof(float); k > 0; k--) {
+		tmp = (i >> ((k - 1) << 3)) & 0xFF;
+		*crc = crcUpdate(*crc, tmp);
+		EEPROM_update(*addr, tmp);
+		*addr = *addr + 1;
+	}
+}
+
+template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSensorSettingFromEeprom(int n, 
+		int * addr, uint16_t * crc, bool applySettings)
+{
+	if (applySettings) {
+		data[n].releasedToApproachedThreshold =
+			readFloatFromEeprom(addr, crc);
+
+		data[n].approachedToReleasedThreshold =
+			readFloatFromEeprom(addr, crc);
+
+		data[n].approachedToPressedThreshold =
+			readFloatFromEeprom(addr, crc);
+
+		data[n].pressedToApproachedThreshold =
+			readFloatFromEeprom(addr, crc);
+	} else {
+		readFloatFromEeprom(addr, crc);
+		readFloatFromEeprom(addr, crc);
+		readFloatFromEeprom(addr, crc);
+		readFloatFromEeprom(addr, crc);
+	}
+}
+
+template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSensorSettingToEeprom(int n, 
+		int * addr, uint16_t * crc)
+{
+	float f;
+
+	f = data[n].releasedToApproachedThreshold;
+	writeFloatToEeprom(f, addr, crc);
+	
+	f = data[n].approachedToReleasedThreshold;
+	writeFloatToEeprom(f, addr, crc);
+	
+	f = data[n].approachedToPressedThreshold;
+	writeFloatToEeprom(f, addr, crc);
+	
+	f = data[n].pressedToApproachedThreshold;
+	writeFloatToEeprom(f, addr, crc);
+}
+
+template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSettingsToEeprom(void)
+{
+	int addr = eepromOffset;
+	int n;
+	uint16_t crc = 0;
+	uint8_t tmp;
+
+	if (((nSensors - 1) & CVD_EEPROM_N_SENSORS_MASK) != (nSensors - 1)) {
+		error = -28; /* not enough space; return ENOSPC */
+	}
+
+	if (eepromOffset + nSensors * 4 * sizeof(float) + 4 > EEPROM_length()) {
+		error = -28; /* not enough space; return ENOSPC */
+	}
+
+	tmp = EEPROM.read(addr);
+	if ((error == 0) && (tmp != CVD_EEPROM_KEY) && (tmp != 0xFF)) {
+		error = -5; /* key not found and not empty; return EIO */
+	}
+
+	if (error == 0) {
+		tmp = CVD_EEPROM_KEY;
+		EEPROM_update(addr++, tmp);
+		crc = crcUpdate(crc, tmp);
+
+		tmp = (CVD_EEPROM_FORMAT_VERSION << CVD_EEPROM_FORMAT_SHIFT) |
+			(((nSensors - 1) & CVD_EEPROM_N_SENSORS_MASK) << 
+			CVD_EEPROM_N_SENSORS_SHIFT);
+		EEPROM_update(addr++, tmp);
+		crc = crcUpdate(crc, tmp);
+
+		for (n = 0; n < nSensors; n++) {
+			writeSensorSettingToEeprom(n, &addr, &crc);
+		}
+
+		EEPROM_update(addr++, (crc >> 8) & 0xFF);
+		EEPROM_update(addr++, crc & 0xFF);
+	}
+}
+
+template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSettingsFromEeprom(void)
+{
+	int addr = eepromOffset;
+	int tmpAddr = eepromOffset + 2;
+	int n;
+	uint16_t crc = 0, crcEeprom = 0;
+	uint8_t tmp;
+	uint8_t formatVersion;
+	uint8_t nSensorsEeprom;
+
+	if (((nSensors - 1) & CVD_EEPROM_N_SENSORS_MASK) != (nSensors - 1)) {
+		error = -28; /* not enough space; return ENOSPC */
+	}
+
+	if (eepromOffset + nSensors * 4 * sizeof(float) + 4 > EEPROM_length()) {
+		error = -28; /* not enough space; return ENOSPC */
+	}
+
+	tmp = EEPROM.read(addr++);
+	crc = crcUpdate(crc, tmp);
+	if ((error == 0) && (tmp != CVD_EEPROM_KEY)) {
+		error = -5; /* key not found; return EIO */
+	}
+
+	if (error == 0) {
+		tmp = EEPROM.read(addr++);
+		crc = crcUpdate(crc, tmp);
+		formatVersion = ((tmp >> CVD_EEPROM_FORMAT_SHIFT) &
+			CVD_EEPROM_FORMAT_MASK);
+		nSensorsEeprom = ((tmp >> CVD_EEPROM_N_SENSORS_SHIFT) &
+			CVD_EEPROM_N_SENSORS_MASK) + 1;
+
+		if (formatVersion != CVD_EEPROM_FORMAT_VERSION) {
+			error = -5; /* incorrect version; return EIO */
+		}
+
+		if (nSensorsEeprom != nSensors) {
+			error = -5; /* incorrect EEPROM setting; return EIO */
+		}
+	}
+
+	if (error == 0) {
+		tmpAddr = addr;
+
+		/* First do a dummy read since we haven't verified CRC yet */
+		for (n = 0; n < nSensors; n++) {
+			readSensorSettingFromEeprom(n, &addr, &crc, false);
+		}
+
+		tmp = EEPROM.read(addr++);
+		crcEeprom = (((uint16_t) tmp) << 8);
+		tmp = EEPROM.read(addr++);
+		crcEeprom |= (uint16_t) tmp;
+
+		if (crc != crcEeprom) {
+			error = -5; /* CRC error; return EIO */
+		}
+	}
+
+	if (error == 0) {
+		addr = tmpAddr;
+
+		/* CRC is valid; read again but now do apply settings */
+		for (n = 0; n < nSensors; n++) {
+			readSensorSettingFromEeprom(n, &addr, &crc, true);
+		}
+	}
 }
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
@@ -599,6 +822,10 @@ CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::CvdSensors(void)
 			data[n].stateChangedAtTime = now;
 			data[n].lastSampledAtTime = 0;
 		}
+	}
+
+	if ((error == 0) && (this->enableReadSettingsFromEeprom)) {
+		readSettingsFromEeprom();
 	}
 }
 
@@ -866,6 +1093,76 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(CvdStruct * d)
 	if (d->counter < d->filterCoeff - 1) {
 		d->counter++;
 	}
+}
+
+template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(CvdStruct * d,
+		enum CvdStruct::ButtonState newState)
+{
+	bool setStateChangedAtTime = true;
+
+	/* 
+	 * When switching from approachedToReleased back to approached or from
+	 * pressedToApproached back to pressed, do not update
+	 * stateChangedAtTime. If it would be updated, button could be
+	 * erroneously in approached or pressed state and would never trigger a
+	 * recalibration.
+	 */
+	if (((d->buttonState == CvdStruct::buttonStateApproachedToReleased) &&
+			newState == CvdStruct::buttonStateApproached) ||
+			((d->buttonState == CvdStruct::buttonStatePressedToApproached) &&
+			newState == CvdStruct::buttonStatePressed)) {
+		setStateChangedAtTime = false;
+	}
+
+	if (d->buttonState != newState) {
+		switch(newState) {
+		case CvdStruct::buttonStateCalibrating:
+			d->counter = 0;
+			d->avg = 0;
+			d->noisePower = 0;
+			d->noisePowerMeasurementComplete = false;
+	
+			if (!d->setParallelCapacitanceManually) {
+				/*
+				 * Set parallelCapacitance to 0; will be updated
+				 * after calibration.
+				 */
+				d->parallelCapacitance = 0;
+			}
+			break;
+		case CvdStruct::buttonStatePreCalibrating:
+			/* Intentional fall-through. */
+		case CvdStruct::buttonStateNoisePowerMeasurement:
+			/* Intentional fall-through. */
+		case CvdStruct::buttonStateReleased:
+			/* Intentional fall-through. */
+		case CvdStruct::buttonStateReleasedToApproached:
+			/* Intentional fall-through. */
+		case CvdStruct::buttonStateApproached:
+			/* Intentional fall-through. */
+		case CvdStruct::buttonStateApproachedToPressed:
+			/* Intentional fall-through. */
+		case CvdStruct::buttonStateApproachedToReleased:
+			/* Intentional fall-through. */
+		case CvdStruct::buttonStatePressed:
+			/* Intentional fall-through. */
+		case CvdStruct::buttonStatePressedToApproached:
+			break;
+		}
+
+		if (setStateChangedAtTime) {
+			d->stateChangedAtTime = d->lastSampledAtTime;
+		}
+		d->buttonState = newState; 
+	}
+}
+
+template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(int n,
+		enum CvdStruct::ButtonState newState)
+{
+	setState(&(this->data[n]), newState);
 }
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
