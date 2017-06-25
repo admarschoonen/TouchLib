@@ -11,7 +11,7 @@
  * sensor, set N_SENSORS to 2 and use an unused analog input pin for the second
  * sensor. For 2 or more sensors you don't need to add an unused analog input.
  */
-#define N_SENSORS			4
+#define N_SENSORS			2
 
 /* 
  * Number of measurements per sensor to take in one cycle. More measurements
@@ -67,7 +67,7 @@ void setup()
 		 * A good initial value is usually 0.5 * the delta value at the
 		 * distance that should be considered as "approached".
 		 */
-		cvdSensors.data[n].releasedToApproachedThreshold = 25.0;
+		cvdSensors.data[n].releasedToApproachedThreshold = 50.0;
 
 		/*
 		 * approachedToReleasedThreshold is the threshold below which
@@ -78,7 +78,7 @@ void setup()
 		 * than releasedToApproachedThreshold to prevent button
 		 * instability (~ 10% lower is usually a good initial guess).
 		 */
-		cvdSensors.data[n].approachedToReleasedThreshold = 20.0;
+		cvdSensors.data[n].approachedToReleasedThreshold = 40.0;
 
 		/* 
 		 * approachedToPressedThreshold is the threshold above which a
@@ -119,6 +119,7 @@ void loop()
 	 * pressed. Instead, it distinguises the following states:
 	 *   - PreCalibrating
 	 *   - Calibrating
+	 *   - NoisePowerMeasurement
 	 *   - Released
 	 *   - ReleasedToApproached
          *   - Approached
@@ -133,6 +134,9 @@ void loop()
 	 *                           |
 	 *                           V
 	 *                      Calibrating <---------------------+
+	 *                           |                            |
+	 *                           V                            |
+	 *                 NoisePowerMeasurement                  |
 	 *                           |                            |
 	 *                           V                            |
 	 *                       Released                         |
@@ -174,7 +178,7 @@ void loop()
 	for (n = 0; n < N_SENSORS; n++) {
 		Serial.print("button[");
 		Serial.print(n);
-		Serial.print("]: current value: ");
+		Serial.print("]: delta: ");
 		Serial.print(cvdSensors.data[n].delta);
 		Serial.print(", buttonStateLabel: ");
 		Serial.print(cvdSensors.data[n].buttonStateLabel);

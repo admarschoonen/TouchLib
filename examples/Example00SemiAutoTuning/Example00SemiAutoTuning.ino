@@ -79,12 +79,12 @@ int processSerialData(int b)
 			/* toggle sensor pressed state */
 			if (cvdSensors.data[n].buttonState ==
 					CvdStruct::buttonStatePressed) {
-				cvdSensors.setState(n,
-					CvdStruct::buttonStateReleased);
+				cvdSensors.data[n].buttonState =
+					CvdStruct::buttonStateReleased;
 			} else if (cvdSensors.data[n].buttonState ==
 					CvdStruct::buttonStateReleased) {
-				cvdSensors.setState(n,
-					CvdStruct::buttonStatePressed);
+				cvdSensors.data[n].buttonState =
+					CvdStruct::buttonStatePressed;
 			}
 			cvdSensors.data[n].buttonStateLabel =
 				CVDButtonStateLabels[cvdSensors.data[n].buttonState];
