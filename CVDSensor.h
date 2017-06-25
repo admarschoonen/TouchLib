@@ -41,9 +41,9 @@
 
 /* These strings are for human readability */
 const char * const CVDButtonStateLabels[] = {
-	"PreCalibrating", "Calibrating", "Released", "ReleasedToApproached",
-	"Approached", "ApproachedToPressed", "ApproachedToReleased", "Pressed",
-	"PressedToApproached"
+	"PreCalibrating", "Calibrating", "NoisePowerMeasurement", "Released",
+	"ReleasedToApproached", "Approached", "ApproachedToPressed",
+	"ApproachedToReleased", "Pressed", "PressedToApproached"
 };
 
 struct CvdStruct {
@@ -52,11 +52,11 @@ struct CvdStruct {
 		/*
 		 * Button states.
 		 * buttonStatePreCalibrating, buttonStateCalibrating,
-		 * buttonStateReleased, buttonStateApproached and
-		 * buttonStateApproachedToPressed can be regarded as "released"
-		 * or "not touched". buttonStatePressed and
-		 * buttonStatePressedToApproached can be regarded as "pressed"
-		 * or "touched".
+		 * buttonStateNoisePowerMeasurement, buttonStateReleased,
+		 * buttonStateApproached and buttonStateApproachedToPressed can
+		 * be regarded as "released" or "not touched".
+		 * buttonStatePressed and buttonStatePressedToApproached can be
+		 * regarded as "pressed" or "touched".
 		 *
 		 * In application code, this can be simplified by considering a
 		 * button as "pressed" or "touched" if the button state is equal
@@ -68,6 +68,7 @@ struct CvdStruct {
 		 */
 		buttonStatePreCalibrating = 0,
 		buttonStateCalibrating,
+		buttonStateNoisePowerMeasurement,
 		buttonStateReleased,
 		buttonStateReleasedToApproached,
 		buttonStateApproached,
@@ -155,8 +156,8 @@ struct CvdStruct {
 	 * Set enableTouchStateMachine to false to only use a sensor for
 	 * capacitive sensing or during tuning. After startup, sensor will be in
 	 * state buttonStatePreCalibrating followed by buttonStateCalibrating
-	 * and after calibration the state will switch to buttonStateReleased
-	 * and stay there.
+	 * and buttonStateNoisePowerMeasurement. After noise measurement the state
+	 * will switch to buttonStateReleased and stay there.
 	 */
 	bool enableTouchStateMachine;
 
@@ -189,6 +190,7 @@ struct CvdStruct {
 	unsigned long lastSampledAtTime;
 	unsigned long stateChangedAtTime;
 	bool slewrateFirstSample;
+	bool noisePowerMeasurementComplete;
 };
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
@@ -213,6 +215,7 @@ class CvdSensors
 		int8_t setDefaults(void);
 		int8_t sample(void);
 		void printScanOrder(void);
+		void setState(int n, enum CvdStruct::ButtonState newState);
 		CvdSensors(void);
 		~CvdSensors(void);
 
@@ -236,8 +239,11 @@ class CvdSensors
 		bool isApproached(CvdStruct * d);
 		bool isReleased(CvdStruct * d);
 		void updateAvg(CvdStruct * d);
+		void setState(CvdStruct * d, enum CvdStruct::ButtonState
+			newState);
 		void processStatePreCalibrating(CvdStruct * d);
 		void processStateCalibrating(CvdStruct * d);
+		void processStateNoisePowerMeasurement(CvdStruct * d);
 		void processStateReleased(CvdStruct * d);
 		void processStateReleasedToApproached(CvdStruct * d);
 		void processStateApproached(CvdStruct * d);
@@ -437,6 +443,7 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 				DISABLE_UPDATE_IF_ANY_BUTTON_IS_APPROACHED_DEFAULT;
 			data[n].disableUpdateIfAnyButtonIsPressed =
 				DISABLE_UPDATE_IF_ANY_BUTTON_IS_PRESSED_DEFAULT;
+			data[n].noisePowerMeasurementComplete = false;
 
 			if (!data[n].setParallelCapacitanceManually) {
 				/*
@@ -449,6 +456,76 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 	}
 
 	return error;
+}
+
+template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(CvdStruct * d,
+		enum CvdStruct::ButtonState newState)
+{
+	bool setStateChangedAtTime = true;
+
+	/* 
+	 * When switching from approachedToReleased back to approached or from
+	 * pressedToApproached back to pressed, do not update
+	 * stateChangedAtTime. If it would be updated, button could be
+	 * erroneously in approached or pressed state and would never trigger a
+	 * recalibration.
+	 */
+	if (((d->buttonState == CvdStruct::buttonStateApproachedToReleased) &&
+			newState == CvdStruct::buttonStateApproached) ||
+			((d->buttonState == CvdStruct::buttonStatePressedToApproached) &&
+			newState == CvdStruct::buttonStatePressed)) {
+		setStateChangedAtTime = false;
+	}
+
+	if (d->buttonState != newState) {
+		switch(newState) {
+		case CvdStruct::buttonStateCalibrating:
+			d->counter = 0;
+			d->avg = 0;
+			d->noisePower = 0;
+			d->noisePowerMeasurementComplete = false;
+	
+			if (!d->setParallelCapacitanceManually) {
+				/*
+				 * Set parallelCapacitance to 0; will be updated
+				 * after calibration.
+				 */
+				d->parallelCapacitance = 0;
+			}
+			break;
+		case CvdStruct::buttonStatePreCalibrating:
+			/* Intentional fall-through. */
+		case CvdStruct::buttonStateNoisePowerMeasurement:
+			/* Intentional fall-through. */
+		case CvdStruct::buttonStateReleased:
+			/* Intentional fall-through. */
+		case CvdStruct::buttonStateReleasedToApproached:
+			/* Intentional fall-through. */
+		case CvdStruct::buttonStateApproached:
+			/* Intentional fall-through. */
+		case CvdStruct::buttonStateApproachedToPressed:
+			/* Intentional fall-through. */
+		case CvdStruct::buttonStateApproachedToReleased:
+			/* Intentional fall-through. */
+		case CvdStruct::buttonStatePressed:
+			/* Intentional fall-through. */
+		case CvdStruct::buttonStatePressedToApproached:
+			break;
+		}
+
+		if (setStateChangedAtTime) {
+			d->stateChangedAtTime = d->lastSampledAtTime;
+		}
+		d->buttonState = newState; 
+	}
+}
+
+template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(int n,
+		enum CvdStruct::ButtonState newState)
+{
+	setState(&(this->data[n]), newState);
 }
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
@@ -501,8 +578,8 @@ CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::CvdSensors(void)
 
 		for (n = 0; n < nSensors; n++) {
 			resetButtonStateSummaries(n);
-			data[n].buttonState = 
-				CvdStruct::buttonStatePreCalibrating;
+			setState(&(data[n]),
+				CvdStruct::buttonStatePreCalibrating);
 			data[n].buttonStateLabel =
 				CVDButtonStateLabels[data[n].buttonState];
 			data[n].counter = 0;
@@ -794,21 +871,28 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(CvdStruct * d)
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePreCalibrating(CvdStruct * d)
 {
+	d->noisePowerMeasurementComplete = false;
+
 	if (d->lastSampledAtTime - d->stateChangedAtTime >= d->preCalibrationTime) {
-		d->stateChangedAtTime = d->lastSampledAtTime;
-		d->buttonState = CvdStruct::buttonStateCalibrating;
+		setState(d, CvdStruct::buttonStateCalibrating);
 	}
 }
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateCalibrating(CvdStruct * d)
 {
-	if (d->lastSampledAtTime - d->stateChangedAtTime < d->calibrationTime) {
+	unsigned long t, t_max;
+
+	d->noisePowerMeasurementComplete = false;
+
+	t = d->lastSampledAtTime - d->stateChangedAtTime;
+	t_max = d->calibrationTime;
+
+	if (t < t_max) {
 		updateAvg(d);
 	} else {
-		d->stateChangedAtTime = d->lastSampledAtTime;
-		d->buttonState = CvdStruct::buttonStateReleased;
-
+		setState(d, CvdStruct::buttonStateNoisePowerMeasurement);
+	
 		if (!d->setParallelCapacitanceManually) {
 			d->parallelCapacitance = d->avg;
 		}
@@ -816,11 +900,28 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateCalibrating(C
 }
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateNoisePowerMeasurement(CvdStruct * d)
+{
+	unsigned long t, t_max;
+
+	d->noisePowerMeasurementComplete = false;
+
+	t = d->lastSampledAtTime - d->stateChangedAtTime;
+	t_max = d->calibrationTime;
+
+	if ((d->enableNoisePowerMeasurement) && (t < t_max)) {
+		updateAvg(d);
+	} else {
+		d->noisePowerMeasurementComplete = true;
+		setState(d, CvdStruct::buttonStateReleased);
+	}
+}
+
+template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateReleased(CvdStruct * d)
 {
 	if ((d->enableTouchStateMachine) && (isApproached(d))) {
-		d->stateChangedAtTime = d->lastSampledAtTime;
-		d->buttonState = CvdStruct::buttonStateReleasedToApproached;
+		setState(d, CvdStruct::buttonStateReleasedToApproached);
 	} else {
 		updateAvg(d);
 	}
@@ -837,12 +938,10 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateReleasedToApp
 	if (isApproached(d)) {
 		if (d->lastSampledAtTime - d->stateChangedAtTime >=
 				d->releasedToApproachedTime) {
-			d->stateChangedAtTime = d->lastSampledAtTime;
-			d->buttonState = CvdStruct::buttonStateApproached;
+			setState(d, CvdStruct::buttonStateApproached);
 		}
 	} else {
-		d->stateChangedAtTime = d->lastSampledAtTime;
-		d->buttonState = CvdStruct::buttonStateReleased;
+		setState(d, CvdStruct::buttonStateReleased);
 	}
 }
 
@@ -853,26 +952,12 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproached(Cv
 		return;
 
 	if (isReleased(d)) {
-		d->stateChangedAtTime = d->lastSampledAtTime;
-		d->buttonState = CvdStruct::buttonStateApproachedToReleased;
+		setState(d, CvdStruct::buttonStateApproachedToReleased);
 	} else if (isPressed(d)) {
-		d->stateChangedAtTime = d->lastSampledAtTime;
-		d->buttonState = CvdStruct::buttonStateApproachedToPressed;
+		setState(d, CvdStruct::buttonStateApproachedToPressed);
 	} else if ((d->approachedTimeout > 0) && (d->lastSampledAtTime - 
 			d->stateChangedAtTime > d->approachedTimeout)) {
-		d->counter = 0;
-		d->avg = 0;
-		d->noisePower = 0;
-		d->stateChangedAtTime = d->lastSampledAtTime;
-		d->buttonState = CvdStruct::buttonStateCalibrating;
-
-		if (!d->setParallelCapacitanceManually) {
-			/*
-			 * Set parallelCapacitance to 0; will be updated
-			 * after calibration.
-			 */
-			d->parallelCapacitance = 0;
-		}
+		setState(d, CvdStruct::buttonStateCalibrating);
 	}
 }
 
@@ -887,12 +972,10 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproachedToP
 	if (isPressed(d)) {
 		if (d->lastSampledAtTime - d->stateChangedAtTime >=
 				d->approachedToPressedTime) {
-			d->stateChangedAtTime = d->lastSampledAtTime;
-			d->buttonState = CvdStruct::buttonStatePressed;
+			setState(d, CvdStruct::buttonStatePressed);
 		}
 	} else {
-		d->stateChangedAtTime = d->lastSampledAtTime;
-		d->buttonState = CvdStruct::buttonStateApproached;
+		setState(d, CvdStruct::buttonStateApproached);
 	}
 }
 
@@ -905,29 +988,14 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproachedToR
 	if (isReleased(d)) {
 		if (d->lastSampledAtTime - d->stateChangedAtTime >=
 				d->approachedToReleasedTime) {
-			d->stateChangedAtTime = d->lastSampledAtTime;
 			if (d->forceCalibrationAfterApproached) {
-				d->counter = 0;
-				d->avg = 0;
-				d->noisePower = 0;
-				d->buttonState =
-					CvdStruct::buttonStateCalibrating;
-				if (!d->setParallelCapacitanceManually) {
-					/*
-					 * Set parallelCapacitance to 0; will be
-					 * updated after calibration.
-					 */
-					d->parallelCapacitance = 0;
-				}
+				setState(d, CvdStruct::buttonStateCalibrating);
 			} else {
-				d->buttonState =
-					CvdStruct::buttonStateReleased;
+				setState(d, CvdStruct::buttonStateReleased);
 			}
 		}
 	} else {
-		/* Do not set stateChangedAtTime here. */
-
-		d->buttonState = CvdStruct::buttonStateApproached;
+		setState(d, CvdStruct::buttonStateApproached);
 	}
 }
 
@@ -940,23 +1008,10 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressed(CvdSt
 	if (isPressed(d)) {
 		if ((d->pressedTimeout > 0) && (d->lastSampledAtTime - 
 				d->stateChangedAtTime > d->pressedTimeout)) {
-			d->counter = 0;
-			d->avg = 0;
-			d->noisePower = 0;
-			d->stateChangedAtTime = d->lastSampledAtTime;
-			d->buttonState = CvdStruct::buttonStateCalibrating;
-
-			if (!d->setParallelCapacitanceManually) {
-				/*
-				 * Set parallelCapacitance to 0; will be updated
-				 * after calibration.
-				 */
-				d->parallelCapacitance = 0;
-			}
+			setState(d, CvdStruct::buttonStateCalibrating);
 		}
 	} else {
-		d->stateChangedAtTime = d->lastSampledAtTime;
-		d->buttonState = CvdStruct::buttonStatePressedToApproached;
+		setState(d, CvdStruct::buttonStatePressedToApproached);
 	}
 }
 
@@ -967,29 +1022,14 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressedToAppr
 		return;
 
 	if (isPressed(d)) {
-		/* Do not set stateChangedAtTime here. */
-
-		d->buttonState = CvdStruct::buttonStatePressed;
+		setState(d, CvdStruct::buttonStatePressed);
 	} else {
 		if (d->lastSampledAtTime - d->stateChangedAtTime >= 
 				d->pressedToApproachedTime) {
-			d->stateChangedAtTime = d->lastSampledAtTime;
 			if (d->forceCalibrationAfterPressed) {
-				d->counter = 0;
-				d->avg = 0;
-				d->noisePower = 0;
-				d->buttonState =
-					CvdStruct::buttonStateCalibrating;
-				if (!d->setParallelCapacitanceManually) {
-					/*
-					 * Set parallelCapacitance to 0; will be
-					 * updated after calibration.
-					 */
-					d->parallelCapacitance = 0;
-				}
+				setState(d, CvdStruct::buttonStateCalibrating);
 			} else {
-				d->buttonState =
-					CvdStruct::buttonStateApproached;
+				setState(d, CvdStruct::buttonStateApproached);
 			}
 		}
 	}
@@ -1010,6 +1050,9 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processSample(uint8_t ch)
 		break;
 	case CvdStruct::buttonStateCalibrating:
 		processStateCalibrating(d);
+		break;
+	case CvdStruct::buttonStateNoisePowerMeasurement:
+		processStateNoisePowerMeasurement(d);
 		break;
 	case CvdStruct::buttonStateReleased:
 		processStateReleased(d);
@@ -1148,7 +1191,8 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 	this->anyButtonIsPressed = false;
 	for (ch = 0; ch < nSensors; ch++) {
 		resetButtonStateSummaries(ch);
-		if (data[ch].buttonState <= CvdStruct::buttonStateCalibrating) {
+		if (data[ch].buttonState <=
+				CvdStruct::buttonStateNoisePowerMeasurement) {
 			data[ch].buttonIsCalibrating = true;
 		}
 		if ((data[ch].buttonState >= CvdStruct::buttonStateReleased) &&
