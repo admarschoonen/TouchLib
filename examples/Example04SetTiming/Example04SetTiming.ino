@@ -63,7 +63,9 @@ void setup()
 		 * close to the sensor).
 		 *
 		 * Reduce this value to recover sooner in case a button is
-		 * accidentally held in approached state due to noise.
+		 * accidentally held in approached state due to noise. Set to 0
+		 * to disable automatic recalibration after a certain time
+		 * altogether.
 		 *
 		 * Change the value here and observe the difference in time
 		 * before recalibration is triggered.
