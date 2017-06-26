@@ -122,15 +122,15 @@ struct CvdStruct {
 	int pin;
 	enum Direction direction;
 	enum SampleType sampleType;
-	float releasedToApproachedThreshold;
-	float approachedToReleasedThreshold;
-	float approachedToPressedThreshold;
-	float pressedToApproachedThreshold;
+	float releasedToApproachedThreshold; /* stored in EEPROM */
+	float approachedToReleasedThreshold; /* stored in EEPROM */
+	float approachedToPressedThreshold; /* stored in EEPROM */
+	float pressedToApproachedThreshold; /* stored in EEPROM */
 	uint32_t releasedToApproachedTime;
 	uint32_t approachedToReleasedTime;
 	uint32_t approachedToPressedTime;
 	uint32_t pressedToApproachedTime;
-	bool enableSlewrateLimiter;
+	bool enableSlewrateLimiter; /* stored in EEPROM as global */
 	unsigned long preCalibrationTime;
 	unsigned long calibrationTime;
 	unsigned long approachedTimeout;
@@ -243,6 +243,7 @@ class CvdSensors
 		 */
 		void EEPROM_update(int addr, uint8_t b);
 
+		uint16_t eepromSizeRequired(void);
 		float readFloatFromEeprom(int * addr, uint16_t * crc);
 		void writeFloatToEeprom(float f, int * addr, uint16_t * crc);
 		void readSensorSettingFromEeprom(int n, int * addr, 
@@ -334,6 +335,16 @@ class CvdSensors
 #define CVD_EEPROM_FORMAT_SHIFT					5
 #define CVD_EEPROM_N_SENSORS_MASK				0x1F
 #define CVD_EEPROM_N_SENSORS_SHIFT				0
+#define CVD_EEPROM_CONFIG_ENABLE_SLEWRATE_LIMITER		0x80
+
+/*
+ * EEPROM overhead:
+ * 1 byte key
+ * 1 byte description (EEPROM format version + nSensors)
+ * 1 byte config
+ * 2 byte CRC
+ */
+#define CVD_EEPROM_N_BYTES_OVERHEAD				(1+1+1+2)
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addChannel(uint8_t ch)
@@ -641,6 +652,12 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSensorSettingToEepro
 }
 
 template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+uint16_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::eepromSizeRequired(void)
+{
+	return nSensors * 4 * sizeof(float) + CVD_EEPROM_N_BYTES_OVERHEAD;
+}
+
+template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSettingsToEeprom(void)
 {
 	int addr = eepromOffset;
@@ -652,7 +669,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSettingsToEeprom(voi
 		error = -28; /* not enough space; return ENOSPC */
 	}
 
-	if (eepromOffset + nSensors * 4 * sizeof(float) + 4 > EEPROM_length()) {
+	if (eepromOffset + eepromSizeRequired() > EEPROM_length()) {
 		error = -28; /* not enough space; return ENOSPC */
 	}
 
@@ -691,12 +708,14 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSettingsFromEeprom(vo
 	uint8_t tmp;
 	uint8_t formatVersion;
 	uint8_t nSensorsEeprom;
+	uint8_t config = 0;
+	bool b;
 
 	if (((nSensors - 1) & CVD_EEPROM_N_SENSORS_MASK) != (nSensors - 1)) {
 		error = -28; /* not enough space; return ENOSPC */
 	}
 
-	if (eepromOffset + nSensors * 4 * sizeof(float) + 4 > EEPROM_length()) {
+	if (eepromOffset + eepromSizeRequired() > EEPROM_length()) {
 		error = -28; /* not enough space; return ENOSPC */
 	}
 
@@ -713,6 +732,9 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSettingsFromEeprom(vo
 			CVD_EEPROM_FORMAT_MASK);
 		nSensorsEeprom = ((tmp >> CVD_EEPROM_N_SENSORS_SHIFT) &
 			CVD_EEPROM_N_SENSORS_MASK) + 1;
+
+		config = EEPROM.read(addr++);
+		crc = crcUpdate(crc, tmp);
 
 		if (formatVersion != CVD_EEPROM_FORMAT_VERSION) {
 			error = -5; /* incorrect version; return EIO */
@@ -747,6 +769,16 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSettingsFromEeprom(vo
 		/* CRC is valid; read again but now do apply settings */
 		for (n = 0; n < nSensors; n++) {
 			readSensorSettingFromEeprom(n, &addr, &crc, true);
+		}
+
+		/* Apply settings from config */
+		if (config & CVD_EEPROM_CONFIG_ENABLE_SLEWRATE_LIMITER) {
+			b = true;
+		} else {
+			b = false;
+		}
+		for (n = 0; n < nSensors; n++) {
+			data[n].enableSlewrateLimiter = b;
 		}
 	}
 }
