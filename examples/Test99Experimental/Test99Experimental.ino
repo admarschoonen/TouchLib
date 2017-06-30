@@ -1,3 +1,4 @@
+#include <EEPROM.h>
 #include <CVDSensor.h>
 
 /*
@@ -44,10 +45,10 @@ void setup()
 	Serial.println();
 	Serial.println();
 
-	cvdSensors.data[0].pin = 0; /* Analog pin 0 */
+	cvdSensors.data[0].pin = A0; /* Analog pin 0 */
 	cvdSensors.data[0].setParallelCapacitanceManually = false;
 
-	cvdSensors.data[1].pin = 1; /* Analog pin 1 */
+	cvdSensors.data[1].pin = A1; /* Analog pin 1 */
 	cvdSensors.data[1].setParallelCapacitanceManually = false;
 
 	cvdSensors.printScanOrder();

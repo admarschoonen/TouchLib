@@ -1,3 +1,4 @@
+#include <EEPROM.h>
 #include <CVDSensor.h>
 
 /*

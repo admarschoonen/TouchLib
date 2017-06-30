@@ -45,4 +45,6 @@ Things to do or ideas to implement:
 * add forceCalibrationAfterReleased / AfterCalibrated bitmasks so resistive
   sensor can be calibrated after capacitive sensor is released
 * add callbacks (function pointers) when button state is changed
+* add ResponsiveAnalogRead method?
 
+* fix bug in printing floating point numbers with fixed width (SNR example)

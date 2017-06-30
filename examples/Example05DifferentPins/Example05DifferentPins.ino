@@ -1,3 +1,4 @@
+#include <EEPROM.h>
 #include <CVDSensor.h>
 
 /*
@@ -49,10 +50,10 @@ void setup()
 	 * By default, pins are connected starting at A0 in successive order.
 	 * Change the .pin parameter to select a different pin.
 	 */
-	cvdSensors.data[0].pin = 0; /* Analog pin 0 */
-	cvdSensors.data[1].pin = 2; /* Analog pin 2 */
-	cvdSensors.data[2].pin = 4; /* Analog pin 4 */
-	cvdSensors.data[3].pin = 6; /* Analog pin 6 */
+	cvdSensors.data[0].pin = A0; /* Analog pin 0 */
+	cvdSensors.data[1].pin = A2; /* Analog pin 2 */
+	cvdSensors.data[2].pin = A4; /* Analog pin 4 */
+	cvdSensors.data[3].pin = A6; /* Analog pin 6 */
 }
 
 void loop()
