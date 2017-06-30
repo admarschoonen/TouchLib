@@ -151,8 +151,8 @@ struct CvdStruct {
 	uint32_t nChargesMin;
 	uint32_t nChargesMax;
 	bool useNChargesPadding;
-	uint16_t chargeDelaySensor; /* delay to charge sensor in microseconds (us) */
-	uint16_t chargeDelayADC; /* delay to charge ADC in microseconds (us) */
+	unsigned int chargeDelaySensor; /* delay to charge sensor in microseconds (us) */
+	unsigned int chargeDelayADC; /* delay to charge ADC in microseconds (us) */
 
 	/*
 	 * Set enableTouchStateMachine to false to only use a sensor for
@@ -195,7 +195,7 @@ struct CvdStruct {
 	bool noisePowerMeasurementComplete;
 };
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 class CvdSensors
 {
 	public:
@@ -346,7 +346,7 @@ class CvdSensors
  */
 #define CVD_EEPROM_N_BYTES_OVERHEAD				(1+1+1+2)
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addChannel(uint8_t ch)
 {
 	long r;
@@ -370,7 +370,7 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addChannel(uint8_t ch)
 	return err;
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::initScanOrder(void)
 {
 	uint16_t pos, length;
@@ -395,7 +395,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::initScanOrder(void)
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 {
 	uint8_t n;
@@ -525,7 +525,7 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
  *  - Algorithm     = bit-by-bit-fast
  */
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 uint16_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::crcUpdate(uint16_t
 		crc, unsigned char c)
 {
@@ -550,7 +550,7 @@ uint16_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::crcUpdate(uint16_t
  * Older versions of EEPROM library don't have length(). Add function here for
  * compatibility.
  */
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 uint16_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::EEPROM_length(void)
 {
 	return E2END + 1;
@@ -560,7 +560,7 @@ uint16_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::EEPROM_length(void)
  * Older versions of EEPROM library don't have update(). Add function here for
  * compatibility.
  */
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::EEPROM_update(int
 		addr, uint8_t b)
 {
@@ -569,7 +569,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::EEPROM_update(int
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 float CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readFloatFromEeprom(int
 		* addr, uint16_t * crc)
 {
@@ -590,7 +590,7 @@ float CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readFloatFromEeprom(int
 	return f;
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeFloatToEeprom(float f,
 		int * addr, uint16_t * crc)
 {
@@ -608,7 +608,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeFloatToEeprom(float 
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSensorSettingFromEeprom(int n, 
 		int * addr, uint16_t * crc, bool applySettings)
 {
@@ -632,7 +632,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSensorSettingFromEepr
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSensorSettingToEeprom(int n, 
 		int * addr, uint16_t * crc)
 {
@@ -651,13 +651,13 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSensorSettingToEepro
 	writeFloatToEeprom(f, addr, crc);
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 uint16_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::eepromSizeRequired(void)
 {
 	return nSensors * 4 * sizeof(float) + CVD_EEPROM_N_BYTES_OVERHEAD;
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSettingsToEeprom(void)
 {
 	int addr = eepromOffset;
@@ -698,7 +698,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSettingsToEeprom(voi
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSettingsFromEeprom(void)
 {
 	int addr = eepromOffset;
@@ -783,14 +783,14 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSettingsFromEeprom(vo
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::~CvdSensors(void)
 {
 	/* Nothing to destroy */
 }
 
 #warning overload constructor with uint8_t customScanOrder[]
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::CvdSensors(void)
 {
 	uint8_t n;
@@ -861,7 +861,7 @@ CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::CvdSensors(void)
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 uint8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::channelToReference(uint8_t ch)
 {
 	uint8_t ref;
@@ -874,7 +874,7 @@ uint8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::channelToReference(uin
 	return ref;
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::hasMux5(void)
 {
 	bool result = false;
@@ -897,7 +897,7 @@ bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::hasMux5(void)
 	return result;
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setAdcReferencePin(int pin)
 {
 	unsigned char mux;
@@ -923,7 +923,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setAdcReferencePin(int pi
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setSensorAndReferencePins(
 		int ch_pin, int ref_pin, bool inv)
 {
@@ -944,7 +944,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setSensorAndReferencePins
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::chargeADC(uint8_t ch,
 		int ref_pin)
 {
@@ -956,7 +956,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::chargeADC(uint8_t ch,
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::chargeSensor(uint8_t ch,
 		int ch_pin)
 {
@@ -970,7 +970,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::chargeSensor(uint8_t ch,
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::charge(uint8_t ch,
 		int ch_pin, int ref_pin)
 {
@@ -978,7 +978,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::charge(uint8_t ch,
 	chargeSensor(ch, ch_pin);
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 int CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sampleHalf(uint16_t pos,
 		bool inv)
 {
@@ -1027,7 +1027,7 @@ int CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sampleHalf(uint16_t pos,
 	return sample;
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addSample(uint8_t ch, int32_t sample)
 {
 	if (data[ch].enableSlewrateLimiter) {
@@ -1047,7 +1047,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addSample(uint8_t ch, int
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isReleased(CvdStruct * d)
 {
 	bool isReleased = false;
@@ -1064,7 +1064,7 @@ bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isReleased(CvdStruct * d)
 	return isReleased;
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isApproached(CvdStruct * d)
 {
 	bool isApproached = false;
@@ -1081,7 +1081,7 @@ bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isApproached(CvdStruct * 
 	return isApproached;
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isPressed(CvdStruct * d)
 {
 	bool isPressed = false;
@@ -1098,7 +1098,7 @@ bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isPressed(CvdStruct * d)
 	return isPressed;
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(CvdStruct * d)
 {
 	float s;
@@ -1127,7 +1127,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(CvdStruct * d)
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(CvdStruct * d,
 		enum CvdStruct::ButtonState newState)
 {
@@ -1190,14 +1190,14 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(CvdStruct * d,
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(int n,
 		enum CvdStruct::ButtonState newState)
 {
 	setState(&(this->data[n]), newState);
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePreCalibrating(CvdStruct * d)
 {
 	d->noisePowerMeasurementComplete = false;
@@ -1207,7 +1207,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePreCalibratin
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateCalibrating(CvdStruct * d)
 {
 	unsigned long t, t_max;
@@ -1228,7 +1228,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateCalibrating(C
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateNoisePowerMeasurement(CvdStruct * d)
 {
 	unsigned long t, t_max;
@@ -1246,7 +1246,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateNoisePowerMea
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateReleased(CvdStruct * d)
 {
 	if ((d->enableTouchStateMachine) && (isApproached(d))) {
@@ -1256,7 +1256,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateReleased(CvdS
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateReleasedToApproached(CvdStruct * d)
 {
 	/* Do not update average in this state. */
@@ -1274,7 +1274,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateReleasedToApp
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproached(CvdStruct * d)
 {
 	if (!d->enableTouchStateMachine)
@@ -1290,7 +1290,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproached(Cv
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproachedToPressed(CvdStruct * d)
 {
 	/* Do not update average in this state. */
@@ -1308,7 +1308,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproachedToP
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproachedToReleased(CvdStruct * d)
 {
 	if (!d->enableTouchStateMachine)
@@ -1328,7 +1328,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproachedToR
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressed(CvdStruct * d)
 {
 	if (!d->enableTouchStateMachine)
@@ -1344,7 +1344,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressed(CvdSt
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressedToApproached(CvdStruct * d)
 {
 	if (!d->enableTouchStateMachine)
@@ -1364,7 +1364,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressedToAppr
 	}
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processSample(uint8_t ch)
 {
 	CvdStruct * d;
@@ -1409,7 +1409,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processSample(uint8_t ch)
 	d->buttonStateLabel = CVDButtonStateLabels[d->buttonState];
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::correctSample(uint8_t ch)
 {
 	CvdStruct * d;
@@ -1446,7 +1446,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::correctSample(uint8_t ch)
 	/* Distance can be negative due to noise! */
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateNCharges(uint8_t ch)
 {
 	CvdStruct * d;
@@ -1455,7 +1455,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateNCharges(uint8_t ch
 	d->nCharges = d->nChargesNext;
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::resetButtonStateSummaries(uint8_t ch)
 {
 	data[ch].buttonIsCalibrating = false;
@@ -1464,7 +1464,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::resetButtonStateSummaries
 	data[ch].buttonIsPressed = false;
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 {
 	uint16_t length, pos;
@@ -1543,7 +1543,7 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 	return error;
 }
 
-template <int N_SENSORS, int N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::printScanOrder(void)
 {
 	uint16_t n;
