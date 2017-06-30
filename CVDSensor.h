@@ -294,7 +294,7 @@ class CvdSensors
 #define CVD_APPROACHED_TO_RELEASED_TIME_DEFAULT			10
 #define CVD_APPROACHED_TO_PRESSED_TIME_DEFAULT			10
 #define CVD_PRESSED_TO_APPROACHED_TIME_DEFAULT			10
-#define CVD_ENABLE_SLEW_RATE_LIMITER_DEFAULT			true
+#define CVD_ENABLE_SLEWRATE_LIMITER_DEFAULT			false
 #define CVD_PRE_CALIBRATION_TIME_DEFAULT			100
 #define CVD_CALIBRATION_TIME_DEFAULT				500
 #define CVD_FILTER_COEFF_DEFAULT				128
@@ -414,7 +414,7 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 #ifdef NUM_ANALOG_PINS
 	if (error == 0) {
 		for (n = 0; n < nSensors; n++) {
-			if (cvdSensors[n].pin >= NUM_ANALOG_PINS) {
+			if (cvdSensors[n].pin - A0 >= NUM_ANALOG_PINS) {
 				error = -1;
 			}
 		}
@@ -437,7 +437,7 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 
 	if (error == 0) {
 		for (n = 0; n < nSensors; n++) {
-			data[n].pin = n;
+			data[n].pin = A0 + n;
 			data[n].direction = CvdStruct::directionPositive;
 			data[n].sampleType = CvdStruct::sampleTypeDifferential;
 			data[n].releasedToApproachedThreshold =
@@ -457,7 +457,7 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 			data[n].pressedToApproachedTime =
 				CVD_PRESSED_TO_APPROACHED_TIME_DEFAULT;
 			data[n].enableSlewrateLimiter = 
-				CVD_ENABLE_SLEW_RATE_LIMITER_DEFAULT;
+				CVD_ENABLE_SLEWRATE_LIMITER_DEFAULT;
 			data[n].preCalibrationTime =
 				CVD_PRE_CALIBRATION_TIME_DEFAULT;
 			data[n].calibrationTime =
@@ -813,7 +813,7 @@ CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::CvdSensors(void)
 #ifdef NUM_ANALOG_PINS
 	if (error == 0) {
 		for (n = 0; n < nSensors; n++) {
-			if (cvdSensors[n].pin >= NUM_ANALOG_PINS) {
+			if (cvdSensors[n].pin - A0 >= NUM_ANALOG_PINS) {
 				error = -1;
 			}
 		}
@@ -903,10 +903,10 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setAdcReferencePin(int pi
 	unsigned char mux;
 
 	if (hasMux5()) {
-		if (pin < 8) {
-			mux = pin;
+		if (pin - A0 < 8) {
+			mux = pin - A0;
 		} else {
-			mux = 0x20 + (pin - 8);
+			mux = 0x20 + (pin - A0 - 8);
 		}
 
 		ADMUX &= ~0x1F;
@@ -917,7 +917,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setAdcReferencePin(int pi
 			ADCSRB &= ~0x08;
 		}
 	} else {
-		mux = pin;
+		mux = pin - A0;
 		ADMUX &= ~0x0F;
 		ADMUX |= (mux & 0x0F);
 	}
@@ -928,19 +928,20 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setSensorAndReferencePins
 		int ch_pin, int ref_pin, bool inv)
 {
 	/* Set reference pin as output and high. */
-	pinMode(A0 + ref_pin, OUTPUT);
+
+	pinMode(ref_pin, OUTPUT);
 	if (inv) {
-		digitalWrite(A0 + ref_pin, LOW);
+		digitalWrite(ref_pin, LOW);
 	} else {
-		digitalWrite(A0 + ref_pin, HIGH);
+		digitalWrite(ref_pin, HIGH);
 	}
 
 	/* Set sensor pin as output and low (discharge sensor). */
-	pinMode(A0 + ch_pin, OUTPUT);
+	pinMode(ch_pin, OUTPUT);
 	if (inv) {
-		digitalWrite(A0 + ch_pin, HIGH);
+		digitalWrite(ch_pin, HIGH);
 	} else {
-		digitalWrite(A0 + ch_pin, LOW);
+		digitalWrite(ch_pin, LOW);
 	}
 }
 
@@ -994,7 +995,7 @@ int CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sampleHalf(uint16_t pos,
 	setSensorAndReferencePins(ch_pin, ref_pin, inv);
 
 	/* Set sensor pin as analog input. */
-	pinMode(A0 + ch_pin, INPUT);
+	pinMode(ch_pin, INPUT);
 
 	/*
 	 * Charge nCharges - 1 times to account for the charge during the
@@ -1008,7 +1009,7 @@ int CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sampleHalf(uint16_t pos,
 	chargeADC(ch, ref_pin);
 
 	/* Read sensor. */
-	sample = analogRead(ch_pin);
+	sample = analogRead(ch_pin - A0);
 
 	if (data[ch].useNChargesPadding) {
 		/*
@@ -1021,8 +1022,8 @@ int CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sampleHalf(uint16_t pos,
 	}
 
 	/* Discharge sensor. */
-	pinMode(A0 + ch_pin, OUTPUT);
-	digitalWrite(A0 + ch_pin, LOW);
+	pinMode(ch_pin, OUTPUT);
+	digitalWrite(ch_pin, LOW);
 
 	return sample;
 }
