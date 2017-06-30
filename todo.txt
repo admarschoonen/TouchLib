@@ -40,10 +40,6 @@ Things to do or ideas to implement:
 * generate setup code
 * different sample functions for CVD, touchRead, resistive read, ... (+ allow
   for custom sample functions via function pointer?)
-* make forceCalibrationAfterApproached / AfterPressed uint32_t bitmasks so
-  calibration can be triggered if another sensor is approached / pressed
-* add forceCalibrationAfterReleased / AfterCalibrated bitmasks so resistive
-  sensor can be calibrated after capacitive sensor is released
 * add callbacks (function pointers) when button state is changed
 * add ResponsiveAnalogRead method?
 
