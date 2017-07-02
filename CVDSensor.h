@@ -41,12 +41,17 @@
 #include <avr/eeprom.h>
 #include <EEPROM.h>
 
+#include <TLSampleMethodCVD.h>
+
 /* These strings are for human readability */
 const char * const CVDButtonStateLabels[] = {
 	"PreCalibrating", "Calibrating", "NoisePowerMeasurement", "Released",
 	"ReleasedToApproached", "Approached", "ApproachedToPressed",
 	"ApproachedToReleased", "Pressed", "PressedToApproached"
 };
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+class CvdSensors;
 
 struct CvdStruct {
 	/* enum definitions */
@@ -156,6 +161,20 @@ struct CvdStruct {
 	unsigned int chargeDelaySensor; /* delay to charge sensor in microseconds (us) */
 	unsigned int chargeDelayADC; /* delay to charge ADC in microseconds (us) */
 
+	/* 
+	 * sampleMethod can be set to:
+	 * - TLSampleMethodCVD
+	 * - TLSampleMethodResistive
+	 * - TLSampleMethodTouchRead (Teensy 3.x only)
+	 * - custom method
+	 *
+	 * For custom method: the inv parameter indicates if an inverted
+	 * measurement is requested. This is used in pseudo differential
+	 * measurements. If inverted measurements are not supported, just check
+	 * return 0 when inv == true.
+	 */
+	int (*sampleMethod)(struct CvdStruct * d, uint8_t nSensors, uint8_t ch, bool inv);
+
 	/*
 	 * Set enableTouchStateMachine to false to only use a sensor for
 	 * capacitive sensing or during tuning. After startup, sensor will be in
@@ -227,6 +246,8 @@ class CvdSensors
 		void setState(int n, enum CvdStruct::ButtonState newState);
 		CvdSensors(void);
 		~CvdSensors(void);
+
+		/* call backs: */
 		void (*buttonStateChangeCallback)(int ch,
 			enum CvdStruct::ButtonState oldState,
 			enum CvdStruct::ButtonState newState);
@@ -258,17 +279,8 @@ class CvdSensors
 		void writeSensorSettingToEeprom(int n, int * addr, 
 			uint16_t * crc);
 		void readSettingsFromEeprom(void);
-		bool hasMux5(void);
-		uint8_t channelToReference(uint8_t ch);
-		void setAdcReferencePin(int pin);
 		int8_t addChannel(uint8_t ch);
 		void addSample(uint8_t ch, int32_t sample);
-		void chargeADC(uint8_t ch, int ref_pin);
-		void chargeSensor(uint8_t ch, int ch_pin);
-		void charge(uint8_t ch, int ch_pin, int ref_pin);
-		void setSensorAndReferencePins(int ch_pin, int ref_pin, bool
-			inv);
-		int sampleHalf(uint16_t pos, bool inv);
 		bool isPressed(CvdStruct * d);
 		bool isApproached(CvdStruct * d);
 		bool isReleased(CvdStruct * d);
@@ -342,6 +354,8 @@ class CvdSensors
 #define CVD_EEPROM_N_SENSORS_MASK				0x1F
 #define CVD_EEPROM_N_SENSORS_SHIFT				0
 #define CVD_EEPROM_CONFIG_ENABLE_SLEWRATE_LIMITER		0x80
+
+#define CVD_SAMPLE_METHOD_DEFAULT				(&TLSampleMethodCVD)
 
 /*
  * EEPROM overhead:
@@ -504,7 +518,7 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 			data[n].disableUpdateIfAnyButtonIsPressed =
 				CVD_DISABLE_UPDATE_IF_ANY_BUTTON_IS_PRESSED_DEFAULT;
 			data[n].stateIsBeingChanged = false;
-
+			data[n].sampleMethod = CVD_SAMPLE_METHOD_DEFAULT;
 			if (!data[n].setParallelCapacitanceManually) {
 				/*
 				 * Set parallelCapacitance to 0; will be updated
@@ -867,173 +881,6 @@ CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::CvdSensors(void)
 	if ((error == 0) && (this->enableReadSettingsFromEeprom)) {
 		readSettingsFromEeprom();
 	}
-}
-
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-uint8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::channelToReference(uint8_t ch)
-{
-	uint8_t ref;
-
-	if (ch == nSensors - 1)
-		ref = 0;
-	else
-		ref = ch + 1;
-
-	return ref;
-}
-
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::hasMux5(void)
-{
-	bool result = false;
-
-	/* 
-	 * From
-	 * http://electronics.stackexchange.com/questions/31048/can-an-atmega-
-	 * or-attiny-device-signature-be-read-while-running
-	 * and http://www.avrfreaks.net/forum/device-signatures.
-	 */
-	if ((SIGNATURE_0 == 0x1E) && (SIGNATURE_1 == 0x97)) {
-		/* ATmega128x */
-		result = true;
-	}
-	if ((SIGNATURE_0 == 0x1E) && (SIGNATURE_1 == 0x98)) {
-		/* ATmega256x */
-		result = true;
-	}
-
-	return result;
-}
-
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setAdcReferencePin(int pin)
-{
-	unsigned char mux;
-
-	if (hasMux5()) {
-		if (pin - A0 < 8) {
-			mux = pin - A0;
-		} else {
-			mux = 0x20 + (pin - A0 - 8);
-		}
-
-		ADMUX &= ~0x1F;
-		ADMUX |= (mux & 0x1F);
-		if (mux > 0x1F) {
-			ADCSRB |= 0x08;
-		} else {
-			ADCSRB &= ~0x08;
-		}
-	} else {
-		mux = pin - A0;
-		ADMUX &= ~0x0F;
-		ADMUX |= (mux & 0x0F);
-	}
-}
-
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setSensorAndReferencePins(
-		int ch_pin, int ref_pin, bool inv)
-{
-	/* Set reference pin as output and high. */
-
-	pinMode(ref_pin, OUTPUT);
-	if (inv) {
-		digitalWrite(ref_pin, LOW);
-	} else {
-		digitalWrite(ref_pin, HIGH);
-	}
-
-	/* Set sensor pin as output and low (discharge sensor). */
-	pinMode(ch_pin, OUTPUT);
-	if (inv) {
-		digitalWrite(ch_pin, HIGH);
-	} else {
-		digitalWrite(ch_pin, LOW);
-	}
-}
-
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::chargeADC(uint8_t ch,
-		int ref_pin)
-{
-	/* Set ADC to reference pin (charge Chold). */
-	setAdcReferencePin(ref_pin);
-
-	if (data[ch].chargeDelayADC) {
-		delayMicroseconds(data[ch].chargeDelayADC);
-	}
-}
-
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::chargeSensor(uint8_t ch,
-		int ch_pin)
-{
-	/*
-	 * Set ADC to sensor pin (transfer charge from Chold to Csense).
-	 */
-	setAdcReferencePin(ch_pin);
-
-	if (data[ch].chargeDelaySensor) {
-		delayMicroseconds(data[ch].chargeDelaySensor);
-	}
-}
-
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::charge(uint8_t ch,
-		int ch_pin, int ref_pin)
-{
-	chargeADC(ch, ref_pin);
-	chargeSensor(ch, ch_pin);
-}
-
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-int CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sampleHalf(uint16_t pos,
-		bool inv)
-{
-	uint8_t ch, ref;
-	int ch_pin, ref_pin, sample;
-	uint8_t i;
-
-	ch = scanOrder[pos];
-	ref = channelToReference(ch);
-	ch_pin = data[ch].pin;
-	ref_pin = data[ref].pin;
-
-	setSensorAndReferencePins(ch_pin, ref_pin, inv);
-
-	/* Set sensor pin as analog input. */
-	pinMode(ch_pin, INPUT);
-
-	/*
-	 * Charge nCharges - 1 times to account for the charge during the
-	 * analogRead() below.
-	 */
-	for (i = 0; i < data[ch].nCharges - 1; i++) {
-		charge(ch, ch_pin, ref_pin);
-	}
-
-	/* Set ADC to reference pin (charge internal capacitor). */
-	chargeADC(ch, ref_pin);
-
-	/* Read sensor. */
-	sample = analogRead(ch_pin - A0);
-
-	if (data[ch].useNChargesPadding) {
-		/*
-		 * Increment i before starting the loop to account for the
-		 * charge during the analogRead() above.
-		 */
-		for (++i; i < data[ch].nChargesMax; i++) {
-			charge(ch, ch_pin, ref_pin);
-		}
-	}
-
-	/* Discharge sensor. */
-	pinMode(ch_pin, OUTPUT);
-	digitalWrite(ch_pin, LOW);
-
-	return sample;
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
@@ -1571,11 +1418,16 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 	for (pos = 0; pos < length; pos++) {
 		if (data[scanOrder[pos]].sampleType &
 				CvdStruct::sampleTypeNormal) {
-			sample1 = sampleHalf(pos, false);
+			ch = scanOrder[pos];
+			sample1 = data[scanOrder[pos]].sampleMethod(data,
+				nSensors, ch, false);
 		}
 		if (data[scanOrder[pos]].sampleType &
 				CvdStruct::sampleTypeInverted) {
-			sample2 = CVD_ADC_MAX - sampleHalf(pos, true);
+			ch = scanOrder[pos];
+			sample2 = CVD_ADC_MAX - 
+				data[scanOrder[pos]].sampleMethod(data,
+				nSensors, ch, true);
 		}
 
 		/*
