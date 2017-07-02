@@ -41,7 +41,10 @@
 #include <avr/eeprom.h>
 #include <EEPROM.h>
 
+#include <TLSampleMethodCustom.h>
 #include <TLSampleMethodCVD.h>
+#include <TLSampleMethodResistive.h>
+#include <TLSampleMethodTouchRead.h>
 
 /* These strings are for human readability */
 const char * const CVDButtonStateLabels[] = {
@@ -126,6 +129,8 @@ struct CvdStruct {
 	 * overruled by the user.
 	 */
 	int pin;
+	int sampleMethodResistive_gndPin;
+	bool sampleMethodResistive_useInternalPullup;
 	enum Direction direction;
 	enum SampleType sampleType;
 	float releasedToApproachedThreshold; /* stored in EEPROM */
@@ -354,6 +359,8 @@ class CvdSensors
 #define CVD_EEPROM_N_SENSORS_MASK				0x1F
 #define CVD_EEPROM_N_SENSORS_SHIFT				0
 #define CVD_EEPROM_CONFIG_ENABLE_SLEWRATE_LIMITER		0x80
+#define CVD_SAMPLE_METHOD_RESISTIVE_GND_PIN			2
+#define CVD_SAMPLE_METHOD_RESISTIVE_USE_INTERNAL_PULLUP		true
 
 #define CVD_SAMPLE_METHOD_DEFAULT				(&TLSampleMethodCVD)
 
@@ -519,6 +526,10 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 				CVD_DISABLE_UPDATE_IF_ANY_BUTTON_IS_PRESSED_DEFAULT;
 			data[n].stateIsBeingChanged = false;
 			data[n].sampleMethod = CVD_SAMPLE_METHOD_DEFAULT;
+			data[n].sampleMethodResistive_gndPin =
+				CVD_SAMPLE_METHOD_RESISTIVE_GND_PIN;
+			data[n].sampleMethodResistive_useInternalPullup =
+				CVD_SAMPLE_METHOD_RESISTIVE_USE_INTERNAL_PULLUP;
 			if (!data[n].setParallelCapacitanceManually) {
 				/*
 				 * Set parallelCapacitance to 0; will be updated
@@ -1476,7 +1487,9 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 			data[ch].buttonIsPressed = true;
 			this->anyButtonIsPressed = true;
 		}
-		updateNCharges(ch);
+		if (data[ch].sampleMethod == TLSampleMethodCVD) {
+			updateNCharges(ch);
+		}
 	}
 
 	return error;

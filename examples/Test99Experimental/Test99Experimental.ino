@@ -12,7 +12,7 @@
  * sensor, set N_SENSORS to 2 and use an unused analog input pin for the second
  * sensor. For 2 or more sensors you don't need to add an unused analog input.
  */
-#define N_SENSORS			2
+#define N_SENSORS			4
 
 /* 
  * Number of measurements per sensor to take in one cycle. More measurements
@@ -51,6 +51,13 @@ void setup()
 	cvdSensors.data[1].pin = A1; /* Analog pin 1 */
 	cvdSensors.data[1].setParallelCapacitanceManually = false;
 
+	cvdSensors.data[2].pin = A3; /* Analog pin 3 */
+	cvdSensors.data[2].setParallelCapacitanceManually = false;
+
+	cvdSensors.data[3].pin = A3; /* Analog pin 3 */
+	cvdSensors.data[3].sampleMethod = TLSampleMethodResistive;
+	cvdSensors.data[3].sampleMethodResistive_gndPin = 2;
+
 	cvdSensors.printScanOrder();
 }
 
@@ -60,39 +67,36 @@ void loop()
 	int now;
 
 	cvdSensors.sample();
-	/*Serial.print("raw[0]: ");
-	Serial.print(cvdSensors.data[0].raw);*/
-	Serial.print("; \t\tcapacitance[0]: ");
-	Serial.print(cvdSensors.data[0].capacitance);
-	Serial.print(", \tavg: ");
-	Serial.print(cvdSensors.data[0].avg);
+	Serial.print("raw[0]: ");
+	Serial.print(cvdSensors.data[0].raw);
 	Serial.print(", \tdelta: ");
 	Serial.print(cvdSensors.data[0].delta);
 	Serial.print(", \tstate: ");
 	Serial.print(cvdSensors.data[0].buttonState);
-	/*Serial.print(", \tnCharges: ");
-	Serial.print(cvdSensors.data[0].nCharges);*/
-	/*Serial.print(", \tpcap: ");
-	Serial.print(cvdSensors.data[0].parallelCapacitance);*/
 
-	/*Serial.print("; \t\traw[1]: ");
-	Serial.print(cvdSensors.data[1].raw);*/
-	Serial.print("; \t\tcapacitance[1]: ");
-	Serial.print(cvdSensors.data[1].capacitance);
-	Serial.print(", \tavg: ");
+	Serial.print("; \t\traw[1]: ");
+	Serial.print(cvdSensors.data[1].raw);
 	Serial.print(cvdSensors.data[1].avg);
 	Serial.print(", \tdelta: ");
 	Serial.print(cvdSensors.data[1].delta);
 	Serial.print(", \tstate: ");
 	Serial.print(cvdSensors.data[1].buttonState);
-	/*Serial.print(", \tnCharges: ");
-	Serial.print(cvdSensors.data[1].nCharges);*/
-	/*Serial.print(", \tpcap: ");
-	Serial.print(cvdSensors.data[1].parallelCapacitance);*/
-	Serial.print("; \tLoop time: ");
-	now = millis();
-	Serial.println(now - prev);
-	prev = now;
+
+	Serial.print("; \t\traw[2]: ");
+	Serial.print(cvdSensors.data[2].raw);
+	Serial.print(cvdSensors.data[2].avg);
+	Serial.print(", \tdelta: ");
+	Serial.print(cvdSensors.data[2].delta);
+	Serial.print(", \tstate: ");
+	Serial.print(cvdSensors.data[2].buttonState);
+
+	Serial.print("; \t\traw[3]: ");
+	Serial.print(cvdSensors.data[3].raw);
+	Serial.print(cvdSensors.data[3].avg);
+	Serial.print(", \tdelta: ");
+	Serial.print(cvdSensors.data[3].delta);
+	Serial.print(", \tstate: ");
+	Serial.println(cvdSensors.data[3].buttonState);
 
 	//delay(100);
 }
