@@ -46,13 +46,6 @@
 #include <TLSampleMethodResistive.h>
 #include <TLSampleMethodTouchRead.h>
 
-/* These strings are for human readability */
-const char * const CVDButtonStateLabels[] = {
-	"PreCalibrating", "Calibrating", "NoisePowerMeasurement", "Released",
-	"ReleasedToApproached", "Approached", "ApproachedToPressed",
-	"ApproachedToReleased", "Pressed", "PressedToApproached"
-};
-
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 class CvdSensors;
 
@@ -63,8 +56,11 @@ struct CvdStruct {
 		 * Button states.
 		 * buttonStatePreCalibrating, buttonStateCalibrating,
 		 * buttonStateNoisePowerMeasurement, buttonStateReleased,
-		 * buttonStateApproached and buttonStateApproachedToPressed can
-		 * be regarded as "released" or "not touched".
+		 * buttonStateReleasedToApproached, buttonStateApproached,
+		 * buttonStateApproachedToReleased and
+		 * buttonStateApproachedToPressed can be regarded as "released"
+		 * or "not touched". 
+		 *
 		 * buttonStatePressed and buttonStatePressedToApproached can be
 		 * regarded as "pressed" or "touched".
 		 *
@@ -75,18 +71,22 @@ struct CvdStruct {
 		 * If desired, application can consider a button state larger
 		 * than or equal to buttonStateApproached and smaller than or
 		 * equal to buttonStateApproachedToReleased as "approached".
+		 *
+		 * Additionally, button state smaller than or equal to
+		 * buttonStateNoisePowerMeasurement can be considered as
+		 * "calibrating".
 		 */
 		buttonStatePreCalibrating = 0,
-		buttonStateCalibrating,
-		buttonStateNoisePowerMeasurement,
-		buttonStateReleased,
-		buttonStateReleasedToApproached,
-		buttonStateApproached,
-		buttonStateApproachedToPressed,
-		buttonStateApproachedToReleased,
-		buttonStatePressed,
-		buttonStatePressedToApproached,
-		buttonStateMax
+		buttonStateCalibrating = 1,
+		buttonStateNoisePowerMeasurement = 2,
+		buttonStateReleased = 3,
+		buttonStateReleasedToApproached = 4,
+		buttonStateApproached = 5,
+		buttonStateApproachedToPressed = 6,
+		buttonStateApproachedToReleased = 7,
+		buttonStatePressed = 8,
+		buttonStatePressedToApproached = 9,
+		buttonStateMax = 10
 	};
 
 	enum Direction {
@@ -310,6 +310,16 @@ class CvdSensors
 		void updateNCharges(uint8_t ch);
 		void resetButtonStateSummaries(uint8_t ch);
 		void initScanOrder(void);
+
+		/* These strings are for human readability */
+		const char * const buttonStateLabels[CvdStruct::buttonStateMax +
+				1] = {
+			"PreCalibrating", "Calibrating",
+			"NoisePowerMeasurement", "Released",
+			"ReleasedToApproached", "Approached",
+			"ApproachedToPressed", "ApproachedToReleased",
+			"Pressed", "PressedToApproached", "Invalid"
+		};
 };
 
 /* Actual implementation */
@@ -874,7 +884,7 @@ CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::CvdSensors(void)
 			resetButtonStateSummaries(n);
 			setState(n, CvdStruct::buttonStatePreCalibrating);
 			data[n].buttonStateLabel =
-				CVDButtonStateLabels[data[n].buttonState];
+				this->buttonStateLabels[data[n].buttonState];
 			data[n].counter = 0;
 			data[n].raw = 0;
 			data[n].capacitance = 0;
@@ -1408,7 +1418,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processSample(uint8_t ch)
 		processStateCalibrating(ch);
 	}
 
-	d->buttonStateLabel = CVDButtonStateLabels[d->buttonState];
+	d->buttonStateLabel = this->buttonStateLabels[d->buttonState];
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
