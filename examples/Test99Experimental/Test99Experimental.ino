@@ -68,35 +68,32 @@ void loop()
 
 	cvdSensors.sample();
 	Serial.print("raw[0]: ");
-	Serial.print(cvdSensors.data[0].raw);
+	Serial.print(cvdSensors.getRaw(0));
 	Serial.print(", \tdelta: ");
-	Serial.print(cvdSensors.data[0].delta);
+	Serial.print(cvdSensors.getDelta(0));
 	Serial.print(", \tstate: ");
-	Serial.print(cvdSensors.data[0].buttonState);
+	Serial.print(cvdSensors.getState(0));
 
 	Serial.print("; \t\traw[1]: ");
-	Serial.print(cvdSensors.data[1].raw);
-	Serial.print(cvdSensors.data[1].avg);
+	Serial.print(cvdSensors.getRaw(1));
 	Serial.print(", \tdelta: ");
-	Serial.print(cvdSensors.data[1].delta);
+	Serial.print(cvdSensors.getDelta(1));
 	Serial.print(", \tstate: ");
-	Serial.print(cvdSensors.data[1].buttonState);
+	Serial.print(cvdSensors.getState(1));
 
 	Serial.print("; \t\traw[2]: ");
-	Serial.print(cvdSensors.data[2].raw);
-	Serial.print(cvdSensors.data[2].avg);
+	Serial.print(cvdSensors.getRaw(2));
 	Serial.print(", \tdelta: ");
-	Serial.print(cvdSensors.data[2].delta);
+	Serial.print(cvdSensors.getDelta(2));
 	Serial.print(", \tstate: ");
-	Serial.print(cvdSensors.data[2].buttonState);
+	Serial.print(cvdSensors.getState(2));
 
 	Serial.print("; \t\traw[3]: ");
-	Serial.print(cvdSensors.data[3].raw);
-	Serial.print(cvdSensors.data[3].avg);
+	Serial.print(cvdSensors.getRaw(3));
 	Serial.print(", \tdelta: ");
-	Serial.print(cvdSensors.data[3].delta);
+	Serial.print(cvdSensors.getDelta(3));
 	Serial.print(", \tstate: ");
-	Serial.println(cvdSensors.data[3].buttonState);
+	Serial.println(cvdSensors.getState(3));
 
 	//delay(100);
 }

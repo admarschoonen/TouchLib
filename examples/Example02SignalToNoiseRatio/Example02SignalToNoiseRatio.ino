@@ -78,17 +78,15 @@ int processSerialData(int b)
 		}
 		if ((n >= 0) && (n == b) && (n <= N_SENSORS)) {
 			/* toggle sensor pressed state */
-			if (cvdSensors.data[n].buttonState ==
+			if (cvdSensors.getState(n) ==
 					CvdStruct::buttonStatePressed) {
 				cvdSensors.setState(n,
 					CvdStruct::buttonStateReleased);
-			} else if (cvdSensors.data[n].buttonState ==
+			} else if (cvdSensors.getState(n) ==
 					CvdStruct::buttonStateReleased) {
 				cvdSensors.setState(n,
 					CvdStruct::buttonStatePressed);
 			}
-			cvdSensors.data[n].buttonStateLabel =
-				CVDButtonStateLabels[cvdSensors.data[n].buttonState];
 		}
 	}
 
@@ -134,12 +132,12 @@ void loop()
 		b = n;
 	}
 
-	avg = cvdSensors.data[b].avg;
-	delta = cvdSensors.data[b].delta;
+	avg = cvdSensors.getAvg(b);
+	delta = cvdSensors.getDelta(b);
 	noisePower = cvdSensors.data[b].noisePower;
 	noiseAmp = sqrt(noisePower);
 	snr = 10 * log10(delta * delta / noisePower);
-	buttonStateLabel = cvdSensors.data[b].buttonStateLabel;
+	buttonStateLabel = cvdSensors.getStateLabel(b);
 
 	floatToIntFrac(avg, 1, 2, &avgInt, &avgFrac);
 	floatToIntFrac(delta, 1, 2, &deltaInt, &deltaFrac);

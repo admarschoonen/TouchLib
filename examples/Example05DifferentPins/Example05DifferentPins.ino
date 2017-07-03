@@ -71,9 +71,9 @@ void loop()
 		Serial.print("button[");
 		Serial.print(n);
 		Serial.print("]: current value: ");
-		Serial.print(cvdSensors.data[n].delta);
+		Serial.print(cvdSensors.getDelta(n));
 		Serial.print(", buttonStateLabel: ");
-		Serial.print(cvdSensors.data[n].buttonStateLabel);
+		Serial.print(cvdSensors.getStateLabel(n));
 		if (n < N_SENSORS - 1) {	
 			Serial.print("\t ");
 		} else {

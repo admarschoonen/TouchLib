@@ -248,6 +248,11 @@ class CvdSensors
 		void printScanOrder(void);
 		bool setForceCalibratingStates(int ch, uint32_t mask,
 			enum CvdStruct::ButtonState * newState);
+		float getRaw(int n);
+		float getDelta(int n);
+		float getAvg(int n);
+		const char * getStateLabel(int n);
+		enum CvdStruct::ButtonState getState(int n);
 		void setState(int n, enum CvdStruct::ButtonState newState);
 		CvdSensors(void);
 		~CvdSensors(void);
@@ -1016,6 +1021,58 @@ bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setForceCalibratingStates
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+float CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getRaw(int ch)
+{
+	CvdStruct * d;
+
+	d = &(data[ch]);
+
+	return d->raw; 
+}
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+float CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getDelta(int ch)
+{
+	CvdStruct * d;
+
+	d = &(data[ch]);
+
+	return d->delta; 
+}
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+float CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getAvg(int ch)
+{
+	CvdStruct * d;
+
+	d = &(data[ch]);
+
+	return d->avg; 
+}
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+const char * CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getStateLabel(int
+		ch)
+{
+	CvdStruct * d;
+
+	d = &(data[ch]);
+
+	return d->buttonStateLabel; 
+}
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+enum CvdStruct::ButtonState CvdSensors<N_SENSORS,
+		N_MEASUREMENTS_PER_SENSOR>::getState(int ch)
+{
+	CvdStruct * d;
+
+	d = &(data[ch]);
+
+	return d->buttonState; 
+}
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(int ch,
 		enum CvdStruct::ButtonState newState)
 {
@@ -1074,7 +1131,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(int ch,
 			 * calibrating to released.
 			 */
 			if (d->buttonState != 
-					CvdStruct::buttonStateCalibrating) {
+					CvdStruct::buttonStateNoisePowerMeasurement) {
 				mask = d->forceCalibrationWhenReleasing;
 			}
 			break;
