@@ -147,8 +147,9 @@ struct CvdStruct {
 	unsigned long approachedTimeout;
 	unsigned long pressedTimeout;
 	uint16_t filterCoeff;
-	uint32_t forceCalibrationWhenReleasing;
-	uint32_t forceCalibrationWhenApproaching;
+	uint32_t forceCalibrationWhenReleasingFromApproached;
+	uint32_t forceCalibrationWhenApproachingFromReleased;
+	uint32_t forceCalibrationWhenApproachingFromPressed;
 	uint32_t forceCalibrationWhenPressing;
 	bool setParallelCapacitanceManually;
 	bool disableUpdateIfAnyButtonIsApproached;
@@ -337,8 +338,9 @@ class CvdSensors
 #define CVD_FILTER_COEFF_DEFAULT				128
 #define CVD_APPROACHED_TIMEOUT_DEFAULT				300000
 #define CVD_PRESSED_TIMEOUT_DEFAULT				CVD_APPROACHED_TIMEOUT_DEFAULT
-#define CVD_FORCE_CALIBRATION_WHEN_RELEASING_DEFAULT		0
-#define CVD_FORCE_CALIBRATION_WHEN_APPROACHING_DEFAULT		0
+#define CVD_FORCE_CALIBRATION_WHEN_RELEASING_FROM_APPROACHED_DEFAULT	0
+#define CVD_FORCE_CALIBRATION_WHEN_APPROACHING_FROM_RELEASED_DEFAULT	0
+#define CVD_FORCE_CALIBRATION_WHEN_APPROACHING_FROM_PRESSED_DEFAULT	0
 #define CVD_FORCE_CALIBRATION_WHEN_PRESSING_DEFAULT		0
 #define CVD_USE_CUSTOM_SCAN_ORDER_DEFAULT			false
 #define CVD_ADC_RESOLUTION_BIT					10
@@ -511,10 +513,12 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 				CVD_APPROACHED_TIMEOUT_DEFAULT;
 			data[n].pressedTimeout =
 				CVD_PRESSED_TIMEOUT_DEFAULT;
-			data[n].forceCalibrationWhenReleasing =
-				CVD_FORCE_CALIBRATION_WHEN_RELEASING_DEFAULT;
-			data[n].forceCalibrationWhenApproaching =
-				CVD_FORCE_CALIBRATION_WHEN_APPROACHING_DEFAULT;
+			data[n].forceCalibrationWhenReleasingFromApproached =
+				CVD_FORCE_CALIBRATION_WHEN_RELEASING_FROM_APPROACHED_DEFAULT;
+			data[n].forceCalibrationWhenApproachingFromReleased =
+				CVD_FORCE_CALIBRATION_WHEN_APPROACHING_FROM_RELEASED_DEFAULT;
+			data[n].forceCalibrationWhenApproachingFromPressed =
+				CVD_FORCE_CALIBRATION_WHEN_APPROACHING_FROM_PRESSED_DEFAULT;
 			data[n].forceCalibrationWhenPressing =
 				CVD_FORCE_CALIBRATION_WHEN_PRESSING_DEFAULT;
 			data[n].enableTouchStateMachine = 
@@ -1136,19 +1140,22 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(int ch,
 		case CvdStruct::buttonStateNoisePowerMeasurement:
 			break;
 		case CvdStruct::buttonStateReleased:
-			/*
-			 * Do not allow recalibration when switching from
-			 * calibrating to released.
-			 */
-			if (d->buttonState != 
-					CvdStruct::buttonStateNoisePowerMeasurement) {
-				mask = d->forceCalibrationWhenReleasing;
+			if (d->buttonState == 
+					CvdStruct::buttonStateApproachedToReleased) {
+				mask = d->forceCalibrationWhenReleasingFromApproached;
 			}
 			break;
 		case CvdStruct::buttonStateReleasedToApproached:
 			break;
 		case CvdStruct::buttonStateApproached:
-			mask = d->forceCalibrationWhenApproaching;
+			if (d->buttonState ==
+					CvdStruct::buttonStateReleasedToApproached) {
+				mask = d->forceCalibrationWhenApproachingFromReleased;
+			}
+			if (d->buttonState ==
+					CvdStruct::buttonStatePressedToApproached) {
+				mask = d->forceCalibrationWhenApproachingFromPressed;
+			}
 			break;
 		case CvdStruct::buttonStateApproachedToPressed:
 			break;
