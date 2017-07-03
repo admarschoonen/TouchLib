@@ -53,6 +53,17 @@ void setup()
 
 	cvdSensors.data[2].pin = A3; /* Analog pin 3 */
 	cvdSensors.data[2].setParallelCapacitanceManually = false;
+	cvdSensors.data[2].releasedToApproachedThreshold = 1200.0;
+	cvdSensors.data[2].approachedToReleasedThreshold = 1000.0;
+	cvdSensors.data[2].approachedToPressedThreshold = 1400.0;
+	cvdSensors.data[2].pressedToApproachedThreshold = 1300.0;
+
+	/*
+	 * When this button is released, recalibrate button 3 to reduce impact
+	 * of hysteresis
+	 */
+	cvdSensors.data[2].forceCalibrationWhenReleasing = (1 << 3);
+	//cvdSensors.data[2].forceCalibrationWhenApproaching = (1 << 3);
 
 	cvdSensors.data[3].pin = A3; /* Analog pin 3 */
 	cvdSensors.data[3].sampleMethod = TLSampleMethodResistive;

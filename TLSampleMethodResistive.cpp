@@ -50,11 +50,10 @@ int TLSampleMethodResistive(struct CvdStruct * data, uint8_t nSensors, uint8_t c
 
 		if (useInternalPullup) {
 			/* Enable internal pull-up on analog input */
-			//digitalWrite(ch_pin, HIGH);
-			digitalWrite(ch_pin, INPUT_PULLUP);
+			pinMode(ch_pin, INPUT_PULLUP);
 		} else {
 			/* Disable internal pull-up on analog input */
-			digitalWrite(ch_pin, INPUT);
+			pinMode(ch_pin, INPUT);
 		}
 		
 		if (gnd_pin >= 0) {
@@ -67,13 +66,11 @@ int TLSampleMethodResistive(struct CvdStruct * data, uint8_t nSensors, uint8_t c
 		sample = analogRead(ch_pin);
 
 		/* Disable internal pull-up on analog input */
-		//digitalWrite(ch_pin, LOW);
-		digitalWrite(ch_pin, INPUT);
+		pinMode(ch_pin, INPUT);
 		
 		if (gnd_pin >= 0) {
 			/* Leave gnd_pin floating */
 			pinMode(gnd_pin, INPUT);
-			digitalWrite(gnd_pin, LOW);
 		}
 	}
 
