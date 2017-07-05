@@ -38,8 +38,10 @@
 #endif
 #include <avr/io.h>
 #include <math.h>
+
+#ifdef EEPROM_h
 #include <avr/eeprom.h>
-#include <EEPROM.h>
+#endif
 
 #include <TLSampleMethodCustom.h>
 #include <TLSampleMethodCVD.h>
@@ -367,7 +369,11 @@ class CvdSensors
 #define CVD_SET_PARALLEL_CAPACITANCE_MANUALLY_DEFAULT		false
 #define CVD_DISABLE_UPDATE_IF_ANY_BUTTON_IS_APPROACHED_DEFAULT	true
 #define CVD_DISABLE_UPDATE_IF_ANY_BUTTON_IS_PRESSED_DEFAULT	true
+#ifdef EEPROM_h
 #define CVD_ENABLE_READ_SETTINGS_FROM_EEPROM_DEFAULT		true
+#else
+#define CVD_ENABLE_READ_SETTINGS_FROM_EEPROM_DEFAULT		false
+#endif
 #define CVD_EEPROM_OFFSET_DEFAULT				0
 #define CVD_EEPROM_KEY						0xC7
 #define CVD_EEPROM_FORMAT_VERSION				0
@@ -606,7 +612,11 @@ uint16_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::crcUpdate(uint16_t
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 uint16_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::EEPROM_length(void)
 {
+	#ifdef EEPROM_h
 	return E2END + 1;
+	#else
+	return 0;
+	#endif
 }
 
 /* 
@@ -617,15 +627,18 @@ template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::EEPROM_update(int
 		addr, uint8_t b)
 {
+	#ifdef EEPROM_h
 	if (EEPROM.read(addr) != b) {
 		EEPROM.write(addr, b);
 	}
+	#endif
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 float CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readFloatFromEeprom(int
 		* addr, uint16_t * crc)
 {
+	#ifdef EEPROM_h
 	float f;
 	uint32_t i = 0;
 	int k;
@@ -641,12 +654,16 @@ float CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readFloatFromEeprom(int
 	memcpy(&f, &i, sizeof(float));
 
 	return f;
+	#else
+	return 0;
+	#endif
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeFloatToEeprom(float f,
 		int * addr, uint16_t * crc)
 {
+	#ifdef EEPROM_h
 	int k;
 	uint32_t i;
 	uint8_t tmp;
@@ -659,12 +676,14 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeFloatToEeprom(float 
 		EEPROM_update(*addr, tmp);
 		*addr = *addr + 1;
 	}
+	#endif
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSensorSettingFromEeprom(int n, 
 		int * addr, uint16_t * crc, bool applySettings)
 {
+	#ifdef EEPROM_h
 	if (applySettings) {
 		data[n].releasedToApproachedThreshold =
 			readFloatFromEeprom(addr, crc);
@@ -683,12 +702,14 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSensorSettingFromEepr
 		readFloatFromEeprom(addr, crc);
 		readFloatFromEeprom(addr, crc);
 	}
+	#endif
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSensorSettingToEeprom(int n, 
 		int * addr, uint16_t * crc)
 {
+	#ifdef EEPROM_h
 	float f;
 
 	f = data[n].releasedToApproachedThreshold;
@@ -702,6 +723,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSensorSettingToEepro
 	
 	f = data[n].pressedToApproachedThreshold;
 	writeFloatToEeprom(f, addr, crc);
+	#endif
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
@@ -713,6 +735,7 @@ uint16_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::eepromSizeRequired(vo
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSettingsToEeprom(void)
 {
+	#ifdef EEPROM_h
 	int addr = eepromOffset;
 	int n;
 	uint16_t crc = 0;
@@ -749,11 +772,13 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSettingsToEeprom(voi
 		EEPROM_update(addr++, (crc >> 8) & 0xFF);
 		EEPROM_update(addr++, crc & 0xFF);
 	}
+	#endif
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSettingsFromEeprom(void)
 {
+	#ifdef EEPROM_h
 	int addr = eepromOffset;
 	int tmpAddr = eepromOffset + 2;
 	int n;
@@ -834,6 +859,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSettingsFromEeprom(vo
 			data[n].enableSlewrateLimiter = b;
 		}
 	}
+	#endif
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
