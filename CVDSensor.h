@@ -252,6 +252,7 @@ class CvdSensors
 		bool setForceCalibratingStates(int ch, uint32_t mask,
 			enum CvdStruct::ButtonState * newState);
 		float getRaw(int n);
+		float getCapacitance(int n);
 		float getDelta(int n);
 		float getAvg(int n);
 		const char * getStateLabel(int n);
@@ -348,7 +349,7 @@ class CvdSensors
 #define CVD_ADC_RESOLUTION_BIT					10
 #define CVD_ADC_MAX						((1 << CVD_ADC_RESOLUTION_BIT) - 1)
 #define CVD_N_CHARGES_MIN_DEFAULT				1
-#define CVD_N_CHARGES_MAX_DEFAULT				5
+#define CVD_N_CHARGES_MAX_DEFAULT				1
 #define CVD_USE_N_CHARGES_PADDING_DEFAULT			true
 #define CVD_CHARGE_DELAY_SENSOR_DEFAULT				0
 #define CVD_CHARGE_DELAY_ADC_DEFAULT				0
@@ -552,7 +553,7 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 			data[n].stateIsBeingChanged = false;
 			data[n].sampleMethod = CVD_SAMPLE_METHOD_DEFAULT;
 			data[n].sampleMethodResistive_gndPin =
-				CVD_SAMPLE_METHOD_RESISTIVE_GND_PIN;
+				CVD_SAMPLE_METHOD_RESISTIVE_GND_PIN + n;
 			data[n].sampleMethodResistive_useInternalPullup =
 				CVD_SAMPLE_METHOD_RESISTIVE_USE_INTERNAL_PULLUP;
 			if (!data[n].setParallelCapacitanceManually) {
@@ -1050,9 +1051,9 @@ bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setForceCalibratingStates
 		if (mask & (1 << n)) {
 			if (n == ch) {
 				chStateChanged = true;
-				*newState = CvdStruct::buttonStateCalibrating;
+				*newState = CvdStruct::buttonStatePreCalibrating;
 			} else {
-				setState(n, CvdStruct::buttonStateCalibrating);
+				setState(n, CvdStruct::buttonStatePreCalibrating);
 			}
 		}
 	}
@@ -1068,6 +1069,16 @@ float CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getRaw(int ch)
 	d = &(data[ch]);
 
 	return d->raw; 
+}
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+float CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getCapacitance(int ch)
+{
+	CvdStruct * d;
+
+	d = &(data[ch]);
+
+	return d->capacitance; 
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
