@@ -31,7 +31,7 @@
 #ifndef TLSampleMethodTouchRead_h
 #define TLSampleMethodTouchRead_h
 
-#include <TLSensor.h>
+#include <TouchLib.h>
 
 int TLSampleMethodTouchRead(struct TLStruct * data, uint8_t nSensors,
 	uint8_t ch, bool inv);

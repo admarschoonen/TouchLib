@@ -26,8 +26,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TLSensor_h
-#define TLSensor_h
+#ifndef TouchLib_h
+#define TouchLib_h
 
 #if ARDUINO >= 100
 #include "Arduino.h"
@@ -171,7 +171,7 @@ struct TLStruct {
 
 	/* 
 	 * sampleMethod can be set to:
-	 * - TLSampleMethodTL
+	 * - TLSampleMethodCVD
 	 * - TLSampleMethodResistive
 	 * - TLSampleMethodTouchRead (Teensy 3.x only)
 	 * - custom method
@@ -386,7 +386,7 @@ class TLSensors
 #define TL_SAMPLE_METHOD_RESISTIVE_GND_PIN			2
 #define TL_SAMPLE_METHOD_RESISTIVE_USE_INTERNAL_PULLUP		true
 
-#define TL_SAMPLE_METHOD_DEFAULT				(&TLSampleMethodTL)
+#define TL_SAMPLE_METHOD_DEFAULT				(&TLSampleMethodCVD)
 
 /*
  * EEPROM overhead:
@@ -1578,7 +1578,7 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 			data[ch].buttonIsPressed = true;
 			this->anyButtonIsPressed = true;
 		}
-		if (data[ch].sampleMethod == TLSampleMethodTL) {
+		if (data[ch].sampleMethod == TLSampleMethodCVD) {
 			updateNCharges(ch);
 		}
 	}

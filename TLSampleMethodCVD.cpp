@@ -1,5 +1,5 @@
 /*
- * TLSampleMethodTL.cpp - Capacitive sensing implementation using CVD method
+ * TLSampleMethodCVD.cpp - Capacitive sensing implementation using CVD method
  * for TouchLibrary for Arduino
  * 
  * https://github.com/AdmarSchoonen/TLSensor
@@ -28,8 +28,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "TLSensor.h"
-#include "TLSampleMethodTL.h"
+#include "TouchLib.h"
+#include "TLSampleMethodCVD.h"
 
 static uint8_t TLChannelToReference(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch)
@@ -47,12 +47,12 @@ static uint8_t TLChannelToReference(struct TLStruct * data, uint8_t nSensors,
 		if (ref == ch) {
 			/*
 			 * Error! Could not find another pin that uses
-			 * TLSampleMethodTL.
+			 * TLSampleMethodCVD.
 			 */
 			ref = 0xFF;
 		}
 	} while ((ref != 0xFF) && (data[ref].sampleMethod !=
-		TLSampleMethodTL));
+		TLSampleMethodCVD));
 
 	return ref;
 }

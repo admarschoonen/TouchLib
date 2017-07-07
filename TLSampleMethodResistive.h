@@ -31,7 +31,7 @@
 #ifndef TLSampleMethodResistive_h
 #define TLSampleMethodResistive_h
 
-#include <TLSensor.h>
+#include <TouchLib.h>
 
 int TLSampleMethodResistive(struct TLStruct * data, uint8_t nSensors,
 	uint8_t ch, bool inv);

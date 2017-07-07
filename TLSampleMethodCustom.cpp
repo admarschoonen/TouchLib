@@ -28,7 +28,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "TLSensor.h"
+#include "TouchLib.h"
 #include "TLSampleMethodCustom.h"
 
 int TLSampleMethodCustom(struct TLStruct * data, uint8_t nSensors, uint8_t ch,

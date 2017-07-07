@@ -31,7 +31,7 @@
 #ifndef TLSampleMethodCustom_h
 #define TLSampleMethodCustom_h
 
-#include <TLSensor.h>
+#include <TouchLib.h>
 
 int TLSampleMethodCustom(struct TLStruct * data, uint8_t nSensors,
 	uint8_t ch, bool inv) __attribute__ ((weak));

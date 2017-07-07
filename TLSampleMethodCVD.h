@@ -1,5 +1,5 @@
 /*
- * TLSampleMethodTL.h - Capacitive sensing implementation using CVD method for
+ * TLSampleMethodCVD.h - Capacitive sensing implementation using CVD method for
  * TouchLibrary for Arduino
  *
  * https://github.com/AdmarSchoonen/TLSensor
@@ -28,10 +28,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TLSampleMethodTL_h
-#define TLSampleMethodTL_h
+#ifndef TLSampleMethodCVD_h
+#define TLSampleMethodCVD_h
 
-#include <TLSensor.h>
+#include <TouchLib.h>
 
 int TLSampleMethodCVD(struct TLStruct * data, uint8_t nSensors, uint8_t ch,
 		bool inv);
