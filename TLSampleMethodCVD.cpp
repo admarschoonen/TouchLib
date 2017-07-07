@@ -36,15 +36,14 @@ static uint8_t TLChannelToReference(struct CvdStruct * data, uint8_t nSensors,
 {
 	uint8_t ref;
 
-	#warning "check if sampleMethod of reference sensor is also CVD"
-
 	ref = ch;
 	do {
 		if (ref == nSensors - 1) {
 			ref = 0;
 		} else {
-			ref = ch + 1;
+			ref = ref + 1;
 		}
+		
 		if (ref == ch) {
 			/*
 			 * Error! Could not find another pin that uses
@@ -52,7 +51,8 @@ static uint8_t TLChannelToReference(struct CvdStruct * data, uint8_t nSensors,
 			 */
 			ref = 0xFF;
 		}
-	} while (data[ref].sampleMethod != TLSampleMethodCVD);
+	} while ((ref != 0xFF) && (data[ref].sampleMethod !=
+		TLSampleMethodCVD));
 
 	return ref;
 }
