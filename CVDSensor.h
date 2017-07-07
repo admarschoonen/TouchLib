@@ -1,6 +1,6 @@
 /*
- * CVDSensor.h - Capacitive sensing library based on CVD method for Arduino
- * https://github.com/AdmarSchoonen/CVDSensor
+ * TLSensor.h - Capacitive sensing library based on TL method for Arduino
+ * https://github.com/AdmarSchoonen/TLSensor
  * Copyright (c) 2016 Admar Schoonen
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,8 +26,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CVDSensor_h
-#define CVDSensor_h
+#ifndef TLSensor_h
+#define TLSensor_h
 
 #if ARDUINO >= 100
 #include "Arduino.h"
@@ -44,14 +44,14 @@
 #endif
 
 #include <TLSampleMethodCustom.h>
-#include <TLSampleMethodCVD.h>
+#include <TLSampleMethodTL.h>
 #include <TLSampleMethodResistive.h>
 #include <TLSampleMethodTouchRead.h>
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-class CvdSensors;
+class TLSensors;
 
-struct CvdStruct {
+struct TLStruct {
 	/* enum definitions */
 	enum ButtonState {
 		/*
@@ -171,7 +171,7 @@ struct CvdStruct {
 
 	/* 
 	 * sampleMethod can be set to:
-	 * - TLSampleMethodCVD
+	 * - TLSampleMethodTL
 	 * - TLSampleMethodResistive
 	 * - TLSampleMethodTouchRead (Teensy 3.x only)
 	 * - custom method
@@ -181,7 +181,7 @@ struct CvdStruct {
 	 * measurements. If inverted measurements are not supported, just check
 	 * return 0 when inv == true.
 	 */
-	int (*sampleMethod)(struct CvdStruct * d, uint8_t nSensors, uint8_t ch, bool inv);
+	int (*sampleMethod)(struct TLStruct * d, uint8_t nSensors, uint8_t ch, bool inv);
 
 	/*
 	 * Set enableTouchStateMachine to false to only use a sensor for
@@ -225,10 +225,10 @@ struct CvdStruct {
 };
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-class CvdSensors
+class TLSensors
 {
 	public:
-		struct CvdStruct data[N_SENSORS];
+		struct TLStruct data[N_SENSORS];
 		uint8_t nSensors;
 		bool enableReadSettingsFromEeprom;
 		int eepromOffset;
@@ -250,21 +250,21 @@ class CvdSensors
 		int8_t sample(void);
 		void printScanOrder(void);
 		bool setForceCalibratingStates(int ch, uint32_t mask,
-			enum CvdStruct::ButtonState * newState);
+			enum TLStruct::ButtonState * newState);
 		float getRaw(int n);
 		float getCapacitance(int n);
 		float getDelta(int n);
 		float getAvg(int n);
 		const char * getStateLabel(int n);
-		enum CvdStruct::ButtonState getState(int n);
-		void setState(int n, enum CvdStruct::ButtonState newState);
-		CvdSensors(void);
-		~CvdSensors(void);
+		enum TLStruct::ButtonState getState(int n);
+		void setState(int n, enum TLStruct::ButtonState newState);
+		TLSensors(void);
+		~TLSensors(void);
 
 		/* call backs: */
 		void (*buttonStateChangeCallback)(int ch,
-			enum CvdStruct::ButtonState oldState,
-			enum CvdStruct::ButtonState newState);
+			enum TLStruct::ButtonState oldState,
+			enum TLStruct::ButtonState newState);
 
 	private:
 		bool useCustomScanOrder;
@@ -295,10 +295,10 @@ class CvdSensors
 		void readSettingsFromEeprom(void);
 		int8_t addChannel(uint8_t ch);
 		void addSample(uint8_t ch, int32_t sample);
-		bool isPressed(CvdStruct * d);
-		bool isApproached(CvdStruct * d);
-		bool isReleased(CvdStruct * d);
-		void updateAvg(CvdStruct * d);
+		bool isPressed(TLStruct * d);
+		bool isApproached(TLStruct * d);
+		bool isReleased(TLStruct * d);
+		void updateAvg(TLStruct * d);
 		void processStatePreCalibrating(uint8_t ch);
 		void processStateCalibrating(uint8_t ch);
 		void processStateNoisePowerMeasurement(uint8_t ch);
@@ -316,7 +316,7 @@ class CvdSensors
 		void initScanOrder(void);
 
 		/* These strings are for human readability */
-		const char * const buttonStateLabels[CvdStruct::buttonStateMax +
+		const char * const buttonStateLabels[TLStruct::buttonStateMax +
 				1] = {
 			"PreCalibrating", "Calibrating",
 			"NoisePowerMeasurement", "Released",
@@ -327,66 +327,66 @@ class CvdSensors
 };
 
 /* Actual implementation */
-#define CVD_RELEASED_TO_APPROACHED_THRESHOLD_DEFAULT		50.0
-#define CVD_APPROACHED_TO_RELEASED_THRESHOLD_DEFAULT		40.0
-#define CVD_APPROACHED_TO_PRESSED_THRESHOLD_DEFAULT		150.0
-#define CVD_PRESSED_TO_APPROACHED_THRESHOLD_DEFAULT		120.0
-#define CVD_RELEASED_TO_APPROACHED_TIME_DEFAULT			10
-#define CVD_APPROACHED_TO_RELEASED_TIME_DEFAULT			10
-#define CVD_APPROACHED_TO_PRESSED_TIME_DEFAULT			10
-#define CVD_PRESSED_TO_APPROACHED_TIME_DEFAULT			10
-#define CVD_ENABLE_SLEWRATE_LIMITER_DEFAULT			false
-#define CVD_PRE_CALIBRATION_TIME_DEFAULT			100
-#define CVD_CALIBRATION_TIME_DEFAULT				500
-#define CVD_FILTER_COEFF_DEFAULT				128
-#define CVD_APPROACHED_TIMEOUT_DEFAULT				300000
-#define CVD_PRESSED_TIMEOUT_DEFAULT				CVD_APPROACHED_TIMEOUT_DEFAULT
-#define CVD_FORCE_CALIBRATION_WHEN_RELEASING_FROM_APPROACHED_DEFAULT	0
-#define CVD_FORCE_CALIBRATION_WHEN_APPROACHING_FROM_RELEASED_DEFAULT	0
-#define CVD_FORCE_CALIBRATION_WHEN_APPROACHING_FROM_PRESSED_DEFAULT	0
-#define CVD_FORCE_CALIBRATION_WHEN_PRESSING_DEFAULT		0
-#define CVD_USE_CUSTOM_SCAN_ORDER_DEFAULT			false
-#define CVD_ADC_RESOLUTION_BIT					10
-#define CVD_ADC_MAX						((1 << CVD_ADC_RESOLUTION_BIT) - 1)
-#define CVD_N_CHARGES_MIN_DEFAULT				1
-#define CVD_N_CHARGES_MAX_DEFAULT				1
-#define CVD_USE_N_CHARGES_PADDING_DEFAULT			true
-#define CVD_CHARGE_DELAY_SENSOR_DEFAULT				0
-#define CVD_CHARGE_DELAY_ADC_DEFAULT				0
-#define CVD_ENABLE_TOUCH_STATE_MACHINE_DEFAULT			true
-#define CVD_ENABLE_NOISE_POWER_MEASUREMENT_DEFAULT		false
+#define TL_RELEASED_TO_APPROACHED_THRESHOLD_DEFAULT		50.0
+#define TL_APPROACHED_TO_RELEASED_THRESHOLD_DEFAULT		40.0
+#define TL_APPROACHED_TO_PRESSED_THRESHOLD_DEFAULT		150.0
+#define TL_PRESSED_TO_APPROACHED_THRESHOLD_DEFAULT		120.0
+#define TL_RELEASED_TO_APPROACHED_TIME_DEFAULT			10
+#define TL_APPROACHED_TO_RELEASED_TIME_DEFAULT			10
+#define TL_APPROACHED_TO_PRESSED_TIME_DEFAULT			10
+#define TL_PRESSED_TO_APPROACHED_TIME_DEFAULT			10
+#define TL_ENABLE_SLEWRATE_LIMITER_DEFAULT			false
+#define TL_PRE_CALIBRATION_TIME_DEFAULT			100
+#define TL_CALIBRATION_TIME_DEFAULT				500
+#define TL_FILTER_COEFF_DEFAULT				128
+#define TL_APPROACHED_TIMEOUT_DEFAULT				300000
+#define TL_PRESSED_TIMEOUT_DEFAULT				TL_APPROACHED_TIMEOUT_DEFAULT
+#define TL_FORCE_CALIBRATION_WHEN_RELEASING_FROM_APPROACHED_DEFAULT	0
+#define TL_FORCE_CALIBRATION_WHEN_APPROACHING_FROM_RELEASED_DEFAULT	0
+#define TL_FORCE_CALIBRATION_WHEN_APPROACHING_FROM_PRESSED_DEFAULT	0
+#define TL_FORCE_CALIBRATION_WHEN_PRESSING_DEFAULT		0
+#define TL_USE_CUSTOM_SCAN_ORDER_DEFAULT			false
+#define TL_ADC_RESOLUTION_BIT					10
+#define TL_ADC_MAX						((1 << TL_ADC_RESOLUTION_BIT) - 1)
+#define TL_N_CHARGES_MIN_DEFAULT				1
+#define TL_N_CHARGES_MAX_DEFAULT				1
+#define TL_USE_N_CHARGES_PADDING_DEFAULT			true
+#define TL_CHARGE_DELAY_SENSOR_DEFAULT				0
+#define TL_CHARGE_DELAY_ADC_DEFAULT				0
+#define TL_ENABLE_TOUCH_STATE_MACHINE_DEFAULT			true
+#define TL_ENABLE_NOISE_POWER_MEASUREMENT_DEFAULT		false
 
-#define CVD_REFERENCE_CAPACITANCE_DEFAULT			((float) 15) /* 15 pF */
-#define CVD_CAPACITANCE_SCALE_FACTOR_DEFAULT			((float) 1)
-#define CVD_PARALLEL_CAPACITANCE_DEFAULT			((float) 1000) /* pF */
+#define TL_REFERENCE_CAPACITANCE_DEFAULT			((float) 15) /* 15 pF */
+#define TL_CAPACITANCE_SCALE_FACTOR_DEFAULT			((float) 1)
+#define TL_PARALLEL_CAPACITANCE_DEFAULT			((float) 1000) /* pF */
 
-#define CVD_DISTANCE_SCALE_FACTOR_DEFAULT			((float) 1)
-#define CVD_DISTANCE_OFFSET_DEFAULT				((float) 0)
+#define TL_DISTANCE_SCALE_FACTOR_DEFAULT			((float) 1)
+#define TL_DISTANCE_OFFSET_DEFAULT				((float) 0)
 
-#define CVD_PERMITTIVITY_VACUUM					((float) (8.85E-12*1E12/1E3))
-#define CVD_RELATIVE_PERMITTIVITY_DEFAULT			((float) 1)
-#define CVD_AREA_DEFAULT					(10*10) /* 100 mm^2 */
+#define TL_PERMITTIVITY_VACUUM					((float) (8.85E-12*1E12/1E3))
+#define TL_RELATIVE_PERMITTIVITY_DEFAULT			((float) 1)
+#define TL_AREA_DEFAULT					(10*10) /* 100 mm^2 */
 
-#define CVD_SET_PARALLEL_CAPACITANCE_MANUALLY_DEFAULT		false
-#define CVD_DISABLE_UPDATE_IF_ANY_BUTTON_IS_APPROACHED_DEFAULT	true
-#define CVD_DISABLE_UPDATE_IF_ANY_BUTTON_IS_PRESSED_DEFAULT	true
+#define TL_SET_PARALLEL_CAPACITANCE_MANUALLY_DEFAULT		false
+#define TL_DISABLE_UPDATE_IF_ANY_BUTTON_IS_APPROACHED_DEFAULT	true
+#define TL_DISABLE_UPDATE_IF_ANY_BUTTON_IS_PRESSED_DEFAULT	true
 #ifdef EEPROM_h
-#define CVD_ENABLE_READ_SETTINGS_FROM_EEPROM_DEFAULT		true
+#define TL_ENABLE_READ_SETTINGS_FROM_EEPROM_DEFAULT		true
 #else
-#define CVD_ENABLE_READ_SETTINGS_FROM_EEPROM_DEFAULT		false
+#define TL_ENABLE_READ_SETTINGS_FROM_EEPROM_DEFAULT		false
 #endif
-#define CVD_EEPROM_OFFSET_DEFAULT				0
-#define CVD_EEPROM_KEY						0xC7
-#define CVD_EEPROM_FORMAT_VERSION				0
-#define CVD_EEPROM_FORMAT_MASK					0x7
-#define CVD_EEPROM_FORMAT_SHIFT					5
-#define CVD_EEPROM_N_SENSORS_MASK				0x1F
-#define CVD_EEPROM_N_SENSORS_SHIFT				0
-#define CVD_EEPROM_CONFIG_ENABLE_SLEWRATE_LIMITER		0x80
-#define CVD_SAMPLE_METHOD_RESISTIVE_GND_PIN			2
-#define CVD_SAMPLE_METHOD_RESISTIVE_USE_INTERNAL_PULLUP		true
+#define TL_EEPROM_OFFSET_DEFAULT				0
+#define TL_EEPROM_KEY						0xC7
+#define TL_EEPROM_FORMAT_VERSION				0
+#define TL_EEPROM_FORMAT_MASK					0x7
+#define TL_EEPROM_FORMAT_SHIFT					5
+#define TL_EEPROM_N_SENSORS_MASK				0x1F
+#define TL_EEPROM_N_SENSORS_SHIFT				0
+#define TL_EEPROM_CONFIG_ENABLE_SLEWRATE_LIMITER		0x80
+#define TL_SAMPLE_METHOD_RESISTIVE_GND_PIN			2
+#define TL_SAMPLE_METHOD_RESISTIVE_USE_INTERNAL_PULLUP		true
 
-#define CVD_SAMPLE_METHOD_DEFAULT				(&TLSampleMethodCVD)
+#define TL_SAMPLE_METHOD_DEFAULT				(&TLSampleMethodTL)
 
 /*
  * EEPROM overhead:
@@ -395,10 +395,10 @@ class CvdSensors
  * 1 byte config
  * 2 byte CRC
  */
-#define CVD_EEPROM_N_BYTES_OVERHEAD				(1+1+1+2)
+#define TL_EEPROM_N_BYTES_OVERHEAD				(1+1+1+2)
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addChannel(uint8_t ch)
+int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addChannel(uint8_t ch)
 {
 	long r;
 	uint16_t n, pos, length;
@@ -422,7 +422,7 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addChannel(uint8_t ch)
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::initScanOrder(void)
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::initScanOrder(void)
 {
 	uint16_t pos, length;
 	uint8_t n, k;
@@ -447,7 +447,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::initScanOrder(void)
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
+int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 {
 	uint8_t n;
 	
@@ -462,18 +462,8 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 		this->anyButtonIsPressed = false;
 	}
 
-#ifdef NUM_ANALOG_PINS
 	if (error == 0) {
-		for (n = 0; n < nSensors; n++) {
-			if (cvdSensors[n].pin - A0 >= NUM_ANALOG_PINS) {
-				error = -1;
-			}
-		}
-	}
-#endif
-
-	if (error == 0) {
-		this->useCustomScanOrder = CVD_USE_CUSTOM_SCAN_ORDER_DEFAULT;
+		this->useCustomScanOrder = TL_USE_CUSTOM_SCAN_ORDER_DEFAULT;
 	
 		if (useCustomScanOrder == false) {
 			initScanOrder();
@@ -482,80 +472,80 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 
 	if (error == 0) {
 		this->enableReadSettingsFromEeprom =
-			CVD_ENABLE_READ_SETTINGS_FROM_EEPROM_DEFAULT;
-		this->eepromOffset = CVD_EEPROM_OFFSET_DEFAULT;
+			TL_ENABLE_READ_SETTINGS_FROM_EEPROM_DEFAULT;
+		this->eepromOffset = TL_EEPROM_OFFSET_DEFAULT;
 		buttonStateChangeCallback = NULL;
 	}
 
 	if (error == 0) {
 		for (n = 0; n < nSensors; n++) {
 			data[n].pin = A0 + n;
-			data[n].direction = CvdStruct::directionPositive;
-			data[n].sampleType = CvdStruct::sampleTypeDifferential;
+			data[n].direction = TLStruct::directionPositive;
+			data[n].sampleType = TLStruct::sampleTypeDifferential;
 			data[n].releasedToApproachedThreshold =
-				CVD_RELEASED_TO_APPROACHED_THRESHOLD_DEFAULT;
+				TL_RELEASED_TO_APPROACHED_THRESHOLD_DEFAULT;
 			data[n].approachedToReleasedThreshold =
-				CVD_APPROACHED_TO_RELEASED_THRESHOLD_DEFAULT;
+				TL_APPROACHED_TO_RELEASED_THRESHOLD_DEFAULT;
 			data[n].approachedToPressedThreshold =
-				CVD_APPROACHED_TO_PRESSED_THRESHOLD_DEFAULT;
+				TL_APPROACHED_TO_PRESSED_THRESHOLD_DEFAULT;
 			data[n].pressedToApproachedThreshold =
-				CVD_PRESSED_TO_APPROACHED_THRESHOLD_DEFAULT;
+				TL_PRESSED_TO_APPROACHED_THRESHOLD_DEFAULT;
 			data[n].releasedToApproachedTime =
-				CVD_RELEASED_TO_APPROACHED_TIME_DEFAULT;
+				TL_RELEASED_TO_APPROACHED_TIME_DEFAULT;
 			data[n].approachedToReleasedTime =
-				CVD_APPROACHED_TO_RELEASED_TIME_DEFAULT;
+				TL_APPROACHED_TO_RELEASED_TIME_DEFAULT;
 			data[n].approachedToPressedTime =
-				CVD_APPROACHED_TO_PRESSED_TIME_DEFAULT;
+				TL_APPROACHED_TO_PRESSED_TIME_DEFAULT;
 			data[n].pressedToApproachedTime =
-				CVD_PRESSED_TO_APPROACHED_TIME_DEFAULT;
+				TL_PRESSED_TO_APPROACHED_TIME_DEFAULT;
 			data[n].enableSlewrateLimiter = 
-				CVD_ENABLE_SLEWRATE_LIMITER_DEFAULT;
+				TL_ENABLE_SLEWRATE_LIMITER_DEFAULT;
 			data[n].preCalibrationTime =
-				CVD_PRE_CALIBRATION_TIME_DEFAULT;
+				TL_PRE_CALIBRATION_TIME_DEFAULT;
 			data[n].calibrationTime =
-				CVD_CALIBRATION_TIME_DEFAULT;
+				TL_CALIBRATION_TIME_DEFAULT;
 			data[n].filterCoeff =
-				CVD_FILTER_COEFF_DEFAULT;
+				TL_FILTER_COEFF_DEFAULT;
 			data[n].approachedTimeout =
-				CVD_APPROACHED_TIMEOUT_DEFAULT;
+				TL_APPROACHED_TIMEOUT_DEFAULT;
 			data[n].pressedTimeout =
-				CVD_PRESSED_TIMEOUT_DEFAULT;
+				TL_PRESSED_TIMEOUT_DEFAULT;
 			data[n].forceCalibrationWhenReleasingFromApproached =
-				CVD_FORCE_CALIBRATION_WHEN_RELEASING_FROM_APPROACHED_DEFAULT;
+				TL_FORCE_CALIBRATION_WHEN_RELEASING_FROM_APPROACHED_DEFAULT;
 			data[n].forceCalibrationWhenApproachingFromReleased =
-				CVD_FORCE_CALIBRATION_WHEN_APPROACHING_FROM_RELEASED_DEFAULT;
+				TL_FORCE_CALIBRATION_WHEN_APPROACHING_FROM_RELEASED_DEFAULT;
 			data[n].forceCalibrationWhenApproachingFromPressed =
-				CVD_FORCE_CALIBRATION_WHEN_APPROACHING_FROM_PRESSED_DEFAULT;
+				TL_FORCE_CALIBRATION_WHEN_APPROACHING_FROM_PRESSED_DEFAULT;
 			data[n].forceCalibrationWhenPressing =
-				CVD_FORCE_CALIBRATION_WHEN_PRESSING_DEFAULT;
+				TL_FORCE_CALIBRATION_WHEN_PRESSING_DEFAULT;
 			data[n].enableTouchStateMachine = 
-				CVD_ENABLE_TOUCH_STATE_MACHINE_DEFAULT;
+				TL_ENABLE_TOUCH_STATE_MACHINE_DEFAULT;
 			data[n].enableNoisePowerMeasurement =
-				CVD_ENABLE_NOISE_POWER_MEASUREMENT_DEFAULT;
+				TL_ENABLE_NOISE_POWER_MEASUREMENT_DEFAULT;
 			data[n].parallelCapacitance =
-				CVD_PARALLEL_CAPACITANCE_DEFAULT;
+				TL_PARALLEL_CAPACITANCE_DEFAULT;
 			data[n].referenceCapacitance =
-				CVD_REFERENCE_CAPACITANCE_DEFAULT;
+				TL_REFERENCE_CAPACITANCE_DEFAULT;
 			data[n].capacitanceScaleFactor =
-				CVD_CAPACITANCE_SCALE_FACTOR_DEFAULT;
+				TL_CAPACITANCE_SCALE_FACTOR_DEFAULT;
 			data[n].distanceScaleFactor =
-				CVD_DISTANCE_SCALE_FACTOR_DEFAULT;
+				TL_DISTANCE_SCALE_FACTOR_DEFAULT;
 			data[n].relativePermittivity =
-				CVD_RELATIVE_PERMITTIVITY_DEFAULT;
-			data[n].distanceOffset = CVD_DISTANCE_OFFSET_DEFAULT;
-			data[n].area = CVD_AREA_DEFAULT;
+				TL_RELATIVE_PERMITTIVITY_DEFAULT;
+			data[n].distanceOffset = TL_DISTANCE_OFFSET_DEFAULT;
+			data[n].area = TL_AREA_DEFAULT;
 			data[n].setParallelCapacitanceManually =
-				CVD_SET_PARALLEL_CAPACITANCE_MANUALLY_DEFAULT;
+				TL_SET_PARALLEL_CAPACITANCE_MANUALLY_DEFAULT;
 			data[n].disableUpdateIfAnyButtonIsApproached =
-				CVD_DISABLE_UPDATE_IF_ANY_BUTTON_IS_APPROACHED_DEFAULT;
+				TL_DISABLE_UPDATE_IF_ANY_BUTTON_IS_APPROACHED_DEFAULT;
 			data[n].disableUpdateIfAnyButtonIsPressed =
-				CVD_DISABLE_UPDATE_IF_ANY_BUTTON_IS_PRESSED_DEFAULT;
+				TL_DISABLE_UPDATE_IF_ANY_BUTTON_IS_PRESSED_DEFAULT;
 			data[n].stateIsBeingChanged = false;
-			data[n].sampleMethod = CVD_SAMPLE_METHOD_DEFAULT;
+			data[n].sampleMethod = TL_SAMPLE_METHOD_DEFAULT;
 			data[n].sampleMethodResistive_gndPin =
-				CVD_SAMPLE_METHOD_RESISTIVE_GND_PIN + n;
+				TL_SAMPLE_METHOD_RESISTIVE_GND_PIN + n;
 			data[n].sampleMethodResistive_useInternalPullup =
-				CVD_SAMPLE_METHOD_RESISTIVE_USE_INTERNAL_PULLUP;
+				TL_SAMPLE_METHOD_RESISTIVE_USE_INTERNAL_PULLUP;
 			if (!data[n].setParallelCapacitanceManually) {
 				/*
 				 * Set parallelCapacitance to 0; will be updated
@@ -586,7 +576,7 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
  */
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-uint16_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::crcUpdate(uint16_t
+uint16_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::crcUpdate(uint16_t
 		crc, unsigned char c)
 {
 	unsigned int i;
@@ -611,7 +601,7 @@ uint16_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::crcUpdate(uint16_t
  * compatibility.
  */
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-uint16_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::EEPROM_length(void)
+uint16_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::EEPROM_length(void)
 {
 	#ifdef EEPROM_h
 	return E2END + 1;
@@ -625,7 +615,7 @@ uint16_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::EEPROM_length(void)
  * compatibility.
  */
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::EEPROM_update(int
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::EEPROM_update(int
 		addr, uint8_t b)
 {
 	#ifdef EEPROM_h
@@ -636,7 +626,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::EEPROM_update(int
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-float CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readFloatFromEeprom(int
+float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readFloatFromEeprom(int
 		* addr, uint16_t * crc)
 {
 	#ifdef EEPROM_h
@@ -661,7 +651,7 @@ float CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readFloatFromEeprom(int
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeFloatToEeprom(float f,
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeFloatToEeprom(float f,
 		int * addr, uint16_t * crc)
 {
 	#ifdef EEPROM_h
@@ -681,7 +671,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeFloatToEeprom(float 
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSensorSettingFromEeprom(int n, 
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSensorSettingFromEeprom(int n, 
 		int * addr, uint16_t * crc, bool applySettings)
 {
 	#ifdef EEPROM_h
@@ -707,7 +697,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSensorSettingFromEepr
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSensorSettingToEeprom(int n, 
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSensorSettingToEeprom(int n, 
 		int * addr, uint16_t * crc)
 {
 	#ifdef EEPROM_h
@@ -728,13 +718,13 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSensorSettingToEepro
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-uint16_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::eepromSizeRequired(void)
+uint16_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::eepromSizeRequired(void)
 {
-	return nSensors * 4 * sizeof(float) + CVD_EEPROM_N_BYTES_OVERHEAD;
+	return nSensors * 4 * sizeof(float) + TL_EEPROM_N_BYTES_OVERHEAD;
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSettingsToEeprom(void)
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSettingsToEeprom(void)
 {
 	#ifdef EEPROM_h
 	int addr = eepromOffset;
@@ -742,7 +732,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSettingsToEeprom(voi
 	uint16_t crc = 0;
 	uint8_t tmp;
 
-	if (((nSensors - 1) & CVD_EEPROM_N_SENSORS_MASK) != (nSensors - 1)) {
+	if (((nSensors - 1) & TL_EEPROM_N_SENSORS_MASK) != (nSensors - 1)) {
 		error = -28; /* not enough space; return ENOSPC */
 	}
 
@@ -751,18 +741,18 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSettingsToEeprom(voi
 	}
 
 	tmp = EEPROM.read(addr);
-	if ((error == 0) && (tmp != CVD_EEPROM_KEY) && (tmp != 0xFF)) {
+	if ((error == 0) && (tmp != TL_EEPROM_KEY) && (tmp != 0xFF)) {
 		error = -5; /* key not found and not empty; return EIO */
 	}
 
 	if (error == 0) {
-		tmp = CVD_EEPROM_KEY;
+		tmp = TL_EEPROM_KEY;
 		EEPROM_update(addr++, tmp);
 		crc = crcUpdate(crc, tmp);
 
-		tmp = (CVD_EEPROM_FORMAT_VERSION << CVD_EEPROM_FORMAT_SHIFT) |
-			(((nSensors - 1) & CVD_EEPROM_N_SENSORS_MASK) << 
-			CVD_EEPROM_N_SENSORS_SHIFT);
+		tmp = (TL_EEPROM_FORMAT_VERSION << TL_EEPROM_FORMAT_SHIFT) |
+			(((nSensors - 1) & TL_EEPROM_N_SENSORS_MASK) << 
+			TL_EEPROM_N_SENSORS_SHIFT);
 		EEPROM_update(addr++, tmp);
 		crc = crcUpdate(crc, tmp);
 
@@ -777,7 +767,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSettingsToEeprom(voi
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSettingsFromEeprom(void)
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSettingsFromEeprom(void)
 {
 	#ifdef EEPROM_h
 	int addr = eepromOffset;
@@ -790,7 +780,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSettingsFromEeprom(vo
 	uint8_t config = 0;
 	bool b;
 
-	if (((nSensors - 1) & CVD_EEPROM_N_SENSORS_MASK) != (nSensors - 1)) {
+	if (((nSensors - 1) & TL_EEPROM_N_SENSORS_MASK) != (nSensors - 1)) {
 		error = -28; /* not enough space; return ENOSPC */
 	}
 
@@ -800,22 +790,22 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSettingsFromEeprom(vo
 
 	tmp = EEPROM.read(addr++);
 	crc = crcUpdate(crc, tmp);
-	if ((error == 0) && (tmp != CVD_EEPROM_KEY)) {
+	if ((error == 0) && (tmp != TL_EEPROM_KEY)) {
 		error = -5; /* key not found; return EIO */
 	}
 
 	if (error == 0) {
 		tmp = EEPROM.read(addr++);
 		crc = crcUpdate(crc, tmp);
-		formatVersion = ((tmp >> CVD_EEPROM_FORMAT_SHIFT) &
-			CVD_EEPROM_FORMAT_MASK);
-		nSensorsEeprom = ((tmp >> CVD_EEPROM_N_SENSORS_SHIFT) &
-			CVD_EEPROM_N_SENSORS_MASK) + 1;
+		formatVersion = ((tmp >> TL_EEPROM_FORMAT_SHIFT) &
+			TL_EEPROM_FORMAT_MASK);
+		nSensorsEeprom = ((tmp >> TL_EEPROM_N_SENSORS_SHIFT) &
+			TL_EEPROM_N_SENSORS_MASK) + 1;
 
 		config = EEPROM.read(addr++);
 		crc = crcUpdate(crc, tmp);
 
-		if (formatVersion != CVD_EEPROM_FORMAT_VERSION) {
+		if (formatVersion != TL_EEPROM_FORMAT_VERSION) {
 			error = -5; /* incorrect version; return EIO */
 		}
 
@@ -851,7 +841,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSettingsFromEeprom(vo
 		}
 
 		/* Apply settings from config */
-		if (config & CVD_EEPROM_CONFIG_ENABLE_SLEWRATE_LIMITER) {
+		if (config & TL_EEPROM_CONFIG_ENABLE_SLEWRATE_LIMITER) {
 			b = true;
 		} else {
 			b = false;
@@ -864,14 +854,14 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSettingsFromEeprom(vo
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::~CvdSensors(void)
+TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::~TLSensors(void)
 {
 	/* Nothing to destroy */
 }
 
 #warning overload constructor with uint8_t customScanOrder[]
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::CvdSensors(void)
+TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::TLSensors(void)
 {
 	uint8_t n;
 	unsigned long now;
@@ -890,16 +880,6 @@ CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::CvdSensors(void)
 		error = -1;
 	}
 
-#ifdef NUM_ANALOG_PINS
-	if (error == 0) {
-		for (n = 0; n < nSensors; n++) {
-			if (cvdSensors[n].pin - A0 >= NUM_ANALOG_PINS) {
-				error = -1;
-			}
-		}
-	}
-#endif
-
 	if (error == 0) {
 		initScanOrder();
 	}
@@ -913,7 +893,7 @@ CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::CvdSensors(void)
 
 		for (n = 0; n < nSensors; n++) {
 			resetButtonStateSummaries(n);
-			setState(n, CvdStruct::buttonStatePreCalibrating);
+			setState(n, TLStruct::buttonStatePreCalibrating);
 			data[n].buttonStateLabel =
 				this->buttonStateLabels[data[n].buttonState];
 			data[n].counter = 0;
@@ -922,14 +902,14 @@ CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::CvdSensors(void)
 			data[n].avg = 0;
 			data[n].noisePower = 0;
 			data[n].delta = 0;
-			data[n].nCharges = CVD_N_CHARGES_MIN_DEFAULT;
-			data[n].nChargesNext = CVD_N_CHARGES_MIN_DEFAULT;
-			data[n].nChargesMin = CVD_N_CHARGES_MIN_DEFAULT;
-			data[n].nChargesMax = CVD_N_CHARGES_MAX_DEFAULT;
+			data[n].nCharges = TL_N_CHARGES_MIN_DEFAULT;
+			data[n].nChargesNext = TL_N_CHARGES_MIN_DEFAULT;
+			data[n].nChargesMin = TL_N_CHARGES_MIN_DEFAULT;
+			data[n].nChargesMax = TL_N_CHARGES_MAX_DEFAULT;
 			data[n].useNChargesPadding =
-				CVD_USE_N_CHARGES_PADDING_DEFAULT;
-			data[n].chargeDelaySensor = CVD_CHARGE_DELAY_SENSOR_DEFAULT;
-			data[n].chargeDelayADC = CVD_CHARGE_DELAY_ADC_DEFAULT;
+				TL_USE_N_CHARGES_PADDING_DEFAULT;
+			data[n].chargeDelaySensor = TL_CHARGE_DELAY_SENSOR_DEFAULT;
+			data[n].chargeDelayADC = TL_CHARGE_DELAY_ADC_DEFAULT;
 			data[n].stateChangedAtTime = now;
 			data[n].lastSampledAtTime = 0;
 		}
@@ -941,7 +921,7 @@ CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::CvdSensors(void)
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addSample(uint8_t ch, int32_t sample)
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addSample(uint8_t ch, int32_t sample)
 {
 	if (data[ch].enableSlewrateLimiter) {
 		if (data[ch].slewrateFirstSample) {
@@ -961,15 +941,15 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addSample(uint8_t ch, int
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isReleased(CvdStruct * d)
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isReleased(TLStruct * d)
 {
 	bool isReleased = false;
 
-	if ((d->direction == CvdStruct::directionPositive) &&
+	if ((d->direction == TLStruct::directionPositive) &&
 			(d->delta <= d->approachedToReleasedThreshold)) {
 		isReleased = true;
 	}
-	if ((d->direction == CvdStruct::directionNegative) &&
+	if ((d->direction == TLStruct::directionNegative) &&
 			(-d->delta <= d->approachedToReleasedThreshold)) {
 		isReleased = true;
 	}
@@ -978,15 +958,15 @@ bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isReleased(CvdStruct * d)
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isApproached(CvdStruct * d)
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isApproached(TLStruct * d)
 {
 	bool isApproached = false;
 
-	if ((d->direction == CvdStruct::directionPositive) &&
+	if ((d->direction == TLStruct::directionPositive) &&
 			(d->delta >= d->releasedToApproachedThreshold)) {
 		isApproached = true;
 	}
-	if ((d->direction == CvdStruct::directionNegative) &&
+	if ((d->direction == TLStruct::directionNegative) &&
 			(-d->delta >= d->releasedToApproachedThreshold)) {
 		isApproached = true;
 	}
@@ -995,15 +975,15 @@ bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isApproached(CvdStruct * 
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isPressed(CvdStruct * d)
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isPressed(TLStruct * d)
 {
 	bool isPressed = false;
 
-	if ((d->direction == CvdStruct::directionPositive) &&
+	if ((d->direction == TLStruct::directionPositive) &&
 			(d->delta >= d->approachedToPressedThreshold)) {
 		isPressed = true;
 	}
-	if ((d->direction == CvdStruct::directionNegative) &&
+	if ((d->direction == TLStruct::directionNegative) &&
 			(-d->delta >= d->approachedToPressedThreshold)) {
 		isPressed = true;
 	}
@@ -1012,7 +992,7 @@ bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isPressed(CvdStruct * d)
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(CvdStruct * d)
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(TLStruct * d)
 {
 	float s;
 
@@ -1029,7 +1009,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(CvdStruct * d)
 
 	/* Only perform noise measurement when not calibrating any more */
 	if ((d->enableNoisePowerMeasurement) && (d->buttonState >
-			CvdStruct::buttonStateCalibrating)) {
+			TLStruct::buttonStateCalibrating)) {
 		s = d->delta * d->delta;
 		d->noisePower = (d->counter * d->noisePower + s) / 
 			(d->counter + 1);
@@ -1041,8 +1021,8 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(CvdStruct * d)
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setForceCalibratingStates(
-		int ch, uint32_t mask, enum CvdStruct::ButtonState * newState)
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setForceCalibratingStates(
+		int ch, uint32_t mask, enum TLStruct::ButtonState * newState)
 {
 	int n;
 	bool chStateChanged = false;
@@ -1051,9 +1031,9 @@ bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setForceCalibratingStates
 		if (mask & (1 << n)) {
 			if (n == ch) {
 				chStateChanged = true;
-				*newState = CvdStruct::buttonStatePreCalibrating;
+				*newState = TLStruct::buttonStatePreCalibrating;
 			} else {
-				setState(n, CvdStruct::buttonStatePreCalibrating);
+				setState(n, TLStruct::buttonStatePreCalibrating);
 			}
 		}
 	}
@@ -1062,9 +1042,9 @@ bool CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setForceCalibratingStates
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-float CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getRaw(int ch)
+float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getRaw(int ch)
 {
-	CvdStruct * d;
+	TLStruct * d;
 
 	d = &(data[ch]);
 
@@ -1072,9 +1052,9 @@ float CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getRaw(int ch)
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-float CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getCapacitance(int ch)
+float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getCapacitance(int ch)
 {
-	CvdStruct * d;
+	TLStruct * d;
 
 	d = &(data[ch]);
 
@@ -1082,9 +1062,9 @@ float CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getCapacitance(int ch)
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-float CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getDelta(int ch)
+float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getDelta(int ch)
 {
-	CvdStruct * d;
+	TLStruct * d;
 
 	d = &(data[ch]);
 
@@ -1092,9 +1072,9 @@ float CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getDelta(int ch)
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-float CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getAvg(int ch)
+float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getAvg(int ch)
 {
-	CvdStruct * d;
+	TLStruct * d;
 
 	d = &(data[ch]);
 
@@ -1102,10 +1082,10 @@ float CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getAvg(int ch)
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-const char * CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getStateLabel(int
+const char * TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getStateLabel(int
 		ch)
 {
-	CvdStruct * d;
+	TLStruct * d;
 
 	d = &(data[ch]);
 
@@ -1113,10 +1093,10 @@ const char * CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getStateLabel(int
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-enum CvdStruct::ButtonState CvdSensors<N_SENSORS,
+enum TLStruct::ButtonState TLSensors<N_SENSORS,
 		N_MEASUREMENTS_PER_SENSOR>::getState(int ch)
 {
-	CvdStruct * d;
+	TLStruct * d;
 
 	d = &(data[ch]);
 
@@ -1124,13 +1104,13 @@ enum CvdStruct::ButtonState CvdSensors<N_SENSORS,
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(int ch,
-		enum CvdStruct::ButtonState newState)
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(int ch,
+		enum TLStruct::ButtonState newState)
 {
 	bool setStateChangedAtTime = true;
 	uint32_t mask = 0;
-	enum CvdStruct::ButtonState oldState;
-	CvdStruct * d;
+	enum TLStruct::ButtonState oldState;
+	TLStruct * d;
 
 	d = &(data[ch]);
 
@@ -1149,19 +1129,19 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(int ch,
 	 * erroneously in approached or pressed state and would never trigger a
 	 * recalibration.
 	 */
-	if (((d->buttonState == CvdStruct::buttonStateApproachedToReleased) &&
-			newState == CvdStruct::buttonStateApproached) ||
-			((d->buttonState == CvdStruct::buttonStatePressedToApproached) &&
-			newState == CvdStruct::buttonStatePressed)) {
+	if (((d->buttonState == TLStruct::buttonStateApproachedToReleased) &&
+			newState == TLStruct::buttonStateApproached) ||
+			((d->buttonState == TLStruct::buttonStatePressedToApproached) &&
+			newState == TLStruct::buttonStatePressed)) {
 		setStateChangedAtTime = false;
 	}
 
 	if (d->buttonState != newState) {
 		d->stateIsBeingChanged = true;
 		switch(newState) {
-		case CvdStruct::buttonStatePreCalibrating:
+		case TLStruct::buttonStatePreCalibrating:
 			break;
-		case CvdStruct::buttonStateCalibrating:
+		case TLStruct::buttonStateCalibrating:
 			d->counter = 0;
 			d->avg = 0;
 			d->noisePower = 0;
@@ -1174,38 +1154,38 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(int ch,
 				d->parallelCapacitance = 0;
 			}
 			break;
-		case CvdStruct::buttonStateNoisePowerMeasurement:
+		case TLStruct::buttonStateNoisePowerMeasurement:
 			break;
-		case CvdStruct::buttonStateReleased:
+		case TLStruct::buttonStateReleased:
 			if (d->buttonState == 
-					CvdStruct::buttonStateApproachedToReleased) {
+					TLStruct::buttonStateApproachedToReleased) {
 				mask = d->forceCalibrationWhenReleasingFromApproached;
 			}
 			break;
-		case CvdStruct::buttonStateReleasedToApproached:
+		case TLStruct::buttonStateReleasedToApproached:
 			break;
-		case CvdStruct::buttonStateApproached:
+		case TLStruct::buttonStateApproached:
 			if (d->buttonState ==
-					CvdStruct::buttonStateReleasedToApproached) {
+					TLStruct::buttonStateReleasedToApproached) {
 				mask = d->forceCalibrationWhenApproachingFromReleased;
 			}
 			if (d->buttonState ==
-					CvdStruct::buttonStatePressedToApproached) {
+					TLStruct::buttonStatePressedToApproached) {
 				mask = d->forceCalibrationWhenApproachingFromPressed;
 			}
 			break;
-		case CvdStruct::buttonStateApproachedToPressed:
+		case TLStruct::buttonStateApproachedToPressed:
 			break;
-		case CvdStruct::buttonStateApproachedToReleased:
+		case TLStruct::buttonStateApproachedToReleased:
 			break;
-		case CvdStruct::buttonStatePressed:
+		case TLStruct::buttonStatePressed:
 			mask = d->forceCalibrationWhenPressing;
 			break;
-		case CvdStruct::buttonStatePressedToApproached:
+		case TLStruct::buttonStatePressedToApproached:
 			break;
 		default:
 			/* Error: illegal state */
-			newState = CvdStruct::buttonStatePreCalibrating;
+			newState = TLStruct::buttonStatePreCalibrating;
 		}
 
 		if (mask) {
@@ -1228,22 +1208,22 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(int ch,
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePreCalibrating(uint8_t ch)
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePreCalibrating(uint8_t ch)
 {
-	CvdStruct * d;
+	TLStruct * d;
 
 	d = &(data[ch]);
 
 	if (d->lastSampledAtTime - d->stateChangedAtTime >= d->preCalibrationTime) {
-		setState(ch, CvdStruct::buttonStateCalibrating);
+		setState(ch, TLStruct::buttonStateCalibrating);
 	}
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateCalibrating(uint8_t ch)
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateCalibrating(uint8_t ch)
 {
 	unsigned long t, t_max;
-	CvdStruct * d;
+	TLStruct * d;
 
 	d = &(data[ch]);
 
@@ -1253,7 +1233,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateCalibrating(u
 	if (t < t_max) {
 		updateAvg(d);
 	} else {
-		setState(ch, CvdStruct::buttonStateNoisePowerMeasurement);
+		setState(ch, TLStruct::buttonStateNoisePowerMeasurement);
 	
 		if (!d->setParallelCapacitanceManually) {
 			d->parallelCapacitance = d->avg;
@@ -1262,10 +1242,10 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateCalibrating(u
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateNoisePowerMeasurement(uint8_t ch)
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateNoisePowerMeasurement(uint8_t ch)
 {
 	unsigned long t, t_max;
-	CvdStruct * d;
+	TLStruct * d;
 
 	d = &(data[ch]);
 
@@ -1275,28 +1255,28 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateNoisePowerMea
 	if ((d->enableNoisePowerMeasurement) && (t < t_max)) {
 		updateAvg(d);
 	} else {
-		setState(ch, CvdStruct::buttonStateReleased);
+		setState(ch, TLStruct::buttonStateReleased);
 	}
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateReleased(uint8_t ch)
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateReleased(uint8_t ch)
 {
-	CvdStruct * d;
+	TLStruct * d;
 
 	d = &(data[ch]);
 
 	if ((d->enableTouchStateMachine) && (isApproached(d))) {
-		setState(ch, CvdStruct::buttonStateReleasedToApproached);
+		setState(ch, TLStruct::buttonStateReleasedToApproached);
 	} else {
 		updateAvg(d);
 	}
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateReleasedToApproached(uint8_t ch)
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateReleasedToApproached(uint8_t ch)
 {
-	CvdStruct * d;
+	TLStruct * d;
 
 	d = &(data[ch]);
 
@@ -1308,17 +1288,17 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateReleasedToApp
 	if (isApproached(d)) {
 		if (d->lastSampledAtTime - d->stateChangedAtTime >=
 				d->releasedToApproachedTime) {
-			setState(ch, CvdStruct::buttonStateApproached);
+			setState(ch, TLStruct::buttonStateApproached);
 		}
 	} else {
-		setState(ch, CvdStruct::buttonStateReleased);
+		setState(ch, TLStruct::buttonStateReleased);
 	}
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproached(uint8_t ch)
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproached(uint8_t ch)
 {
-	CvdStruct * d;
+	TLStruct * d;
 
 	d = &(data[ch]);
 
@@ -1326,19 +1306,19 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproached(ui
 		return;
 
 	if (isReleased(d)) {
-		setState(ch, CvdStruct::buttonStateApproachedToReleased);
+		setState(ch, TLStruct::buttonStateApproachedToReleased);
 	} else if (isPressed(d)) {
-		setState(ch, CvdStruct::buttonStateApproachedToPressed);
+		setState(ch, TLStruct::buttonStateApproachedToPressed);
 	} else if ((d->approachedTimeout > 0) && (d->lastSampledAtTime - 
 			d->stateChangedAtTime > d->approachedTimeout)) {
-		setState(ch, CvdStruct::buttonStateCalibrating);
+		setState(ch, TLStruct::buttonStateCalibrating);
 	}
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproachedToPressed(uint8_t ch)
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproachedToPressed(uint8_t ch)
 {
-	CvdStruct * d;
+	TLStruct * d;
 
 	d = &(data[ch]);
 
@@ -1350,17 +1330,17 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproachedToP
 	if (isPressed(d)) {
 		if (d->lastSampledAtTime - d->stateChangedAtTime >=
 				d->approachedToPressedTime) {
-			setState(ch, CvdStruct::buttonStatePressed);
+			setState(ch, TLStruct::buttonStatePressed);
 		}
 	} else {
-		setState(ch, CvdStruct::buttonStateApproached);
+		setState(ch, TLStruct::buttonStateApproached);
 	}
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproachedToReleased(uint8_t ch)
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproachedToReleased(uint8_t ch)
 {
-	CvdStruct * d;
+	TLStruct * d;
 
 	d = &(data[ch]);
 
@@ -1370,17 +1350,17 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproachedToR
 	if (isReleased(d)) {
 		if (d->lastSampledAtTime - d->stateChangedAtTime >=
 				d->approachedToReleasedTime) {
-			setState(ch, CvdStruct::buttonStateReleased);
+			setState(ch, TLStruct::buttonStateReleased);
 		}
 	} else {
-		setState(ch, CvdStruct::buttonStateApproached);
+		setState(ch, TLStruct::buttonStateApproached);
 	}
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressed(uint8_t ch)
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressed(uint8_t ch)
 {
-	CvdStruct * d;
+	TLStruct * d;
 
 	d = &(data[ch]);
 
@@ -1390,17 +1370,17 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressed(uint8
 	if (isPressed(d)) {
 		if ((d->pressedTimeout > 0) && (d->lastSampledAtTime - 
 				d->stateChangedAtTime > d->pressedTimeout)) {
-			setState(ch, CvdStruct::buttonStateCalibrating);
+			setState(ch, TLStruct::buttonStateCalibrating);
 		}
 	} else {
-		setState(ch, CvdStruct::buttonStatePressedToApproached);
+		setState(ch, TLStruct::buttonStatePressedToApproached);
 	}
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressedToApproached(uint8_t ch)
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressedToApproached(uint8_t ch)
 {
-	CvdStruct * d;
+	TLStruct * d;
 
 	d = &(data[ch]);
 
@@ -1408,53 +1388,53 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressedToAppr
 		return;
 
 	if (isPressed(d)) {
-		setState(ch, CvdStruct::buttonStatePressed);
+		setState(ch, TLStruct::buttonStatePressed);
 	} else {
 		if (d->lastSampledAtTime - d->stateChangedAtTime >= 
 				d->pressedToApproachedTime) {
-			setState(ch, CvdStruct::buttonStateApproached);
+			setState(ch, TLStruct::buttonStateApproached);
 		}
 	}
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processSample(uint8_t ch)
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processSample(uint8_t ch)
 {
-	CvdStruct * d;
+	TLStruct * d;
 
 	d = &(data[ch]);
 
 	d->delta = d->capacitance - d->avg;
 
 	switch (d->buttonState) {
-	case CvdStruct::buttonStatePreCalibrating:
+	case TLStruct::buttonStatePreCalibrating:
 		processStatePreCalibrating(ch);
 		break;
-	case CvdStruct::buttonStateCalibrating:
+	case TLStruct::buttonStateCalibrating:
 		processStateCalibrating(ch);
 		break;
-	case CvdStruct::buttonStateNoisePowerMeasurement:
+	case TLStruct::buttonStateNoisePowerMeasurement:
 		processStateNoisePowerMeasurement(ch);
 		break;
-	case CvdStruct::buttonStateReleased:
+	case TLStruct::buttonStateReleased:
 		processStateReleased(ch);
 		break;
-	case CvdStruct::buttonStateReleasedToApproached:
+	case TLStruct::buttonStateReleasedToApproached:
 		processStateReleasedToApproached(ch);
 		break;
-	case CvdStruct::buttonStateApproached:
+	case TLStruct::buttonStateApproached:
 		processStateApproached(ch);
 		break;
-	case CvdStruct::buttonStateApproachedToReleased:
+	case TLStruct::buttonStateApproachedToReleased:
 		processStateApproachedToReleased(ch);
 		break;
-	case CvdStruct::buttonStateApproachedToPressed:
+	case TLStruct::buttonStateApproachedToPressed:
 		processStateApproachedToPressed(ch);
 		break;
-	case CvdStruct::buttonStatePressed:
+	case TLStruct::buttonStatePressed:
 		processStatePressed(ch);
 		break;
-	case CvdStruct::buttonStatePressedToApproached:
+	case TLStruct::buttonStatePressedToApproached:
 		processStatePressedToApproached(ch);
 		break;
 	default:
@@ -1466,18 +1446,18 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processSample(uint8_t ch)
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::correctSample(uint8_t ch)
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::correctSample(uint8_t ch)
 {
-	CvdStruct * d;
+	TLStruct * d;
 	float tmp, scale;
 
 	d = &(data[ch]);
 
 	if (d->enableSlewrateLimiter) {
-		scale = (float) ((CVD_ADC_MAX + 1) << 2);
+		scale = (float) ((TL_ADC_MAX + 1) << 2);
 	} else {
 		scale = ((float) (nMeasurementsPerSensor << 1)) *
-			((float) (CVD_ADC_MAX + 1));
+			((float) (TL_ADC_MAX + 1));
 	}
 
 	tmp = 1 - ((float) d->raw) / scale;
@@ -1485,11 +1465,11 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::correctSample(uint8_t ch)
 	tmp = ((float) 1) / tmp;
 
 	d->nChargesNext = (int32_t) (ceilf(tmp));
-	if (d->nChargesNext < CVD_N_CHARGES_MIN_DEFAULT) {
-		d->nChargesNext = CVD_N_CHARGES_MIN_DEFAULT;
+	if (d->nChargesNext < TL_N_CHARGES_MIN_DEFAULT) {
+		d->nChargesNext = TL_N_CHARGES_MIN_DEFAULT;
 	}
-	if (d->nChargesNext > CVD_N_CHARGES_MAX_DEFAULT) {
-		d->nChargesNext = CVD_N_CHARGES_MAX_DEFAULT;
+	if (d->nChargesNext > TL_N_CHARGES_MAX_DEFAULT) {
+		d->nChargesNext = TL_N_CHARGES_MAX_DEFAULT;
 	}
 
 	tmp = scale * tmp * d->capacitanceScaleFactor /
@@ -1497,22 +1477,22 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::correctSample(uint8_t ch)
 	d->capacitance = tmp;
 	/* Capacitance can be negative due to noise! */
 
-	d->distance = (d->distanceScaleFactor * CVD_PERMITTIVITY_VACUUM *
+	d->distance = (d->distanceScaleFactor * TL_PERMITTIVITY_VACUUM *
 		d->relativePermittivity * d->area / tmp) - d->distanceOffset;
 	/* Distance can be negative due to noise! */
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateNCharges(uint8_t ch)
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateNCharges(uint8_t ch)
 {
-	CvdStruct * d;
+	TLStruct * d;
 
 	d = &(data[ch]);
 	d->nCharges = d->nChargesNext;
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::resetButtonStateSummaries(uint8_t ch)
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::resetButtonStateSummaries(uint8_t ch)
 {
 	data[ch].buttonIsCalibrating = false;
 	data[ch].buttonIsReleased = false;
@@ -1521,7 +1501,7 @@ void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::resetButtonStateSummaries
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
+int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 {
 	uint16_t length, pos;
 	uint8_t ch;
@@ -1539,15 +1519,15 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 
 	for (pos = 0; pos < length; pos++) {
 		if (data[scanOrder[pos]].sampleType &
-				CvdStruct::sampleTypeNormal) {
+				TLStruct::sampleTypeNormal) {
 			ch = scanOrder[pos];
 			sample1 = data[scanOrder[pos]].sampleMethod(data,
 				nSensors, ch, false);
 		}
 		if (data[scanOrder[pos]].sampleType &
-				CvdStruct::sampleTypeInverted) {
+				TLStruct::sampleTypeInverted) {
 			ch = scanOrder[pos];
-			sample2 = CVD_ADC_MAX - 
+			sample2 = TL_ADC_MAX - 
 				data[scanOrder[pos]].sampleMethod(data,
 				nSensors, ch, true);
 		}
@@ -1557,11 +1537,11 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 		 * 2 to get same amplitude as with sampleTypeDifferential.
 		 */
 		if (data[scanOrder[pos]].sampleType ==
-				CvdStruct::sampleTypeNormal) {
+				TLStruct::sampleTypeNormal) {
 			sample1 = sample1 << 1;
 		}
 		if (data[scanOrder[pos]].sampleType ==
-				CvdStruct::sampleTypeInverted) {
+				TLStruct::sampleTypeInverted) {
 			sample2 = sample2 << 1;
 		}
 
@@ -1582,23 +1562,23 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 	for (ch = 0; ch < nSensors; ch++) {
 		resetButtonStateSummaries(ch);
 		if (data[ch].buttonState <=
-				CvdStruct::buttonStateNoisePowerMeasurement) {
+				TLStruct::buttonStateNoisePowerMeasurement) {
 			data[ch].buttonIsCalibrating = true;
 		}
-		if ((data[ch].buttonState >= CvdStruct::buttonStateReleased) &&
+		if ((data[ch].buttonState >= TLStruct::buttonStateReleased) &&
 				(data[ch].buttonState <=
-				CvdStruct::buttonStateReleasedToApproached)) {
+				TLStruct::buttonStateReleasedToApproached)) {
 			data[ch].buttonIsReleased = true;
 		}
-		if (data[ch].buttonState >= CvdStruct::buttonStateApproached) {
+		if (data[ch].buttonState >= TLStruct::buttonStateApproached) {
 			data[ch].buttonIsApproached = true;
 			this->anyButtonIsApproached = true;
 		}
-		if (data[ch].buttonState >= CvdStruct::buttonStatePressed) {
+		if (data[ch].buttonState >= TLStruct::buttonStatePressed) {
 			data[ch].buttonIsPressed = true;
 			this->anyButtonIsPressed = true;
 		}
-		if (data[ch].sampleMethod == TLSampleMethodCVD) {
+		if (data[ch].sampleMethod == TLSampleMethodTL) {
 			updateNCharges(ch);
 		}
 	}
@@ -1607,7 +1587,7 @@ int8_t CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::printScanOrder(void)
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::printScanOrder(void)
 {
 	uint16_t n;
 

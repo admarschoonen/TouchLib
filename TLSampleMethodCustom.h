@@ -2,7 +2,7 @@
  * TLSampleMethodCustom.h - Custom sensing implementation for TouchLibrary for
  * Arduino
  *
- * https://github.com/AdmarSchoonen/CVDSensor
+ * https://github.com/AdmarSchoonen/TLSensor
  * Copyright (c) 2016 - 2017 Admar Schoonen
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,9 +31,9 @@
 #ifndef TLSampleMethodCustom_h
 #define TLSampleMethodCustom_h
 
-#include <CVDSensor.h>
+#include <TLSensor.h>
 
-int TLSampleMethodCustom(struct CvdStruct * data, uint8_t nSensors,
+int TLSampleMethodCustom(struct TLStruct * data, uint8_t nSensors,
 	uint8_t ch, bool inv) __attribute__ ((weak));
 
 #endif

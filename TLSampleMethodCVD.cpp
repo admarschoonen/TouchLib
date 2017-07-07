@@ -1,8 +1,8 @@
 /*
- * TLSampleMethodCVD.cpp - Capacitive sensing implementation using CVD method
+ * TLSampleMethodTL.cpp - Capacitive sensing implementation using CVD method
  * for TouchLibrary for Arduino
  * 
- * https://github.com/AdmarSchoonen/CVDSensor
+ * https://github.com/AdmarSchoonen/TLSensor
  * Copyright (c) 2016 - 2017 Admar Schoonen
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,10 +28,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "CVDSensor.h"
-#include "TLSampleMethodCVD.h"
+#include "TLSensor.h"
+#include "TLSampleMethodTL.h"
 
-static uint8_t TLChannelToReference(struct CvdStruct * data, uint8_t nSensors,
+static uint8_t TLChannelToReference(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch)
 {
 	uint8_t ref;
@@ -47,12 +47,12 @@ static uint8_t TLChannelToReference(struct CvdStruct * data, uint8_t nSensors,
 		if (ref == ch) {
 			/*
 			 * Error! Could not find another pin that uses
-			 * TLSampleMethodCVD.
+			 * TLSampleMethodTL.
 			 */
 			ref = 0xFF;
 		}
 	} while ((ref != 0xFF) && (data[ref].sampleMethod !=
-		TLSampleMethodCVD));
+		TLSampleMethodTL));
 
 	return ref;
 }
@@ -124,7 +124,7 @@ void TLSetAdcReferencePin(int pin)
 	}
 }
 
-static void TLChargeADC(struct CvdStruct * data, uint8_t nSensors, uint8_t ch, 
+static void TLChargeADC(struct TLStruct * data, uint8_t nSensors, uint8_t ch, 
 		int ref_pin, bool delay)
 {
 	/* Set ADC to reference pin (charge Chold). */
@@ -135,7 +135,7 @@ static void TLChargeADC(struct CvdStruct * data, uint8_t nSensors, uint8_t ch,
 	}
 }
 
-static void TLChargeSensor(struct CvdStruct * data, uint8_t nSensors, uint8_t ch,
+static void TLChargeSensor(struct TLStruct * data, uint8_t nSensors, uint8_t ch,
 		int ch_pin, bool delay)
 {
 	/*
@@ -148,7 +148,7 @@ static void TLChargeSensor(struct CvdStruct * data, uint8_t nSensors, uint8_t ch
 	}
 }
 
-static void TLCharge(struct CvdStruct * data, uint8_t nSensors, uint8_t ch,
+static void TLCharge(struct TLStruct * data, uint8_t nSensors, uint8_t ch,
 		int ch_pin, int ref_pin)
 {
 	unsigned int d;
@@ -164,11 +164,11 @@ static void TLCharge(struct CvdStruct * data, uint8_t nSensors, uint8_t ch,
 	}
 }
 
-int TLSampleMethodCVD(struct CvdStruct * data, uint8_t nSensors, uint8_t ch,
+int TLSampleMethodCVD(struct TLStruct * data, uint8_t nSensors, uint8_t ch,
 		bool inv)
 {
-	struct CvdStruct * dCh;
-	struct CvdStruct * dRef;
+	struct TLStruct * dCh;
+	struct TLStruct * dRef;
 	uint8_t ref;
 	int ch_pin, ref_pin, sample;
 	uint8_t i;

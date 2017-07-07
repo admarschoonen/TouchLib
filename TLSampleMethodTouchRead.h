@@ -2,7 +2,7 @@
  * TLSampleMethodTouchRead.h - Capacitive sensing implementation using
  * TouchRead method for TouchLibrary for Arduino Teensy 3.x
  *
- * https://github.com/AdmarSchoonen/CVDSensor
+ * https://github.com/AdmarSchoonen/TLSensor
  * Copyright (c) 2016 - 2017 Admar Schoonen
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,9 +31,9 @@
 #ifndef TLSampleMethodTouchRead_h
 #define TLSampleMethodTouchRead_h
 
-#include <CVDSensor.h>
+#include <TLSensor.h>
 
-int TLSampleMethodTouchRead(struct CvdStruct * data, uint8_t nSensors,
+int TLSampleMethodTouchRead(struct TLStruct * data, uint8_t nSensors,
 	uint8_t ch, bool inv);
 
 #endif
