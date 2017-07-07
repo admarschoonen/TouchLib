@@ -44,7 +44,7 @@
 #endif
 
 #include <TLSampleMethodCustom.h>
-#include <TLSampleMethodTL.h>
+#include <TLSampleMethodCVD.h>
 #include <TLSampleMethodResistive.h>
 #include <TLSampleMethodTouchRead.h>
 
