@@ -1,2 +1,2 @@
-# CVDSensor
-Capacitive touch library using CVD method for Arduino
+# TouchLib
+A generic touch library for Arduino, usable for both resistive and capacitive touch
