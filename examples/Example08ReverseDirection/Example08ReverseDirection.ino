@@ -1,8 +1,7 @@
-#include <EEPROM.h>
-#include <CVDSensor.h>
+#include <TouchLib.h>
 
 /*
- * CVDSense Library Demo Sketch
+ * Touch Library Demo Sketch
  * Admar Schoonen 2016
  * Connect 4 electrodes (piece of metal sheet / foil) to analog pins A0 - A3
  */
@@ -20,8 +19,8 @@
  */
 #define N_MEASUREMENTS_PER_SENSOR	16
 
-/* cvdSensors is the actual object that contains all the sensors */
-CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> cvdSensors;
+/* tlSensors is the actual object that contains all the sensors */
+TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> tlSensors;
 
 void setup()                    
 {
@@ -49,11 +48,11 @@ void setup()
 
 	for (n = 0; n < N_SENSORS; n++) {
 		/*
-		 * By default, CVDSensor assumes that the signal to be measured
+		 * By default, TLSensor assumes that the signal to be measured
 		 * causes an increase in capacitance. For some sensors however,
 		 * the signal causes a decrease in capacitance. For such
 		 * sensors, set the direction property to
-		 * CvdStruct::directionNegative.
+		 * TLStruct::directionNegative.
 		 *
 		 * To test this out, use sensors with some insulation on top
 		 * (plastic sheet, paper, cotton, ...). Then, touch the sensors
@@ -63,7 +62,7 @@ void setup()
 		 * sensor switches to states Approached and Released. 
 		 */
 
-		cvdSensors.data[n].direction = CvdStruct::directionNegative;
+		tlSensors.data[n].direction = TLStruct::directionNegative;
 	}
 }
 
@@ -72,10 +71,10 @@ void loop()
 	int n;
 
 	/* 
-	 * Call cvdSensors.sample() take do a new measurement cycle for all
+	 * Call tlSensors.sample() take do a new measurement cycle for all
 	 * sensors 
 	 */
-	cvdSensors.sample();
+	tlSensors.sample();
 
 	/* 
 	 * For each button, print current value, background value and button
@@ -85,11 +84,11 @@ void loop()
 		Serial.print("button[");
 		Serial.print(n);
 		Serial.print("]: current value: ");
-		Serial.print(cvdSensors.getDelta(n));
+		Serial.print(tlSensors.getDelta(n));
 		Serial.print(", background value: ");
-		Serial.print(cvdSensors.getAvg(n));
+		Serial.print(tlSensors.getAvg(n));
 		Serial.print(", buttonStateLabel: ");
-		Serial.print(cvdSensors.getStateLabel(n));
+		Serial.print(tlSensors.getStateLabel(n));
 		if (n < N_SENSORS - 1) {	
 			Serial.print("\t ");
 		} else {

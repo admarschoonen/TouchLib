@@ -1,8 +1,8 @@
 #include <EEPROM.h>
-#include <TLSensor.h>
+#include <TouchLib.h>
 
 /*
- * TLSense Library Demo Sketch
+ * Touch Library Demo Sketch
  * Admar Schoonen 2016
  * Connect 4 electrodes (piece of metal sheet / foil) to analog pins A0 - A3
  */
@@ -137,7 +137,7 @@ void loop()
 	noisePower = tlSensors.data[b].noisePower;
 	noiseAmp = sqrt(noisePower);
 	snr = 10 * log10(delta * delta / noisePower);
-	buttonStateLabel = tlSensors.getStateLabel(d);
+	buttonStateLabel = tlSensors.getStateLabel(b);
 
 	floatToIntFrac(avg, 1, 2, &avgInt, &avgFrac);
 	floatToIntFrac(delta, 1, 2, &deltaInt, &deltaFrac);

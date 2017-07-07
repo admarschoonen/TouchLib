@@ -1,8 +1,7 @@
-#include <EEPROM.h>
-#include <CVDSensor.h>
+#include <TouchLib.h>
 
 /*
- * CVDSense Library Demo Sketch
+ * Touch Library Demo Sketch
  * Admar Schoonen 2016
  * Connect 4 electrodes (piece of metal sheet / foil) to analog pins A0, A2, A4
  * and A6
@@ -21,8 +20,8 @@
  */
 #define N_MEASUREMENTS_PER_SENSOR	16
 
-/* cvdSensors is the actual object that contains all the sensors */
-CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> cvdSensors;
+/* tlSensors is the actual object that contains all the sensors */
+TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> tlSensors;
 
 void setup()                    
 {
@@ -50,10 +49,10 @@ void setup()
 	 * By default, pins are connected starting at A0 in successive order.
 	 * Change the .pin parameter to select a different pin.
 	 */
-	cvdSensors.data[0].pin = A0; /* Analog pin 0 */
-	cvdSensors.data[1].pin = A2; /* Analog pin 2 */
-	cvdSensors.data[2].pin = A4; /* Analog pin 4 */
-	cvdSensors.data[3].pin = A6; /* Analog pin 6 */
+	tlSensors.data[0].pin = A0; /* Analog pin 0 */
+	tlSensors.data[1].pin = A2; /* Analog pin 2 */
+	tlSensors.data[2].pin = A4; /* Analog pin 4 */
+	tlSensors.data[3].pin = A6; /* Analog pin 6 */
 }
 
 void loop()
@@ -61,19 +60,19 @@ void loop()
 	int n;
 
 	/* 
-	 * Call cvdSensors.sample() take do a new measurement cycle for all
+	 * Call tlSensors.sample() take do a new measurement cycle for all
 	 * sensors 
 	 */
-	cvdSensors.sample();
+	tlSensors.sample();
 
 	/* For each button, print current value and button state label */
 	for (n = 0; n < N_SENSORS; n++) {
 		Serial.print("button[");
 		Serial.print(n);
 		Serial.print("]: current value: ");
-		Serial.print(cvdSensors.getDelta(n));
+		Serial.print(tlSensors.getDelta(n));
 		Serial.print(", buttonStateLabel: ");
-		Serial.print(cvdSensors.getStateLabel(n));
+		Serial.print(tlSensors.getStateLabel(n));
 		if (n < N_SENSORS - 1) {	
 			Serial.print("\t ");
 		} else {

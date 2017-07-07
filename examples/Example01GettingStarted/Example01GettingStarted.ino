@@ -1,8 +1,7 @@
-#include <EEPROM.h>
-#include <CVDSensor.h>
+#include <TouchLib.h>
 
 /*
- * CVDSense Library Demo Sketch
+ * Touch Library Demo Sketch
  * Admar Schoonen 2016
  * Connect 4 electrodes (piece of metal sheet / foil) to analog pins A0 - A3
  */
@@ -20,8 +19,8 @@
  */
 #define N_MEASUREMENTS_PER_SENSOR	16
 
-/* cvdSensors is the actual object that contains all the sensors */
-CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> cvdSensors;
+/* tlSensors is the actual object that contains all the sensors */
+TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> tlSensors;
 
 void setup()                    
 {
@@ -51,17 +50,17 @@ void loop()
 	int n;
 
 	/* 
-	 * Call cvdSensors.sample() take do a new measurement cycle for all
+	 * Call tlSensors.sample() take do a new measurement cycle for all
 	 * sensors 
 	 */
-	cvdSensors.sample();
+	tlSensors.sample();
 
 	/* For each button, print 1 if button pressed, 0 if not pressed */
 	for (n = 0; n < N_SENSORS; n++) {
 		Serial.print("button[");
 		Serial.print(n);
 		Serial.print("]: pressed: ");
-		Serial.print(cvdSensors.data[n].buttonIsPressed);
+		Serial.print(tlSensors.data[n].buttonIsPressed);
 		if (n < N_SENSORS - 1) {	
 			Serial.print("\t ");
 		} else {

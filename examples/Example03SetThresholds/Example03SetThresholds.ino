@@ -1,8 +1,7 @@
-#include <EEPROM.h>
-#include <CVDSensor.h>
+#include <TouchLib.h>
 
 /*
- * CVDSense Library Demo Sketch
+ * Touch Library Demo Sketch
  * Admar Schoonen 2016
  * Connect 4 electrodes (piece of metal sheet / foil) to analog pins A0 - A3
  */
@@ -20,8 +19,8 @@
  */
 #define N_MEASUREMENTS_PER_SENSOR	16
 
-/* cvdSensors is the actual object that contains all the sensors */
-CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> cvdSensors;
+/* tlSensors is the actual object that contains all the sensors */
+TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> tlSensors;
 
 void setup()                    
 {
@@ -53,10 +52,10 @@ void setup()
 		 * Set state transition times to 0 to get more direct feedback
 		 * while tuning the threshold levels.
 		 */
-		cvdSensors.data[n].releasedToApproachedTime = 0;
-		cvdSensors.data[n].approachedToReleasedTime = 0;
-		cvdSensors.data[n].approachedToPressedTime = 0;
-		cvdSensors.data[n].pressedToApproachedTime = 0;
+		tlSensors.data[n].releasedToApproachedTime = 0;
+		tlSensors.data[n].approachedToReleasedTime = 0;
+		tlSensors.data[n].approachedToPressedTime = 0;
+		tlSensors.data[n].pressedToApproachedTime = 0;
 
 		/* 
 		 * releasedToApproachedThreshold is the threshold above which
@@ -68,7 +67,7 @@ void setup()
 		 * A good initial value is usually 0.5 * the delta value at the
 		 * distance that should be considered as "approached".
 		 */
-		cvdSensors.data[n].releasedToApproachedThreshold = 50.0;
+		tlSensors.data[n].releasedToApproachedThreshold = 50.0;
 
 		/*
 		 * approachedToReleasedThreshold is the threshold below which
@@ -79,7 +78,7 @@ void setup()
 		 * than releasedToApproachedThreshold to prevent button
 		 * instability (~ 10% lower is usually a good initial guess).
 		 */
-		cvdSensors.data[n].approachedToReleasedThreshold = 40.0;
+		tlSensors.data[n].approachedToReleasedThreshold = 40.0;
 
 		/* 
 		 * approachedToPressedThreshold is the threshold above which a
@@ -91,7 +90,7 @@ void setup()
 		 * lightest touch (usually with your little finger) that should
 		 * still be registered.
 		 */
-		cvdSensors.data[n].approachedToPressedThreshold = 75.0;
+		tlSensors.data[n].approachedToPressedThreshold = 75.0;
 
 		/*
 		 * pressedToApproachedThreshold is the threshold below which a
@@ -101,7 +100,7 @@ void setup()
 		 * 10% lower is usually a good initial guess), but do not make
 		 * it smaller than approachedToReleasedThreshold.
 		 */
-		cvdSensors.data[n].pressedToApproachedThreshold = 60.0;
+		tlSensors.data[n].pressedToApproachedThreshold = 60.0;
 	}
 }
 
@@ -110,13 +109,13 @@ void loop()
 	int n;
 
 	/* 
-	 * Call cvdSensors.sample() take do a new measurement cycle for all
+	 * Call tlSensors.sample() take do a new measurement cycle for all
 	 * sensors 
 	 */
-	cvdSensors.sample();
+	tlSensors.sample();
 
 	/*
-	 * Internally, CVDSensors uses many more states than just approached and
+	 * Internally, TLSensors uses many more states than just approached and
 	 * pressed. Instead, it distinguises the following states:
 	 *   - PreCalibrating
 	 *   - Calibrating
@@ -180,9 +179,9 @@ void loop()
 		Serial.print("button[");
 		Serial.print(n);
 		Serial.print("]: delta: ");
-		Serial.print(cvdSensors.getDelta(n));
+		Serial.print(tlSensors.getDelta(n));
 		Serial.print(", buttonStateLabel: ");
-		Serial.print(cvdSensors.getStateLabel(n));
+		Serial.print(tlSensors.getStateLabel(n));
 		if (n < N_SENSORS - 1) {	
 			Serial.print("\t ");
 		} else {

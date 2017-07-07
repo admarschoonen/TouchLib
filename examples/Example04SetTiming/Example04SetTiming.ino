@@ -1,8 +1,7 @@
-#include <EEPROM.h>
-#include <CVDSensor.h>
+#include <TouchLib.h>
 
 /*
- * CVDSense Library Demo Sketch
+ * Touch Library Demo Sketch
  * Admar Schoonen 2016
  * Connect 4 electrodes (piece of metal sheet / foil) to analog pins A0 - A3
  */
@@ -20,8 +19,8 @@
  */
 #define N_MEASUREMENTS_PER_SENSOR	16
 
-/* cvdSensors is the actual object that contains all the sensors */
-CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> cvdSensors;
+/* tlSensors is the actual object that contains all the sensors */
+TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> tlSensors;
 
 void setup()                    
 {
@@ -50,10 +49,10 @@ void setup()
 	/* Change approached threshold for each sensor */
 	for (n = 0; n < N_SENSORS; n++) {
 		/* Set thresholds to levels you found in previous step. */
-		/*cvdSensors.data[n].releasedToApproachedThreshold = ;
-		cvdSensors.data[n].approachedToReleasedThreshold = ;
-		cvdSensors.data[n].approachedToPressedThreshold = ;
-		cvdSensors.data[n].pressedToApproachedThreshold = ;*/
+		/*tlSensors.data[n].releasedToApproachedThreshold = ;
+		tlSensors.data[n].approachedToReleasedThreshold = ;
+		tlSensors.data[n].approachedToPressedThreshold = ;
+		tlSensors.data[n].pressedToApproachedThreshold = ;*/
 
 		/* 
 		 * approachedTimeout is set to 300000 milliseconds (5 minutes)
@@ -71,13 +70,13 @@ void setup()
 		 * Change the value here and observe the difference in time
 		 * before recalibration is triggered.
 		 */
-		cvdSensors.data[n].approachedTimeout = 300000;
+		tlSensors.data[n].approachedTimeout = 300000;
 
 		/*
 		 * pressedTimeout is set to 5 minutes by default. It is similar
 		 * to approachedTimeout above, but for the pressed state.
 		 */
-		cvdSensors.data[n].pressedTimeout = 300000;
+		tlSensors.data[n].pressedTimeout = 300000;
 
 		/*
 		 * calibrationTime is set to 100 ms by default. It is the time
@@ -86,7 +85,7 @@ void setup()
 		 * (the avg value), but at the cost of longer time at startup
 		 * and during recalibration.
 		 */
-		cvdSensors.data[n].calibrationTime = 500;
+		tlSensors.data[n].calibrationTime = 500;
 
 		/*
 		 * preCalibrationTime is set to 100 ms by default. It is the
@@ -95,7 +94,7 @@ void setup()
 		 * settle. Increasing this value will result in longer time for
 		 * setting at the cost of longer time at startup.
 		 */
-		cvdSensors.data[n].preCalibrationTime = 500;
+		tlSensors.data[n].preCalibrationTime = 500;
 	}
 }
 
@@ -104,13 +103,13 @@ void loop()
 	int n;
 
 	/* 
-	 * Call cvdSensors.sample() take do a new measurement cycle for all
+	 * Call tlSensors.sample() take do a new measurement cycle for all
 	 * sensors 
 	 */
-	cvdSensors.sample();
+	tlSensors.sample();
 
 	/*
-	 * Internally, CVDSensors uses many more states than just approached and
+	 * Internally, TLSensors uses many more states than just approached and
 	 * pressed. Instead, it distinguises the following states:
 	 *   - PreCalibrating
 	 *   - Calibrating
@@ -170,9 +169,9 @@ void loop()
 		Serial.print("button[");
 		Serial.print(n);
 		Serial.print("]: current value: ");
-		Serial.print(cvdSensors.getDelta(n));
+		Serial.print(tlSensors.getDelta(n));
 		Serial.print(", buttonStateLabel: ");
-		Serial.print(cvdSensors.getStateLabel(n));
+		Serial.print(tlSensors.getStateLabel(n));
 		if (n < N_SENSORS - 1) {	
 			Serial.print("\t ");
 		} else {

@@ -1,8 +1,7 @@
-#include <EEPROM.h>
-#include <CVDSensor.h>
+#include <TouchLib.h>
 
 /*
- * CVDSense Library Demo Sketch
+ * Touch Library Demo Sketch
  * Admar Schoonen 2016
  * Connect 4 electrodes (piece of metal sheet / foil) to analog pins A0 - A3
  */
@@ -20,8 +19,8 @@
  */
 #define N_MEASUREMENTS_PER_SENSOR	16
 
-/* cvdSensors is the actual object that contains all the sensors */
-CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> cvdSensors;
+/* tlSensors is the actual object that contains all the sensors */
+TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> tlSensors;
 
 void setup()                    
 {
@@ -47,7 +46,7 @@ void setup()
 
 	/*
 	 * The parameter N_MEASUREMENTS_PER_SENSOR (see above) determines the
-	 * number of measurements per sensor per measurement cycle. CVDSensor
+	 * number of measurements per sensor per measurement cycle. TLSensor
 	 * uses a pseudo-random sampling order to spread noise randomly over
 	 * multiple samples. A higher value uses more samples and thus more
 	 * noise reduction. However, a higher value also makes the total
@@ -71,10 +70,10 @@ void loop()
 
 	t_start = millis();
 	/* 
-	 * Call cvdSensors.sample() take do a new measurement cycle for all
+	 * Call tlSensors.sample() take do a new measurement cycle for all
 	 * sensors 
 	 */
-	cvdSensors.sample();
+	tlSensors.sample();
 	t_stop = millis();
 
 	/* 
@@ -86,11 +85,11 @@ void loop()
 		Serial.print("button[");
 		Serial.print(n);
 		Serial.print("]: current value: ");
-		Serial.print(cvdSensors.getDelta(n));
+		Serial.print(tlSensors.getDelta(n));
 		Serial.print(", background value: ");
-		Serial.print(cvdSensors.getAvg(n));
+		Serial.print(tlSensors.getAvg(n));
 		Serial.print(", buttonStateLabel: ");
-		Serial.print(cvdSensors.getStateLabel(n));
+		Serial.print(tlSensors.getStateLabel(n));
 		if (n < N_SENSORS - 1) {	
 			Serial.print("\t ");
 		}

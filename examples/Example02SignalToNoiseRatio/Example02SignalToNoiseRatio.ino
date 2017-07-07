@@ -1,8 +1,7 @@
-#include <EEPROM.h>
-#include <CVDSensor.h>
+#include <TouchLib.h>
 
 /*
- * CVDSense Library Demo Sketch
+ * Touch Library Demo Sketch
  * Admar Schoonen 2016
  * Connect 4 electrodes (piece of metal sheet / foil) to analog pins A0 - A3
  */
@@ -20,8 +19,8 @@
  */
 #define N_MEASUREMENTS_PER_SENSOR	16
 
-/* cvdSensors is the actual object that contains all the sensors */
-CvdSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> cvdSensors;
+/* tlSensors is the actual object that contains all the sensors */
+TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> tlSensors;
 
 void setup()
 {
@@ -52,10 +51,10 @@ void setup()
 		 * Disable state machine so we can control updating average in
 		 * the main loop.
 		 */
-		cvdSensors.data[n].enableTouchStateMachine = false;
+		tlSensors.data[n].enableTouchStateMachine = false;
 
 		/* Enable noise power measurement */
-		cvdSensors.data[n].enableNoisePowerMeasurement = true;
+		tlSensors.data[n].enableNoisePowerMeasurement = true;
 	}
 }
 
@@ -78,14 +77,14 @@ int processSerialData(int b)
 		}
 		if ((n >= 0) && (n == b) && (n <= N_SENSORS)) {
 			/* toggle sensor pressed state */
-			if (cvdSensors.getState(n) ==
-					CvdStruct::buttonStatePressed) {
-				cvdSensors.setState(n,
-					CvdStruct::buttonStateReleased);
-			} else if (cvdSensors.getState(n) ==
-					CvdStruct::buttonStateReleased) {
-				cvdSensors.setState(n,
-					CvdStruct::buttonStatePressed);
+			if (tlSensors.getState(n) ==
+					TLStruct::buttonStatePressed) {
+				tlSensors.setState(n,
+					TLStruct::buttonStateReleased);
+			} else if (tlSensors.getState(n) ==
+					TLStruct::buttonStateReleased) {
+				tlSensors.setState(n,
+					TLStruct::buttonStatePressed);
 			}
 		}
 	}
@@ -120,10 +119,10 @@ void loop()
 	n = processSerialData(b);
 
 	/*
-	 * Call cvdSensors.sample() take do a new measurement cycle for all
+	 * Call tlSensors.sample() take do a new measurement cycle for all
 	 * sensors
 	 */
-	cvdSensors.sample();
+	tlSensors.sample();
 
 	/*
 	 * Only print statistics for selected button
@@ -132,12 +131,12 @@ void loop()
 		b = n;
 	}
 
-	avg = cvdSensors.getAvg(b);
-	delta = cvdSensors.getDelta(b);
-	noisePower = cvdSensors.data[b].noisePower;
+	avg = tlSensors.getAvg(b);
+	delta = tlSensors.getDelta(b);
+	noisePower = tlSensors.data[b].noisePower;
 	noiseAmp = sqrt(noisePower);
 	snr = 10 * log10(delta * delta / noisePower);
-	buttonStateLabel = cvdSensors.getStateLabel(b);
+	buttonStateLabel = tlSensors.getStateLabel(b);
 
 	floatToIntFrac(avg, 1, 2, &avgInt, &avgFrac);
 	floatToIntFrac(delta, 1, 2, &deltaInt, &deltaFrac);
