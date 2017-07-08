@@ -148,6 +148,17 @@ static void TLChargeSensor(struct TLStruct * data, uint8_t nSensors, uint8_t ch,
 	}
 }
 
+static void TLDischargeSensor(struct TLStruct * data, uint8_t nSensors, uint8_t ch,
+		bool delay)
+{
+	pinMode(data[ch].pin, OUTPUT);
+	digitalWrite(data[ch].pin, LOW);
+
+	if ((delay) && (data[ch].chargeDelaySensor)) {
+		delayMicroseconds(data[ch].chargeDelaySensor);
+	}
+}
+
 static void TLCharge(struct TLStruct * data, uint8_t nSensors, uint8_t ch,
 		int ch_pin, int ref_pin)
 {
@@ -213,9 +224,7 @@ int TLSampleMethodCVD(struct TLStruct * data, uint8_t nSensors, uint8_t ch,
 		}
 	}
 
-	/* Discharge sensor. */
-	pinMode(ch_pin, OUTPUT);
-	digitalWrite(ch_pin, LOW);
+	TLDischargeSensor(data, nSensors, ch, true);
 
 	return sample;
 }
