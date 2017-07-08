@@ -63,10 +63,10 @@ void setup()
 	 */
 
 	tlSensors.data[0].forceCalibrationWhenApproachingFromPressed = 
-		(1 << 2); // Recalibrate sensor 2 if sensor 0 is released
+		(1UL << 2); // Recalibrate sensor 2 if sensor 0 is released
 
 	tlSensors.data[1].forceCalibrationWhenApproachingFromPressed = 
-		(1 << 3); // Recalibrate sensor 3 if sensor 1 is released
+		(1UL << 3); // Recalibrate sensor 3 if sensor 1 is released
 
 	/*
 	 * The resistive part of our sensors are sensors 2 and 3. By default,
