@@ -139,6 +139,7 @@ struct TLStruct {
 	float approachedToReleasedThreshold; /* stored in EEPROM */
 	float approachedToPressedThreshold; /* stored in EEPROM */
 	float pressedToApproachedThreshold; /* stored in EEPROM */
+	float calibratedMaxDelta;
 	uint32_t releasedToApproachedTime;
 	uint32_t approachedToReleasedTime;
 	uint32_t approachedToPressedTime;
@@ -207,6 +208,7 @@ struct TLStruct {
 	float distance;
 	float avg;
 	float delta;
+	float maxDelta;
 	float noisePower;
 	enum ButtonState buttonState;
 	const char * buttonStateLabel; /* human readable label */
@@ -902,6 +904,8 @@ TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::TLSensors(void)
 			data[n].avg = 0;
 			data[n].noisePower = 0;
 			data[n].delta = 0;
+			data[n].maxDelta = 0;
+			data[n].maxDelta = 0;
 			data[n].nCharges = TL_N_CHARGES_MIN_DEFAULT;
 			data[n].nChargesNext = TL_N_CHARGES_MIN_DEFAULT;
 			data[n].nChargesMin = TL_N_CHARGES_MIN_DEFAULT;
@@ -1144,6 +1148,7 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(int ch,
 		case TLStruct::buttonStateCalibrating:
 			d->counter = 0;
 			d->avg = 0;
+			d->maxDelta = 0;
 			d->noisePower = 0;
 	
 			if (!d->setParallelCapacitanceManually) {
@@ -1405,6 +1410,9 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processSample(uint8_t ch)
 	d = &(data[ch]);
 
 	d->delta = d->capacitance - d->avg;
+	if (d->maxDelta < d->delta) {
+		d->maxDelta = d->delta;
+	}
 
 	switch (d->buttonState) {
 	case TLStruct::buttonStatePreCalibrating:
