@@ -527,7 +527,7 @@ void maxTouchCalibration(int n)
 void checkResistiveCapacitiveSensor(int n)
 {
 	int k;
-	int cap_sensor, res_sensor;
+	int cap_sensor = -1, res_sensor = -1;
 
 	tlSensors.data[n].forceCalibrationWhenApproachingFromPressed = 0UL;
 
@@ -685,41 +685,58 @@ void printCode(void)
 		Serial.println("         */");
 		Serial.print("        tlSensors.data[");
 		Serial.print(n);
-		Serial.print("].pin = ");
+		Serial.print("].sampleMethod                       = ");
+		if (tlSensors.data[n].sampleMethod == TLSampleMethodResistive) {
+			Serial.println("TLSampleMethodResistive");
+		} else {
+			Serial.println("TLSampleMethodCVD");
+		}
+		Serial.print("        tlSensors.data[");
+		Serial.print(n);
+		Serial.print("].pin                                        = ");
 		Serial.print(tlSensors.data[n].pin - A0);
 		Serial.println(";");
 		if (tlSensors.data[n].sampleMethod == TLSampleMethodResistive) {
 			Serial.print("        tlSensors.data[");
 			Serial.print(n);
-			Serial.print("].sampleMethodResistive_gndPin = ");
+			Serial.print("].sampleMethodResistive_gndPin       = ");
 			Serial.print(tlSensors.data[n].sampleMethodResistive_gndPin);
 			Serial.println(";");
 		}
 		Serial.print("        tlSensors.data[");
 		Serial.print(n);
-		Serial.print("].releasedToApproachedThreshold = ");
+		Serial.print("].releasedToApproachedThreshold =              ");
 		Serial.print(tlSensors.data[n].releasedToApproachedThreshold);
 		Serial.println(";");
 		Serial.print("        tlSensors.data[");
 		Serial.print(n);
-		Serial.print("].approachedToReleasedThreshold = ");
+		Serial.print("].approachedToReleasedThreshold =              ");
 		Serial.print(tlSensors.data[n].approachedToReleasedThreshold);
 		Serial.println(";");
 		Serial.print("        tlSensors.data[");
 		Serial.print(n);
-		Serial.print("].approachedToPressedThreshold =  ");
+		Serial.print("].approachedToPressedThreshold =               ");
 		Serial.print(tlSensors.data[n].approachedToPressedThreshold);
 		Serial.println(";");
 		Serial.print("        tlSensors.data[");
 		Serial.print(n);
-		Serial.print("].pressedToApproachedThreshold =  ");
+		Serial.print("].pressedToApproachedThreshold =               ");
 		Serial.print(tlSensors.data[n].pressedToApproachedThreshold);
 		Serial.println(";");
 		Serial.print("        tlSensors.data[");
 		Serial.print(n);
-		Serial.print("].calibratedMaxDelta =            ");
+		Serial.print("].calibratedMaxDelta =                         ");
 		Serial.print(tlSensors.data[n].calibratedMaxDelta);
 		Serial.println(";");
+		Serial.print("        tlSensors.data[");
+		Serial.print(n);
+		Serial.print("].enableSlewrateLimiter =                      ");
+		if (tlSensors.data[n].enableSlewrateLimiter) {
+			Serial.println("true;");
+		} else {
+			Serial.println("false;");
+		}
+
 		if ((tlSensors.data[n].sampleMethod == TLSampleMethodCVD) &&
 				(tlSensors.data[n].forceCalibrationWhenApproachingFromPressed)) {
 			Serial.print("        tlSensors.data[");
