@@ -56,10 +56,10 @@ struct TLStruct {
 	enum ButtonState {
 		/*
 		 * Button states.
-		 * buttonStatePreCalibrating, buttonStateCalibrating,
-		 * buttonStateNoisePowerMeasurement, buttonStateReleased,
-		 * buttonStateReleasedToApproached, buttonStateApproached,
-		 * buttonStateApproachedToReleased and
+		 * buttonStateInitializing, buttonStatePreCalibrating,
+		 * buttonStateCalibrating, buttonStateNoisePowerMeasurement,
+		 * buttonStateReleased, buttonStateReleasedToApproached,
+		 * buttonStateApproached, buttonStateApproachedToReleased and
 		 * buttonStateApproachedToPressed can be regarded as "released"
 		 * or "not touched". 
 		 *
@@ -78,17 +78,18 @@ struct TLStruct {
 		 * buttonStateNoisePowerMeasurement can be considered as
 		 * "calibrating".
 		 */
-		buttonStatePreCalibrating = 0,
-		buttonStateCalibrating = 1,
-		buttonStateNoisePowerMeasurement = 2,
-		buttonStateReleased = 3,
-		buttonStateReleasedToApproached = 4,
-		buttonStateApproached = 5,
-		buttonStateApproachedToPressed = 6,
-		buttonStateApproachedToReleased = 7,
-		buttonStatePressed = 8,
-		buttonStatePressedToApproached = 9,
-		buttonStateMax = 10
+		buttonStateInitializing = 0,
+		buttonStatePreCalibrating = 1,
+		buttonStateCalibrating = 2,
+		buttonStateNoisePowerMeasurement = 3,
+		buttonStateReleased = 4,
+		buttonStateReleasedToApproached = 5,
+		buttonStateApproached = 6,
+		buttonStateApproachedToPressed = 7,
+		buttonStateApproachedToReleased = 8,
+		buttonStatePressed = 9,
+		buttonStatePressedToApproached = 10,
+		buttonStateMax = 11
 	};
 
 	enum Direction {
@@ -177,19 +178,42 @@ struct TLStruct {
 	 * - TLSampleMethodTouchRead (Teensy 3.x only)
 	 * - custom method
 	 *
-	 * For custom method: the inv parameter indicates if an inverted
-	 * measurement is requested. This is used in pseudo differential
-	 * measurements. If inverted measurements are not supported, just check
-	 * return 0 when inv == true.
+	 * It is used only during initialization and should set callback
+	 * functions sampleMethodPreSample, sampleMethodSample and
+	 * sampleMethodPostSample.
 	 */
-	int (*sampleMethod)(struct TLStruct * d, uint8_t nSensors, uint8_t ch, bool inv);
+	int (*sampleMethod)(struct TLStruct * d, uint8_t nSensors, uint8_t ch);
+
+	/*
+	 * sampleMethodPreSample should be set by sampleMethod. It is called at
+	 * the beginning of a new measurement
+	 */
+	int (*sampleMethodPreSample)(struct TLStruct * d, uint8_t nSensors,
+		uint8_t ch);
+
+	/*
+	 * sampleMethodSample should be set by sampleMethod. For custom method:
+	 * the inv parameter indicates if an inverted measurement is requested.
+	 * This is used in pseudo differential measurements. If inverted
+	 * measurements are not supported, just check return 0 when inv == true.
+	 */
+	int (*sampleMethodSample)(struct TLStruct * d, uint8_t nSensors,
+		uint8_t ch, bool inv);
+
+	/*
+	 * sampleMethodPostSample should be set by sampleMethod. It is called at
+	 * the end of a new measurement
+	 */
+	int (*sampleMethodPostSample)(struct TLStruct * d, uint8_t nSensors,
+		uint8_t ch);
 
 	/*
 	 * Set enableTouchStateMachine to false to only use a sensor for
 	 * capacitive sensing or during tuning. After startup, sensor will be in
-	 * state buttonStatePreCalibrating followed by buttonStateCalibrating
-	 * and buttonStateNoisePowerMeasurement. After noise measurement the state
-	 * will switch to buttonStateReleased and stay there.
+	 * state buttonStateInitializing, followed by buttonStatePreCalibrating,
+	 * buttonStateCalibrating and buttonStateNoisePowerMeasurement. After
+	 * noise measurement the state will switch to buttonStateReleased and
+	 * stay there.
 	 */
 	bool enableTouchStateMachine;
 
@@ -301,6 +325,7 @@ class TLSensors
 		bool isApproached(TLStruct * d);
 		bool isReleased(TLStruct * d);
 		void updateAvg(TLStruct * d);
+		void processStateInitializing(uint8_t ch);
 		void processStatePreCalibrating(uint8_t ch);
 		void processStateCalibrating(uint8_t ch);
 		void processStateNoisePowerMeasurement(uint8_t ch);
@@ -320,7 +345,7 @@ class TLSensors
 		/* These strings are for human readability */
 		const char * const buttonStateLabels[TLStruct::buttonStateMax +
 				1] = {
-			"PreCalibrating", "Calibrating",
+			"Initializing", "PreCalibrating", "Calibrating",
 			"NoisePowerMeasurement", "Released",
 			"ReleasedToApproached", "Approached",
 			"ApproachedToPressed", "ApproachedToReleased",
@@ -895,7 +920,7 @@ TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::TLSensors(void)
 
 		for (n = 0; n < nSensors; n++) {
 			resetButtonStateSummaries(n);
-			setState(n, TLStruct::buttonStatePreCalibrating);
+			setState(n, TLStruct::buttonStateInitializing);
 			data[n].buttonStateLabel =
 				this->buttonStateLabels[data[n].buttonState];
 			data[n].counter = 0;
@@ -1143,6 +1168,8 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(int ch,
 	if (d->buttonState != newState) {
 		d->stateIsBeingChanged = true;
 		switch(newState) {
+		case TLStruct::buttonStateInitializing:
+			break;
 		case TLStruct::buttonStatePreCalibrating:
 			break;
 		case TLStruct::buttonStateCalibrating:
@@ -1209,6 +1236,18 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(int ch,
 			(*buttonStateChangeCallback)(ch, oldState, newState);
 		}
 		d->stateIsBeingChanged = false;
+	}
+}
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateInitializing(uint8_t ch)
+{
+	TLStruct * d;
+	d = &(data[ch]);
+
+	if (d->sampleMethod != NULL) {
+		d->sampleMethod(data, nSensors, ch);
+		setState(ch, TLStruct::buttonStatePreCalibrating);
 	}
 }
 
@@ -1415,6 +1454,9 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processSample(uint8_t ch)
 	}
 
 	switch (d->buttonState) {
+	case TLStruct::buttonStateInitializing:
+		processStateInitializing(ch);
+		break;
 	case TLStruct::buttonStatePreCalibrating:
 		processStatePreCalibrating(ch);
 		break;
@@ -1525,43 +1567,53 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 		data[ch].slewrateFirstSample = true;
 	}
 
-	for (pos = 0; pos < length; pos++) {
-		if (data[scanOrder[pos]].sampleType &
-				TLStruct::sampleTypeNormal) {
-			ch = scanOrder[pos];
-			sample1 = data[scanOrder[pos]].sampleMethod(data,
-				nSensors, ch, false);
+	for (ch = 0; ch < nSensors; ch++) {
+		if (data[ch].sampleMethodPreSample != NULL) {
+			data[ch].sampleMethodPreSample(data, nSensors, ch);
 		}
-		if (data[scanOrder[pos]].sampleType &
+	}
+
+	for (pos = 0; pos < length; pos++) {
+		ch = scanOrder[pos];
+		if (data[ch].sampleType &
+				TLStruct::sampleTypeNormal) {
+			if (data[ch].sampleMethodSample != NULL) {
+				sample1 = data[ch].sampleMethodSample(data,
+					nSensors, ch, false);
+			}
+		}
+		if (data[ch].sampleType &
 				TLStruct::sampleTypeInverted) {
-			ch = scanOrder[pos];
-			sample2 = TL_ADC_MAX - 
-				data[scanOrder[pos]].sampleMethod(data,
-				nSensors, ch, true);
+			if (data[ch].sampleMethodSample != NULL) {
+				sample2 = TL_ADC_MAX - 
+					data[ch].sampleMethodSample(data,
+					nSensors, ch, true);
+			}
 		}
 
 		/*
 		 * For sampleTypeNormal and sampleTypeInverted: scale by factor
 		 * 2 to get same amplitude as with sampleTypeDifferential.
 		 */
-		if (data[scanOrder[pos]].sampleType ==
-				TLStruct::sampleTypeNormal) {
+		if (data[ch].sampleType == TLStruct::sampleTypeNormal) {
 			sample1 = sample1 << 1;
 		}
-		if (data[scanOrder[pos]].sampleType ==
-				TLStruct::sampleTypeInverted) {
+		if (data[ch].sampleType == TLStruct::sampleTypeInverted) {
 			sample2 = sample2 << 1;
 		}
 
 		sum = sample1 + sample2;
-		addSample(scanOrder[pos], sum);
+		addSample(ch, sum);
 	}
 	
 	now = millis();
 
 	for (ch = 0; ch < nSensors; ch++) {
-		data[ch].lastSampledAtTime = now;
 		correctSample(ch);
+		if (data[ch].sampleMethodPostSample != NULL) {
+			data[ch].sampleMethodPostSample(data, nSensors, ch);
+		}
+		data[ch].lastSampledAtTime = now;
 		processSample(ch);
 	}
 

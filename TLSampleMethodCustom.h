@@ -33,7 +33,16 @@
 
 #include <TouchLib.h>
 
-int TLSampleMethodCustom(struct TLStruct * data, uint8_t nSensors,
+int TLSampleMethodCustomPreSample(struct TLStruct * data, uint8_t nSensors,
+	uint8_t ch) __attribute__ ((weak));
+
+int TLSampleMethodCustomSample(struct TLStruct * data, uint8_t nSensors,
 	uint8_t ch, bool inv) __attribute__ ((weak));
+
+int TLSampleMethodCustomPostSample(struct TLStruct * data, uint8_t nSensors,
+	uint8_t ch) __attribute__ ((weak));
+
+int TLSampleMethodCustom(struct TLStruct * data, uint8_t nSensors,
+	uint8_t ch) __attribute__ ((weak));
 
 #endif

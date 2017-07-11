@@ -175,8 +175,14 @@ static void TLCharge(struct TLStruct * data, uint8_t nSensors, uint8_t ch,
 	}
 }
 
-int TLSampleMethodCVD(struct TLStruct * data, uint8_t nSensors, uint8_t ch,
-		bool inv)
+int TLSampleMethodCVDPreSample(struct TLStruct * data, uint8_t nSensors,
+		uint8_t ch)
+{
+	return 0;
+}
+
+int TLSampleMethodCVDSample(struct TLStruct * data, uint8_t nSensors, 
+		uint8_t ch, bool inv)
 {
 	struct TLStruct * dCh;
 	struct TLStruct * dRef;
@@ -228,3 +234,23 @@ int TLSampleMethodCVD(struct TLStruct * data, uint8_t nSensors, uint8_t ch,
 
 	return sample;
 }
+
+int TLSampleMethodCVDPostSample(struct TLStruct * data, uint8_t nSensors,
+		uint8_t ch)
+{
+	return 0;
+}
+
+int TLSampleMethodCVD(struct TLStruct * data, uint8_t nSensors, uint8_t ch)
+{
+	struct TLStruct * d;
+
+	d = &(data[ch]);
+
+	d->sampleMethodPreSample = NULL;
+	d->sampleMethodSample = TLSampleMethodCVDSample;
+	d->sampleMethodPostSample = NULL;
+
+	return 0;
+}
+

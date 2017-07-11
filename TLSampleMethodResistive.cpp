@@ -31,8 +31,8 @@
 #include "TouchLib.h"
 #include "TLSampleMethodResistive.h"
 
-int TLSampleMethodResistive(struct TLStruct * data, uint8_t nSensors, uint8_t ch,
-		bool inv)
+int TLSampleMethodResistiveSample(struct TLStruct * data, uint8_t nSensors,
+		uint8_t ch, bool inv)
 {
 	struct TLStruct * dCh;
 	int ch_pin, gnd_pin, sample;
@@ -75,4 +75,19 @@ int TLSampleMethodResistive(struct TLStruct * data, uint8_t nSensors, uint8_t ch
 	}
 
 	return sample;
+}
+
+
+int TLSampleMethodResistive(struct TLStruct * data, uint8_t nSensors,
+		uint8_t ch)
+{
+	struct TLStruct * d;
+
+	d = &(data[ch]);
+
+	d->sampleMethodPreSample = NULL;
+	d->sampleMethodSample = TLSampleMethodResistiveSample;
+	d->sampleMethodPostSample = NULL;
+
+	return 0;
 }

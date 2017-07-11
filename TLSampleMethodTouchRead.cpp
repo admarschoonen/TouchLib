@@ -31,8 +31,14 @@
 #include "TouchLib.h"
 #include "TLSampleMethodTouchRead.h"
 
-int TLSampleMethodTouchRead(struct TLStruct * data, uint8_t nSensors, uint8_t ch,
-		bool inv)
+int TLSampleMethodTouchReadPreSample(struct TLStruct * data, uint8_t nSensors,
+		uint8_t ch)
+{
+	return 0;
+}
+
+int TLSampleMethodTouchReadSample(struct TLStruct * data, uint8_t nSensors,
+	uint8_t ch, bool inv)
 {
 	int sample;
 	
@@ -70,4 +76,24 @@ int TLSampleMethodTouchRead(struct TLStruct * data, uint8_t nSensors, uint8_t ch
 	#endif
 
 	return sample;
+}
+
+int TLSampleMethodTouchReadPostSample(struct TLStruct * data, uint8_t nSensors,
+		uint8_t ch)
+{
+	return 0;
+}
+
+int TLSampleMethodTouchRead(struct TLStruct * data, uint8_t nSensors,
+		uint8_t ch)
+{
+	struct TLStruct * d;
+
+	d = &(data[ch]);
+
+	d->sampleMethodPreSample = TLSampleMethodTouchReadPreSample;
+	d->sampleMethodSample = TLSampleMethodTouchReadSample;
+	d->sampleMethodPostSample = TLSampleMethodTouchReadPostSample;
+
+	return 0;
 }

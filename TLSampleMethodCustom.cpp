@@ -31,8 +31,33 @@
 #include "TouchLib.h"
 #include "TLSampleMethodCustom.h"
 
-int TLSampleMethodCustom(struct TLStruct * data, uint8_t nSensors, uint8_t ch,
-		bool inv)
+int TLSampleMethodCustomPreSample(struct TLStruct * data, uint8_t nSensors,
+		uint8_t ch)
 {
+	return 0;
+}
+
+int TLSampleMethodCustomSample(struct TLStruct * data, uint8_t nSensors,
+		uint8_t ch, bool inv)
+{
+	return 0;
+}
+
+int TLSampleMethodCustomPostSample(struct TLStruct * data, uint8_t nSensors,
+		uint8_t ch)
+{
+	return 0;
+}
+
+int TLSampleMethodCustom(struct TLStruct * data, uint8_t nSensors, uint8_t ch)
+{
+	struct TLStruct * d;
+
+	d = &(data[ch]);
+
+	d->sampleMethodPreSample = TLSampleMethodCustomPreSample;
+	d->sampleMethodSample = TLSampleMethodCustomSample;
+	d->sampleMethodPostSample = TLSampleMethodCustomPostSample;
+
 	return 0;
 }
