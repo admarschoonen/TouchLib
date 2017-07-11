@@ -31,6 +31,17 @@
 #include "TouchLib.h"
 #include "TLSampleMethodTouchRead.h"
 
+#define TL_REFERENCE_VALUE_DEFAULT			((float) 2) /* 2 pF */
+#define TL_SCALE_FACTOR_DEFAULT				((float) 1)
+#define TL_OFFSET_VALUE_DEFAULT				((float) 0) /* pF */
+
+#define TL_SET_OFFSET_VALUE_MANUALLY_DEFAULT	    	false
+
+#define TL_RELEASED_TO_APPROACHED_THRESHOLD_DEFAULT	50.0
+#define TL_APPROACHED_TO_RELEASED_THRESHOLD_DEFAULT	40.0
+#define TL_APPROACHED_TO_PRESSED_THRESHOLD_DEFAULT	150.0
+#define TL_PRESSED_TO_APPROACHED_THRESHOLD_DEFAULT	120.0
+
 int TLSampleMethodTouchReadPreSample(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch)
 {
@@ -69,7 +80,7 @@ int TLSampleMethodTouchReadSample(struct TLStruct * data, uint8_t nSensors,
 		sample = 0;
 	} else {
 		dCh = &(data[ch]);
-		ch_pin = dCh->pin;
+		ch_pin = dCh->tlStructSampleMethod.touchRead.pin;
 		sample = touchRead(ch_pin);
 	}
 
@@ -81,7 +92,24 @@ int TLSampleMethodTouchReadSample(struct TLStruct * data, uint8_t nSensors,
 int TLSampleMethodTouchReadPostSample(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch)
 {
-	return 0;
+        TLStruct * d;
+        float tmp, scale;
+
+        d = &(data[ch]);
+
+        if (d->enableSlewrateLimiter) {
+                scale = (float) ((TL_ADC_MAX + 1) << 2);
+        } else {
+                scale = ((float) (d->nMeasurementsPerSensor << 1)) *
+                        ((float) (TL_ADC_MAX + 1));
+        }
+
+        tmp = d->raw / scale;
+        tmp = d->scaleFactor * d->referenceValue * tmp;
+        d->value = tmp;
+        /* Capacitance can be negative due to noise! */
+
+        return 0;
 }
 
 int TLSampleMethodTouchRead(struct TLStruct * data, uint8_t nSensors,
@@ -94,6 +122,26 @@ int TLSampleMethodTouchRead(struct TLStruct * data, uint8_t nSensors,
 	d->sampleMethodPreSample = TLSampleMethodTouchReadPreSample;
 	d->sampleMethodSample = TLSampleMethodTouchReadSample;
 	d->sampleMethodPostSample = TLSampleMethodTouchReadPostSample;
+
+	d->tlStructSampleMethod.touchRead.pin = A0 + ch;
+
+
+	d->referenceValue = TL_REFERENCE_VALUE_DEFAULT;
+	d->offsetValue = TL_OFFSET_VALUE_DEFAULT;
+	d->scaleFactor = TL_SCALE_FACTOR_DEFAULT;
+	d->setOffsetValueManually = TL_SET_OFFSET_VALUE_MANUALLY_DEFAULT;
+
+	d->releasedToApproachedThreshold =
+		TL_RELEASED_TO_APPROACHED_THRESHOLD_DEFAULT;
+	d->approachedToReleasedThreshold =
+		TL_APPROACHED_TO_RELEASED_THRESHOLD_DEFAULT;
+	d->approachedToPressedThreshold =
+		TL_APPROACHED_TO_PRESSED_THRESHOLD_DEFAULT;
+	d->pressedToApproachedThreshold =
+		TL_PRESSED_TO_APPROACHED_THRESHOLD_DEFAULT;
+
+	d->direction = TLStruct::directionPositive;
+	d->sampleType = TLStruct::sampleTypeNormal;
 
 	return 0;
 }

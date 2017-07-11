@@ -56,10 +56,10 @@ struct TLStruct {
 	enum ButtonState {
 		/*
 		 * Button states.
-		 * buttonStateInitializing, buttonStatePreCalibrating,
-		 * buttonStateCalibrating, buttonStateNoisePowerMeasurement,
-		 * buttonStateReleased, buttonStateReleasedToApproached,
-		 * buttonStateApproached, buttonStateApproachedToReleased and
+		 * buttonStatePreCalibrating, buttonStateCalibrating,
+		 * buttonStateNoisePowerMeasurement, buttonStateReleased,
+		 * buttonStateReleasedToApproached, buttonStateApproached,
+		 * buttonStateApproachedToReleased and
 		 * buttonStateApproachedToPressed can be regarded as "released"
 		 * or "not touched". 
 		 *
@@ -78,25 +78,24 @@ struct TLStruct {
 		 * buttonStateNoisePowerMeasurement can be considered as
 		 * "calibrating".
 		 */
-		buttonStateInitializing = 0,
-		buttonStatePreCalibrating = 1,
-		buttonStateCalibrating = 2,
-		buttonStateNoisePowerMeasurement = 3,
-		buttonStateReleased = 4,
-		buttonStateReleasedToApproached = 5,
-		buttonStateApproached = 6,
-		buttonStateApproachedToPressed = 7,
-		buttonStateApproachedToReleased = 8,
-		buttonStatePressed = 9,
-		buttonStatePressedToApproached = 10,
-		buttonStateMax = 11
+		buttonStatePreCalibrating = 0,
+		buttonStateCalibrating = 1,
+		buttonStateNoisePowerMeasurement = 2,
+		buttonStateReleased = 3,
+		buttonStateReleasedToApproached = 4,
+		buttonStateApproached = 5,
+		buttonStateApproachedToPressed = 6,
+		buttonStateApproachedToReleased = 7,
+		buttonStatePressed = 8,
+		buttonStatePressedToApproached = 9,
+		buttonStateMax = 10
 	};
 
 	enum Direction {
 		/*
-		 * directionPositive means the capacitance is increased when a
+		 * directionPositive means the value is increased when a
 		 * user touches the button (this is the default behaviour).
-		 * directionNegative means the capacitance is decreased when a
+		 * directionNegative means the value is decreased when a
 		 * user touches the button (not very common).
 		 */
 		directionNegative,
@@ -127,13 +126,17 @@ struct TLStruct {
 		sampleTypeDifferential = 3
 	};
 
+	union TLStructSampleMethod {
+		struct TLStructSampleMethodCVD CVD;
+		struct TLStructSampleMethodResistive resistive;
+		struct TLStructSampleMethodTouchRead touchRead;
+		struct TLStructSampleMethodCustom custom;
+	} tlStructSampleMethod;
+
 	/*
 	 * These members are set to defaults upon initialization but can be
 	 * overruled by the user.
 	 */
-	int pin;
-	int sampleMethodResistive_gndPin;
-	bool sampleMethodResistive_useInternalPullup;
 	enum Direction direction;
 	enum SampleType sampleType;
 	float releasedToApproachedThreshold; /* stored in EEPROM */
@@ -155,21 +158,12 @@ struct TLStruct {
 	uint32_t forceCalibrationWhenApproachingFromReleased;
 	uint32_t forceCalibrationWhenApproachingFromPressed;
 	uint32_t forceCalibrationWhenPressing;
-	bool setParallelCapacitanceManually;
+	bool setOffsetValueManually;
 	bool disableUpdateIfAnyButtonIsApproached;
 	bool disableUpdateIfAnyButtonIsPressed;
-	float referenceCapacitance; /* in pico Farad (pF) */
-	float parallelCapacitance; /* in pico Farad (pF) */
-	float capacitanceScaleFactor;
-	float distanceOffset;
-	float distanceScaleFactor;
-	float relativePermittivity;
-	float area; /* in mm^2 */
-	uint32_t nChargesMin;
-	uint32_t nChargesMax;
-	bool useNChargesPadding;
-	unsigned int chargeDelaySensor; /* delay to charge sensor in microseconds (us) */
-	unsigned int chargeDelayADC; /* delay to charge ADC in microseconds (us) */
+	float referenceValue; /* in pico Farad (pF) */
+	float offsetValue; /* in pico Farad (pF) */
+	float scaleFactor;
 
 	/* 
 	 * sampleMethod can be set to:
@@ -210,10 +204,9 @@ struct TLStruct {
 	/*
 	 * Set enableTouchStateMachine to false to only use a sensor for
 	 * capacitive sensing or during tuning. After startup, sensor will be in
-	 * state buttonStateInitializing, followed by buttonStatePreCalibrating,
-	 * buttonStateCalibrating and buttonStateNoisePowerMeasurement. After
-	 * noise measurement the state will switch to buttonStateReleased and
-	 * stay there.
+	 * state buttonStatePreCalibrating followed by buttonStateCalibrating
+	 * and buttonStateNoisePowerMeasurement. After noise measurement the
+	 * state will switch to buttonStateReleased and stay there.
 	 */
 	bool enableTouchStateMachine;
 
@@ -227,9 +220,8 @@ struct TLStruct {
 	uint8_t nSensors;
 	uint8_t nMeasurementsPerSensor;
 	int32_t raw;
-	/* Total capacitance (including parallelCapacitance) in pico Farad (pF) */
-	float capacitance;
-	float distance;
+	/* Total value in pico Farad (pF) */
+	float value;
 	float avg;
 	float delta;
 	float maxDelta;
@@ -240,10 +232,9 @@ struct TLStruct {
 	bool buttonIsReleased; /* use this to see if button is released */
 	bool buttonIsApproached; /* use this to see if button is approached */
 	bool buttonIsPressed; /* use this to see if button is pressed */
+	bool forcedCal;
 	uint32_t counter;
 	uint32_t recalCounter;
-	uint32_t nCharges;
-	uint32_t nChargesNext;
 	unsigned long lastSampledAtTime;
 	unsigned long stateChangedAtTime;
 	bool slewrateFirstSample;
@@ -273,12 +264,14 @@ class TLSensors
 
 		void writeSettingsToEeprom(void);
 		int8_t setDefaults(void);
+		int initialize(uint8_t ch, int (*sampleMethod)(
+			struct TLStruct * d, uint8_t nSensors, uint8_t ch));
 		int8_t sample(void);
 		void printScanOrder(void);
 		bool setForceCalibratingStates(int ch, uint32_t mask,
 			enum TLStruct::ButtonState * newState);
 		float getRaw(int n);
-		float getCapacitance(int n);
+		float getValue(int n);
 		float getDelta(int n);
 		float getAvg(int n);
 		const char * getStateLabel(int n);
@@ -325,7 +318,6 @@ class TLSensors
 		bool isApproached(TLStruct * d);
 		bool isReleased(TLStruct * d);
 		void updateAvg(TLStruct * d);
-		void processStateInitializing(uint8_t ch);
 		void processStatePreCalibrating(uint8_t ch);
 		void processStateCalibrating(uint8_t ch);
 		void processStateNoisePowerMeasurement(uint8_t ch);
@@ -336,16 +328,14 @@ class TLSensors
 		void processStatePressed(uint8_t ch);
 		void processStatePressedToApproached(uint8_t ch);
 		void processStateApproachedToReleased(uint8_t ch);
-		void correctSample(uint8_t ch);
 		void processSample(uint8_t ch);
-		void updateNCharges(uint8_t ch);
 		void resetButtonStateSummaries(uint8_t ch);
 		void initScanOrder(void);
 
 		/* These strings are for human readability */
 		const char * const buttonStateLabels[TLStruct::buttonStateMax +
 				1] = {
-			"Initializing", "PreCalibrating", "Calibrating",
+			"PreCalibrating", "Calibrating",
 			"NoisePowerMeasurement", "Released",
 			"ReleasedToApproached", "Approached",
 			"ApproachedToPressed", "ApproachedToReleased",
@@ -354,18 +344,14 @@ class TLSensors
 };
 
 /* Actual implementation */
-#define TL_RELEASED_TO_APPROACHED_THRESHOLD_DEFAULT		50.0
-#define TL_APPROACHED_TO_RELEASED_THRESHOLD_DEFAULT		40.0
-#define TL_APPROACHED_TO_PRESSED_THRESHOLD_DEFAULT		150.0
-#define TL_PRESSED_TO_APPROACHED_THRESHOLD_DEFAULT		120.0
 #define TL_RELEASED_TO_APPROACHED_TIME_DEFAULT			10
 #define TL_APPROACHED_TO_RELEASED_TIME_DEFAULT			10
 #define TL_APPROACHED_TO_PRESSED_TIME_DEFAULT			10
 #define TL_PRESSED_TO_APPROACHED_TIME_DEFAULT			10
 #define TL_ENABLE_SLEWRATE_LIMITER_DEFAULT			false
-#define TL_PRE_CALIBRATION_TIME_DEFAULT			100
+#define TL_PRE_CALIBRATION_TIME_DEFAULT				100
 #define TL_CALIBRATION_TIME_DEFAULT				500
-#define TL_FILTER_COEFF_DEFAULT				128
+#define TL_FILTER_COEFF_DEFAULT					128
 #define TL_APPROACHED_TIMEOUT_DEFAULT				300000
 #define TL_PRESSED_TIMEOUT_DEFAULT				TL_APPROACHED_TIMEOUT_DEFAULT
 #define TL_FORCE_CALIBRATION_WHEN_RELEASING_FROM_APPROACHED_DEFAULT	0
@@ -375,26 +361,9 @@ class TLSensors
 #define TL_USE_CUSTOM_SCAN_ORDER_DEFAULT			false
 #define TL_ADC_RESOLUTION_BIT					10
 #define TL_ADC_MAX						((1 << TL_ADC_RESOLUTION_BIT) - 1)
-#define TL_N_CHARGES_MIN_DEFAULT				1
-#define TL_N_CHARGES_MAX_DEFAULT				1
-#define TL_USE_N_CHARGES_PADDING_DEFAULT			true
-#define TL_CHARGE_DELAY_SENSOR_DEFAULT				0
-#define TL_CHARGE_DELAY_ADC_DEFAULT				0
 #define TL_ENABLE_TOUCH_STATE_MACHINE_DEFAULT			true
 #define TL_ENABLE_NOISE_POWER_MEASUREMENT_DEFAULT		false
 
-#define TL_REFERENCE_CAPACITANCE_DEFAULT			((float) 15) /* 15 pF */
-#define TL_CAPACITANCE_SCALE_FACTOR_DEFAULT			((float) 1)
-#define TL_PARALLEL_CAPACITANCE_DEFAULT			((float) 1000) /* pF */
-
-#define TL_DISTANCE_SCALE_FACTOR_DEFAULT			((float) 1)
-#define TL_DISTANCE_OFFSET_DEFAULT				((float) 0)
-
-#define TL_PERMITTIVITY_VACUUM					((float) (8.85E-12*1E12/1E3))
-#define TL_RELATIVE_PERMITTIVITY_DEFAULT			((float) 1)
-#define TL_AREA_DEFAULT					(10*10) /* 100 mm^2 */
-
-#define TL_SET_PARALLEL_CAPACITANCE_MANUALLY_DEFAULT		false
 #define TL_DISABLE_UPDATE_IF_ANY_BUTTON_IS_APPROACHED_DEFAULT	true
 #define TL_DISABLE_UPDATE_IF_ANY_BUTTON_IS_PRESSED_DEFAULT	true
 #ifdef EEPROM_h
@@ -410,8 +379,6 @@ class TLSensors
 #define TL_EEPROM_N_SENSORS_MASK				0x1F
 #define TL_EEPROM_N_SENSORS_SHIFT				0
 #define TL_EEPROM_CONFIG_ENABLE_SLEWRATE_LIMITER		0x80
-#define TL_SAMPLE_METHOD_RESISTIVE_GND_PIN			2
-#define TL_SAMPLE_METHOD_RESISTIVE_USE_INTERNAL_PULLUP		true
 
 #define TL_SAMPLE_METHOD_DEFAULT				(&TLSampleMethodCVD)
 
@@ -506,17 +473,7 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 
 	if (error == 0) {
 		for (n = 0; n < nSensors; n++) {
-			data[n].pin = A0 + n;
-			data[n].direction = TLStruct::directionPositive;
-			data[n].sampleType = TLStruct::sampleTypeDifferential;
-			data[n].releasedToApproachedThreshold =
-				TL_RELEASED_TO_APPROACHED_THRESHOLD_DEFAULT;
-			data[n].approachedToReleasedThreshold =
-				TL_APPROACHED_TO_RELEASED_THRESHOLD_DEFAULT;
-			data[n].approachedToPressedThreshold =
-				TL_APPROACHED_TO_PRESSED_THRESHOLD_DEFAULT;
-			data[n].pressedToApproachedThreshold =
-				TL_PRESSED_TO_APPROACHED_THRESHOLD_DEFAULT;
+			initialize(n, TLSampleMethodCVD);
 			data[n].releasedToApproachedTime =
 				TL_RELEASED_TO_APPROACHED_TIME_DEFAULT;
 			data[n].approachedToReleasedTime =
@@ -549,36 +506,18 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 				TL_ENABLE_TOUCH_STATE_MACHINE_DEFAULT;
 			data[n].enableNoisePowerMeasurement =
 				TL_ENABLE_NOISE_POWER_MEASUREMENT_DEFAULT;
-			data[n].parallelCapacitance =
-				TL_PARALLEL_CAPACITANCE_DEFAULT;
-			data[n].referenceCapacitance =
-				TL_REFERENCE_CAPACITANCE_DEFAULT;
-			data[n].capacitanceScaleFactor =
-				TL_CAPACITANCE_SCALE_FACTOR_DEFAULT;
-			data[n].distanceScaleFactor =
-				TL_DISTANCE_SCALE_FACTOR_DEFAULT;
-			data[n].relativePermittivity =
-				TL_RELATIVE_PERMITTIVITY_DEFAULT;
-			data[n].distanceOffset = TL_DISTANCE_OFFSET_DEFAULT;
-			data[n].area = TL_AREA_DEFAULT;
-			data[n].setParallelCapacitanceManually =
-				TL_SET_PARALLEL_CAPACITANCE_MANUALLY_DEFAULT;
 			data[n].disableUpdateIfAnyButtonIsApproached =
 				TL_DISABLE_UPDATE_IF_ANY_BUTTON_IS_APPROACHED_DEFAULT;
 			data[n].disableUpdateIfAnyButtonIsPressed =
 				TL_DISABLE_UPDATE_IF_ANY_BUTTON_IS_PRESSED_DEFAULT;
 			data[n].stateIsBeingChanged = false;
 			data[n].sampleMethod = TL_SAMPLE_METHOD_DEFAULT;
-			data[n].sampleMethodResistive_gndPin =
-				TL_SAMPLE_METHOD_RESISTIVE_GND_PIN + n;
-			data[n].sampleMethodResistive_useInternalPullup =
-				TL_SAMPLE_METHOD_RESISTIVE_USE_INTERNAL_PULLUP;
-			if (!data[n].setParallelCapacitanceManually) {
+			if (!data[n].setOffsetValueManually) {
 				/*
-				 * Set parallelCapacitance to 0; will be updated
+				 * Set offsetValue to 0; will be updated
 				 * after calibration.
 				 */
-				data[n].parallelCapacitance = 0;
+				data[n].offsetValue = 0;
 			}
 		}
 	}
@@ -920,27 +859,21 @@ TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::TLSensors(void)
 
 		for (n = 0; n < nSensors; n++) {
 			resetButtonStateSummaries(n);
-			setState(n, TLStruct::buttonStateInitializing);
+			setState(n, TLStruct::buttonStatePreCalibrating);
 			data[n].buttonStateLabel =
 				this->buttonStateLabels[data[n].buttonState];
 			data[n].counter = 0;
+			data[n].forcedCal = false;
 			data[n].raw = 0;
-			data[n].capacitance = 0;
+			data[n].value = 0;
 			data[n].avg = 0;
 			data[n].noisePower = 0;
 			data[n].delta = 0;
 			data[n].maxDelta = 0;
 			data[n].maxDelta = 0;
-			data[n].nCharges = TL_N_CHARGES_MIN_DEFAULT;
-			data[n].nChargesNext = TL_N_CHARGES_MIN_DEFAULT;
-			data[n].nChargesMin = TL_N_CHARGES_MIN_DEFAULT;
-			data[n].nChargesMax = TL_N_CHARGES_MAX_DEFAULT;
-			data[n].useNChargesPadding =
-				TL_USE_N_CHARGES_PADDING_DEFAULT;
-			data[n].chargeDelaySensor = TL_CHARGE_DELAY_SENSOR_DEFAULT;
-			data[n].chargeDelayADC = TL_CHARGE_DELAY_ADC_DEFAULT;
 			data[n].stateChangedAtTime = now;
 			data[n].lastSampledAtTime = 0;
+			data[n].nMeasurementsPerSensor = nMeasurementsPerSensor;
 		}
 	}
 
@@ -1025,16 +958,16 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(TLStruct * d)
 {
 	float s;
 
-	if (d->disableUpdateIfAnyButtonIsApproached &&
-			this->anyButtonIsApproached) {
+	if (!d->forcedCal && (d->disableUpdateIfAnyButtonIsApproached &&
+			this->anyButtonIsApproached)) {
 		return;
 	}
-	if (d->disableUpdateIfAnyButtonIsPressed &&
-			this->anyButtonIsPressed) {
+	if (!d->forcedCal && (d->disableUpdateIfAnyButtonIsPressed &&
+			this->anyButtonIsPressed)) {
 		return;
 	}
 
-	d->avg = (d->counter * d->avg + d->capacitance) / (d->counter + 1);
+	d->avg = (d->counter * d->avg + d->value) / (d->counter + 1);
 
 	/* Only perform noise measurement when not calibrating any more */
 	if ((d->enableNoisePowerMeasurement) && (d->buttonState >
@@ -1064,6 +997,7 @@ bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setForceCalibratingStates(
 			} else {
 				setState(n, TLStruct::buttonStatePreCalibrating);
 			}
+			data[n].forcedCal = true;
 		}
 	}
 
@@ -1081,13 +1015,13 @@ float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getRaw(int ch)
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getCapacitance(int ch)
+float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getValue(int ch)
 {
 	TLStruct * d;
 
 	d = &(data[ch]);
 
-	return d->capacitance; 
+	return d->value; 
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
@@ -1168,8 +1102,6 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(int ch,
 	if (d->buttonState != newState) {
 		d->stateIsBeingChanged = true;
 		switch(newState) {
-		case TLStruct::buttonStateInitializing:
-			break;
 		case TLStruct::buttonStatePreCalibrating:
 			break;
 		case TLStruct::buttonStateCalibrating:
@@ -1177,13 +1109,14 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(int ch,
 			d->avg = 0;
 			d->maxDelta = 0;
 			d->noisePower = 0;
+			d->forcedCal = false;
 	
-			if (!d->setParallelCapacitanceManually) {
+			if (!d->setOffsetValueManually) {
 				/*
-				 * Set parallelCapacitance to 0; will be updated
+				 * Set offsetValue to 0; will be updated
 				 * after calibration.
 				 */
-				d->parallelCapacitance = 0;
+				d->offsetValue = 0;
 			}
 			break;
 		case TLStruct::buttonStateNoisePowerMeasurement:
@@ -1240,15 +1173,25 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(int ch,
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateInitializing(uint8_t ch)
+int TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::initialize(
+		uint8_t ch, int (*sampleMethod)(struct TLStruct * d,
+		uint8_t nSensors, uint8_t ch))
 {
 	TLStruct * d;
+	int ret = 0;
+
 	d = &(data[ch]);
 
-	if (d->sampleMethod != NULL) {
-		d->sampleMethod(data, nSensors, ch);
+	if (sampleMethod != NULL) {
+		d->sampleMethod = sampleMethod;
+		ret = d->sampleMethod(data, nSensors, ch);
 		setState(ch, TLStruct::buttonStatePreCalibrating);
 	}
+	if (ret) {
+		error = -1;
+	}
+
+	return ret;
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
@@ -1274,13 +1217,13 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateCalibrating(ui
 	t = d->lastSampledAtTime - d->stateChangedAtTime;
 	t_max = d->calibrationTime;
 
-	if (t < t_max) {
+	if ((d->counter < d->filterCoeff - 1) || (t < t_max)) {
 		updateAvg(d);
 	} else {
 		setState(ch, TLStruct::buttonStateNoisePowerMeasurement);
 	
-		if (!d->setParallelCapacitanceManually) {
-			d->parallelCapacitance = d->avg;
+		if (!d->setOffsetValueManually) {
+			d->offsetValue = d->avg;
 		}
 	}
 }
@@ -1448,15 +1391,12 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processSample(uint8_t ch)
 
 	d = &(data[ch]);
 
-	d->delta = d->capacitance - d->avg;
+	d->delta = d->value - d->avg;
 	if (d->maxDelta < d->delta) {
 		d->maxDelta = d->delta;
 	}
 
 	switch (d->buttonState) {
-	case TLStruct::buttonStateInitializing:
-		processStateInitializing(ch);
-		break;
 	case TLStruct::buttonStatePreCalibrating:
 		processStatePreCalibrating(ch);
 		break;
@@ -1493,52 +1433,6 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processSample(uint8_t ch)
 	}
 
 	d->buttonStateLabel = this->buttonStateLabels[d->buttonState];
-}
-
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::correctSample(uint8_t ch)
-{
-	TLStruct * d;
-	float tmp, scale;
-
-	d = &(data[ch]);
-
-	if (d->enableSlewrateLimiter) {
-		scale = (float) ((TL_ADC_MAX + 1) << 2);
-	} else {
-		scale = ((float) (nMeasurementsPerSensor << 1)) *
-			((float) (TL_ADC_MAX + 1));
-	}
-
-	tmp = 1 - ((float) d->raw) / scale;
-	tmp = pow(tmp, -((float) 1) / ((float) d->nCharges)) - ((float) 1);
-	tmp = ((float) 1) / tmp;
-
-	d->nChargesNext = (int32_t) (ceilf(tmp));
-	if (d->nChargesNext < TL_N_CHARGES_MIN_DEFAULT) {
-		d->nChargesNext = TL_N_CHARGES_MIN_DEFAULT;
-	}
-	if (d->nChargesNext > TL_N_CHARGES_MAX_DEFAULT) {
-		d->nChargesNext = TL_N_CHARGES_MAX_DEFAULT;
-	}
-
-	tmp = scale * tmp * d->capacitanceScaleFactor /
-		d->referenceCapacitance;
-	d->capacitance = tmp;
-	/* Capacitance can be negative due to noise! */
-
-	d->distance = (d->distanceScaleFactor * TL_PERMITTIVITY_VACUUM *
-		d->relativePermittivity * d->area / tmp) - d->distanceOffset;
-	/* Distance can be negative due to noise! */
-}
-
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateNCharges(uint8_t ch)
-{
-	TLStruct * d;
-
-	d = &(data[ch]);
-	d->nCharges = d->nChargesNext;
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
@@ -1609,7 +1503,6 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 	now = millis();
 
 	for (ch = 0; ch < nSensors; ch++) {
-		correctSample(ch);
 		if (data[ch].sampleMethodPostSample != NULL) {
 			data[ch].sampleMethodPostSample(data, nSensors, ch);
 		}
@@ -1637,9 +1530,6 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 		if (data[ch].buttonState >= TLStruct::buttonStatePressed) {
 			data[ch].buttonIsPressed = true;
 			this->anyButtonIsPressed = true;
-		}
-		if (data[ch].sampleMethod == TLSampleMethodCVD) {
-			updateNCharges(ch);
 		}
 	}
 

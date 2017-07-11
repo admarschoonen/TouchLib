@@ -33,6 +33,13 @@
 
 #include <TouchLib.h>
 
+struct TLStructSampleMethodResistive {
+	int pin;
+	int gndPin;
+	int useInternalPullup;
+	float valueMax;
+};
+
 int TLSampleMethodResistivePreSample(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch);
 

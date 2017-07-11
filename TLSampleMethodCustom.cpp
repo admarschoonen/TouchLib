@@ -31,6 +31,11 @@
 #include "TouchLib.h"
 #include "TLSampleMethodCustom.h"
 
+#define TL_RELEASED_TO_APPROACHED_THRESHOLD_DEFAULT	50.0
+#define TL_APPROACHED_TO_RELEASED_THRESHOLD_DEFAULT	40.0
+#define TL_APPROACHED_TO_PRESSED_THRESHOLD_DEFAULT	150.0
+#define TL_PRESSED_TO_APPROACHED_THRESHOLD_DEFAULT	120.0
+
 int TLSampleMethodCustomPreSample(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch)
 {
@@ -46,6 +51,12 @@ int TLSampleMethodCustomSample(struct TLStruct * data, uint8_t nSensors,
 int TLSampleMethodCustomPostSample(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch)
 {
+	struct TLStruct * d;
+
+	d = &(data[ch]);
+
+	d->value = d->raw;
+
 	return 0;
 }
 
@@ -59,5 +70,18 @@ int TLSampleMethodCustom(struct TLStruct * data, uint8_t nSensors, uint8_t ch)
 	d->sampleMethodSample = TLSampleMethodCustomSample;
 	d->sampleMethodPostSample = TLSampleMethodCustomPostSample;
 
+	d->tlStructSampleMethod.custom.pin = A0 + ch;
+
+	d->releasedToApproachedThreshold = 
+		TL_RELEASED_TO_APPROACHED_THRESHOLD_DEFAULT;
+	d->approachedToReleasedThreshold =
+		TL_APPROACHED_TO_RELEASED_THRESHOLD_DEFAULT;
+	d->approachedToPressedThreshold =
+		TL_APPROACHED_TO_PRESSED_THRESHOLD_DEFAULT;     
+	d->pressedToApproachedThreshold =
+		TL_PRESSED_TO_APPROACHED_THRESHOLD_DEFAULT; 
+
+	d->direction = TLStruct::directionPositive;
+	d->sampleType = TLStruct::sampleTypeNormal;
 	return 0;
 }

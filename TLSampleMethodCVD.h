@@ -33,6 +33,21 @@
 
 #include <TouchLib.h>
 
+struct TLStructSampleMethodCVD {
+        int pin;
+	bool useNChargesPadding;
+	uint32_t nChargesMin;
+	uint32_t nChargesMax;
+	uint32_t nCharges;
+	uint32_t nChargesNext;
+
+	/* delay to charge sensor in microseconds (us) */
+	unsigned int chargeDelaySensor;
+
+	/* delay to charge ADC in microseconds (us) */
+        unsigned int chargeDelayADC; 
+};
+
 int TLSampleMethodCVDPreSample(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch);
 
