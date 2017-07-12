@@ -12,7 +12,7 @@
  * sensor, set N_SENSORS to 2 and use an unused analog input pin for the second
  * sensor. For 2 or more sensors you don't need to add an unused analog input.
  */
-#define N_SENSORS			2
+#define N_SENSORS			4
 
 /*
  * Number of measurements per sensor to take in one cycle. More measurements
@@ -60,6 +60,11 @@ void setup()
 		/* By default, assume all sensors are capacitive */
 		tlSensors.initialize(n, TLSampleMethodCVD);
 
+		/* Set pin to an invalid setting */
+		tlSensors.data[n].tlStructSampleMethod.CVD.pin = -1;
+		tlSensors.data[n].pin =
+			&(tlSensors.data[n].tlStructSampleMethod.CVD.pin);
+
 		/*
 		 * Disable state machine so we can control updating average in
 		 * the main loop.
@@ -68,6 +73,8 @@ void setup()
 
 		/* Enable noise power measurement */
 		tlSensors.data[n].enableNoisePowerMeasurement = true;
+
+		tlSensors.data[n].forceCalibrationWhenApproachingFromPressed = 0UL;
 	}
 }
 
@@ -304,6 +311,7 @@ bool askSampleMethod(int n)
 {
 	char c;
 
+	Serial.println("");
 	Serial.print("Is sensor ");
 	Serial.print(n);
 	Serial.print(" a capacitive or a resistive sensor? ");
@@ -315,16 +323,11 @@ bool askSampleMethod(int n)
 			Serial.print("Illegal sensor type. ");
 		} else {
 			if (lower(c) == 'c') {
-				tlSensors.data[n].sampleMethod =
-					TLSampleMethodCVD;
+				tlSensors.initialize(n, TLSampleMethodCVD);
 			}
 			if (lower(c) == 'r') {
 				tlSensors.initialize(n, TLSampleMethodResistive);
-				tlSensors.data[n].sampleMethod =
-					TLSampleMethodResistive;
 				tlSensors.data[n].enableSlewrateLimiter = false;
-				tlSensors.data[n].direction =
-					TLStruct::directionNegative;
 			}
 			break;
 		}
@@ -333,7 +336,7 @@ bool askSampleMethod(int n)
 	return false;
 }
 
-void noiseCalibration(int n)
+void noiseTuning(int n)
 {
 	char c;
 	bool highNoise = false;
@@ -363,14 +366,6 @@ void noiseCalibration(int n)
 	Serial.println(" is finished.");
 
 	highNoise = false;
-	Serial.print("Default r2a: ");
-	Serial.println(tlSensors.data[n].releasedToApproachedThreshold);
-	Serial.print("Candidate r2a: ");
-	Serial.println(3 * sqrt(tlSensors.data[n].noisePower));
-	Serial.print("Default a2r: ");
-	Serial.println(tlSensors.data[n].approachedToReleasedThreshold);
-	Serial.print("Candidate a2r: ");
-	Serial.println(0.9 * 3 * sqrt(tlSensors.data[n].noisePower));
 
 	if (tlSensors.data[n].releasedToApproachedThreshold <
 			3 * sqrt(tlSensors.data[n].noisePower)) {
@@ -404,7 +399,7 @@ void noiseCalibration(int n)
 }
 
 #define N_MEASUREMENTS 10
-void touchCalibration(int n)
+void touchTuning(int n)
 {
 	char c;
 	float delta[N_MEASUREMENTS];
@@ -474,7 +469,7 @@ void touchCalibration(int n)
 	Serial.println("");
 }
 
-void maxTouchCalibration(int n)
+void maxTouchTuning(int n)
 {
 	char c;
 	float maxDelta[N_MEASUREMENTS];
@@ -551,50 +546,43 @@ void checkResistiveCapacitiveSensor(int n)
 {
 	int k;
 	int cap_sensor = -1, res_sensor = -1;
-	int n_pin = -1, k_pin = -1;
+	int res_pin = -1, cap_pin = -1;
 
-	tlSensors.data[n].forceCalibrationWhenApproachingFromPressed = 0UL;
+	k = tlSensors.findSensorPair(n, (n + 1) % N_SENSORS);
 
-	if (tlSensors.data[n].sampleMethod == TLSampleMethodResistive) {
-		res_sensor = n;
-		n_pin = tlSensors.data[n].tlStructSampleMethod.resistive.pin;
-	}
-
-	if (tlSensors.data[n].sampleMethod == TLSampleMethodCVD) {
-		cap_sensor = n;
-		n_pin = tlSensors.data[n].tlStructSampleMethod.CVD.pin;
-	}
-
-	for (k = n; k < N_SENSORS; k++) {
-		k_pin = -1;
+	if (k >= 0) {
 		if (tlSensors.data[k].sampleMethod == TLSampleMethodResistive) {
 			res_sensor = k;
-			k_pin =
-				tlSensors.data[k].tlStructSampleMethod.resistive.pin;
+			res_pin = tlSensors.data[k].tlStructSampleMethod.resistive.pin;
 		}
 
 		if (tlSensors.data[k].sampleMethod == TLSampleMethodCVD) {
 			cap_sensor = k;
-			k_pin = tlSensors.data[k].tlStructSampleMethod.CVD.pin;
+			cap_pin = tlSensors.data[k].tlStructSampleMethod.CVD.pin;
 		}
+	}
 
-		if ((k_pin == n_pin) &&
-				(((tlSensors.data[n].sampleMethod == TLSampleMethodResistive) &&
-				(tlSensors.data[k].sampleMethod == TLSampleMethodCVD)) ||
-				((tlSensors.data[k].sampleMethod == TLSampleMethodResistive) &&
-				(tlSensors.data[n].sampleMethod == TLSampleMethodCVD)))) {
-			Serial.print("Capacitive sensor ");
-			Serial.print(cap_sensor);
-			Serial.print(" and resistive sensor ");
-			Serial.print(res_sensor);
-			Serial.println(" use the same analog pin. I will "
-				" enforce that the resistive sensor is "
-				"automatically recalibrated when the capacitive"
-				" sensor is released.");
+	if (tlSensors.data[n].sampleMethod == TLSampleMethodResistive) {
+		res_sensor = n;
+		res_pin = tlSensors.data[n].tlStructSampleMethod.resistive.pin;
+	}
 
-			tlSensors.data[cap_sensor].forceCalibrationWhenApproachingFromPressed =
-		                (1UL << res_sensor);
-		}
+	if (tlSensors.data[n].sampleMethod == TLSampleMethodCVD) {
+		cap_sensor = n;
+		cap_pin = tlSensors.data[n].tlStructSampleMethod.CVD.pin;
+	}
+
+	if (res_pin == cap_pin) {
+		Serial.print("Capacitive sensor ");
+		Serial.print(cap_sensor);
+		Serial.print(" and resistive sensor ");
+		Serial.print(res_sensor);
+		Serial.println(" use the same analog pin. I will enforce that "
+			"the resistive sensor is automatically recalibrated "
+			"when the capacitive sensor is released.");
+
+		tlSensors.data[cap_sensor].forceCalibrationWhenApproachingFromPressed |=
+	                (1UL << res_sensor);
 	}
 }
 
@@ -726,7 +714,7 @@ void printCode(void)
 		Serial.print(pin - A0);
 		Serial.print("\n");
 		if (tlSensors.data[n].sampleMethod == TLSampleMethodResistive) {
-			Serial.print("        * Ground pin: ");
+			Serial.print("         * Ground pin: ");
 			Serial.print(tlSensors.data[n].tlStructSampleMethod.resistive.gndPin);
 			Serial.print("\n");
 		}
@@ -791,8 +779,7 @@ void printCode(void)
 			Serial.print("false;\n");
 		}
 
-		if ((tlSensors.data[n].sampleMethod == TLSampleMethodCVD) &&
-				(tlSensors.data[n].forceCalibrationWhenApproachingFromPressed)) {
+		if (tlSensors.data[n].forceCalibrationWhenApproachingFromPressed) {
 			Serial.print("        tlSensors.data[");
 			Serial.print(n);
 			Serial.print("].forceCalibrationWhenApproachingFromPressed"
@@ -803,15 +790,63 @@ void printCode(void)
 		}
 	}
 
+	Serial.print("\n");
+	Serial.print("        Serial.println(\"Calibrating sensors...\");\n");
+	Serial.print("        while(tlSensors.anyButtonIsCalibrating()) {\n");
+	Serial.print("                tlSensors.sample();\n");
+	Serial.print("        }\n");
+	Serial.print("        Serial.println(\"Calibration done...\");\n");
 	Serial.print("}\n");
 
 	Serial.print("\n");
-	Serial.print("#define BAR_LENGTH                     200\n");
+	Serial.print("void print_sensor_state(int n)\n");
+	Serial.print("{\n");
+	Serial.print("        char s[32] = {'\\0'};\n");
+	Serial.print("\n");
+	Serial.print("        Serial.print(\" #\");\n");
+	Serial.print("        Serial.print(n);\n");
+	Serial.print("        Serial.print(\": \");\n");
+	Serial.print("        Serial.print(tlSensors.isCalibrating(n));\n");
+	Serial.print("        Serial.print(\" \");\n");
+	Serial.print("        Serial.print(tlSensors.isReleased(n));\n");
+	Serial.print("        Serial.print(\" \");\n");
+	Serial.print("        Serial.print(tlSensors.isApproached(n));\n");
+	Serial.print("        Serial.print(\" \");\n");
+	Serial.print("        Serial.print(tlSensors.isPressed(n));\n");
+	Serial.print("        Serial.print(\" \");\n");
+	Serial.print("        Serial.print(tlSensors.getStateLabel(n));\n");
+	Serial.print("        memset(s, '\\0', sizeof(s));\n");
+	Serial.print("        memset(s, ' ', 22 - "
+			"strlen(tlSensors.getStateLabel(n)));\n");
+	Serial.print("        Serial.print(s);\n");
+	Serial.print("}\n");
+	Serial.print("\n");
+	Serial.print("#define BAR_LENGTH                     100\n");
 	Serial.print("\n");
 	Serial.print("void loop(void)\n");
 	Serial.print("{\n");
-	Serial.print("        tlSensors.sample();\n");
-	Serial.print("        tlSensors.printBar(0, BAR_LENGTH);\n");
+	Serial.print("        int k;\n");
+	Serial.print("\n");
+	Serial.print("        int n = 0; /* <-- Change this number to view a "
+		"different sensor */\n");
+	Serial.print("\n");
+	Serial.print("        tlSensors.sample(); /* <-- Take a series of new "
+		"samples for all sensors */\n");
+	Serial.print("\n");
+	Serial.print("        tlSensors.printBar(n, BAR_LENGTH); /* <-- Print "
+		"the visualization */\n");
+	Serial.print("\n");
+	Serial.print("        print_sensor_state(n); /* <-- Print summary of "
+		"sensor n */\n");
+	Serial.print("\n");
+	Serial.print("        /* For capacitive + resistive sensors: k is the "
+		"sensor that sensor n is paired with */\n");
+	Serial.print("        k = tlSensors.findSensorPair(n, (n + 1) % "
+		"N_SENSORS);\n");
+	Serial.print("        if (k > -1) {\n");
+	Serial.print("                print_sensor_state(k); /* <-- Print "
+		"summary of sensor k */\n");
+	Serial.print("        }\n");
 	Serial.print("        Serial.println(\"\");\n");
 	Serial.print("}\n");
 
@@ -821,73 +856,42 @@ void printCode(void)
 
 void loop()
 {
-	static int b = 0;
-	static bool firstTime = true;
-
-	char s[200] = {'\0'};
 	int n;
-	const char *buttonStateLabel;
-	float avg, delta, noisePower, noiseAmp, snr;
-	int avgInt, avgFrac, deltaInt, deltaFrac, noisePowerInt, noisePowerFrac,
-		noiseAmpInt, noiseAmpFrac, snrInt, snrFrac;
 
-	if (firstTime == false) {
-		return;
-	}
-
-	firstTime = false;
 	printWelcome();
 
 	askPower();
+	Serial.println("First we need to know what type of sensors the system "
+		"has and to which pins they are connected.");
 	for (n = 0; n < N_SENSORS; n++) {
 		askSampleMethod(n);
 		askPinning(n);
-		noiseCalibration(n);
-		touchCalibration(n);
-		maxTouchCalibration(n);
-		Serial.print("Finished calibrating sensor ");
+	}
+	Serial.println("");
+
+	Serial.println("Next step is to tune the sensors.");
+	for (n = 0; n < N_SENSORS; n++) {
+		noiseTuning(n);
+		touchTuning(n);
+		maxTouchTuning(n);
+		Serial.print("Finished tuning sensor ");
 		Serial.println(n);
 		Serial.println("");
 		Serial.println("");
 	}
 	
+	/*
+	 * Disabled forced calibration of resistive sensors. Seems not to be
+	 * needed.
+	 */
+	#if (0)
 	for (n = 0; n < N_SENSORS; n++) {
 		checkResistiveCapacitiveSensor(n);
 	}
+	#endif
 	Serial.println("");
 	Serial.println("");
 
 	printCode();
-
-	/*
-	 * Call tlSensors.sample() take do a new measurement cycle for all
-	 * sensors
-	 */
-	tlSensors.sample();
-
-	/*
-	 * Only print statistics for selected button
-	 */
-	if (n > -1) {
-		b = n;
-	}
-
-	avg = tlSensors.getAvg(b);
-	delta = tlSensors.getDelta(b);
-	noisePower = tlSensors.data[b].noisePower;
-	noiseAmp = sqrt(noisePower);
-	snr = 10 * log10(delta * delta / noisePower);
-	buttonStateLabel = tlSensors.getStateLabel(b);
-
-	floatToIntFrac(avg, 1, 2, &avgInt, &avgFrac);
-	floatToIntFrac(delta, 1, 2, &deltaInt, &deltaFrac);
-	floatToIntFrac(noisePower, 1, 2, &noisePowerInt, &noisePowerFrac);
-	floatToIntFrac(noiseAmp, 1, 2, &noiseAmpInt, &noiseAmpFrac);
-	floatToIntFrac(snr, 1, 2, &snrInt, &snrFrac);
-
-	snprintf(s, sizeof(s) -1, "button[%d]: avg: % 7d.%02d, delta: "
-		"% 7d.%02d, noise: % 7d.%02d, SNR: % 7d.%02d dB, state: %s\r\n",
-		b, avgInt, avgFrac, deltaInt, deltaFrac, noiseAmpInt,
-		noiseAmpFrac, snrInt, snrFrac, buttonStateLabel);
-	Serial.print(s);
+	while(1);
 }
