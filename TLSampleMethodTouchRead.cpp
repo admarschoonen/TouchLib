@@ -51,7 +51,7 @@ int TLSampleMethodTouchReadPreSample(struct TLStruct * data, uint8_t nSensors,
 int TLSampleMethodTouchReadSample(struct TLStruct * data, uint8_t nSensors,
 	uint8_t ch, bool inv)
 {
-	int sample;
+	int sample = 0;
 	
 	/*
 	 * touchRead() is only available on Teensy 3.x:
@@ -69,8 +69,6 @@ int TLSampleMethodTouchReadSample(struct TLStruct * data, uint8_t nSensors,
 		defined(__MK64FX1M0__))
 
 	/* Error! Not a Teensy! */
-	sample = 0;
-
 	#else
 	struct TLStruct * dCh;
 	int ch_pin;
@@ -81,7 +79,10 @@ int TLSampleMethodTouchReadSample(struct TLStruct * data, uint8_t nSensors,
 	} else {
 		dCh = &(data[ch]);
 		ch_pin = dCh->tlStructSampleMethod.touchRead.pin;
-		sample = touchRead(ch_pin);
+
+		if (ch_pin >= 0) {
+			sample = touchRead(ch_pin);
+		}
 	}
 
 	#endif
@@ -112,6 +113,24 @@ int TLSampleMethodTouchReadPostSample(struct TLStruct * data, uint8_t nSensors,
         return 0;
 }
 
+
+int TLSampleMethodTouchReadMapDelta(struct TLStruct * data, uint8_t nSensors,
+		uint8_t ch, int length)
+{
+	int n = -1;
+	struct TLStruct * d;
+
+	d = &(data[ch]);
+
+	n = map(100 * d->delta, 0, 100 * log(d->approachedToPressedThreshold), 
+		0, length);
+
+	n = (n < 0) ? 0 : n;
+	n = (n > length) ? length : n;
+
+	return n;
+}
+
 int TLSampleMethodTouchRead(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch)
 {
@@ -122,6 +141,7 @@ int TLSampleMethodTouchRead(struct TLStruct * data, uint8_t nSensors,
 	d->sampleMethodPreSample = TLSampleMethodTouchReadPreSample;
 	d->sampleMethodSample = TLSampleMethodTouchReadSample;
 	d->sampleMethodPostSample = TLSampleMethodTouchReadPostSample;
+	d->sampleMethodMapDelta = TLSampleMethodTouchReadMapDelta;
 
 	d->tlStructSampleMethod.touchRead.pin = A0 + ch;
 

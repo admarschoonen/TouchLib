@@ -87,6 +87,10 @@ int TLSampleMethodResistiveSample(struct TLStruct * data, uint8_t nSensors,
 		useInternalPullup =
 			dCh->tlStructSampleMethod.resistive.useInternalPullup;
 
+		if (ch_pin < 0) {
+			return 0; /* An error occurred */
+		}
+
 		if (useInternalPullup) {
 			/* Enable internal pull-up on analog input */
 			pinMode(ch_pin, INPUT_PULLUP);
@@ -110,6 +114,7 @@ int TLSampleMethodResistiveSample(struct TLStruct * data, uint8_t nSensors,
 		if (gnd_pin >= 0) {
 			/* Leave gnd_pin floating */
 			pinMode(gnd_pin, INPUT);
+			digitalWrite(gnd_pin, LOW);
 		}
 	}
 
@@ -161,6 +166,24 @@ int TLSampleMethodResistivePostSample(struct TLStruct * data, uint8_t nSensors,
 	return 0;
 }
 
+int TLSampleMethodResistiveMapDelta(struct TLStruct * data, uint8_t nSensors,
+		uint8_t ch, int length)
+{
+	int n = -1;
+	struct TLStruct * d;
+	float delta;
+
+	d = &(data[ch]);
+	delta = d->delta - d->releasedToApproachedThreshold / 2;
+
+	n = map(100 * delta, 0, 100 * d->calibratedMaxDelta, 0, length);
+
+	n = (n < 0) ? 0 : n;
+	n = (n > length) ? length : n;
+
+	return n;
+}
+
 int TLSampleMethodResistive(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch)
 {
@@ -171,6 +194,7 @@ int TLSampleMethodResistive(struct TLStruct * data, uint8_t nSensors,
 	d->sampleMethodPreSample = TLSampleMethodResistivePreSample;
 	d->sampleMethodSample = TLSampleMethodResistiveSample;
 	d->sampleMethodPostSample = TLSampleMethodResistivePostSample;
+	d->sampleMethodMapDelta = TLSampleMethodResistiveMapDelta;
 
 	d->tlStructSampleMethod.resistive.pin = A0 + ch;
 	d->tlStructSampleMethod.resistive.gndPin = ch +

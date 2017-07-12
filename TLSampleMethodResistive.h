@@ -49,6 +49,9 @@ int TLSampleMethodResistiveSample(struct TLStruct * data, uint8_t nSensors,
 int TLSampleMethodResistivePostSample(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch);
 
+int TLSampleMethodResistiveMapDelta(struct TLStruct * d, uint8_t nSensors,
+		uint8_t ch, int length);
+
 int TLSampleMethodResistive(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch);
 

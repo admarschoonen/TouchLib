@@ -46,6 +46,9 @@ int TLSampleMethodCustomSample(struct TLStruct * data, uint8_t nSensors,
 int TLSampleMethodCustomPostSample(struct TLStruct * data, uint8_t nSensors,
 	uint8_t ch) __attribute__ ((weak));
 
+int TLSampleMethodCustomMapDelta(struct TLStruct * data, uint8_t nSensors,
+                uint8_t ch, int length) __attribute__ ((weak));
+
 int TLSampleMethodCustom(struct TLStruct * data, uint8_t nSensors,
 	uint8_t ch) __attribute__ ((weak));
 

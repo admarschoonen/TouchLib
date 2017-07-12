@@ -181,7 +181,7 @@ struct TLStruct {
 
 	/*
 	 * sampleMethodPreSample should be set by sampleMethod. It is called at
-	 * the beginning of a new measurement
+	 * the beginning of a new measurement.
 	 */
 	int (*sampleMethodPreSample)(struct TLStruct * d, uint8_t nSensors,
 		uint8_t ch);
@@ -197,10 +197,17 @@ struct TLStruct {
 
 	/*
 	 * sampleMethodPostSample should be set by sampleMethod. It is called at
-	 * the end of a new measurement
+	 * the end of a new measurement.
 	 */
 	int (*sampleMethodPostSample)(struct TLStruct * d, uint8_t nSensors,
 		uint8_t ch);
+
+	/*
+	 * sampleMethodMapDelta should be set by sampleMethod. It is called by
+	 * the printBar method.
+	 */
+	int (*sampleMethodMapDelta)(struct TLStruct * d, uint8_t nSensors,
+		uint8_t ch, int length);
 
 	/*
 	 * Set enableTouchStateMachine to false to only use a sensor for
@@ -268,7 +275,8 @@ class TLSensors
 		int initialize(uint8_t ch, int (*sampleMethod)(
 			struct TLStruct * d, uint8_t nSensors, uint8_t ch));
 		int8_t sample(void);
-		int printBar(uint8_t ch, uint8_t length);
+		int findSensorPair(uint8_t ch, uint8_t chStart);
+		int printBar(uint8_t ch_k, int length);
 		void printScanOrder(void);
 		bool setForceCalibratingStates(int ch, uint32_t mask,
 			enum TLStruct::ButtonState * newState);
@@ -276,6 +284,11 @@ class TLSensors
 		float getValue(int n);
 		float getDelta(int n);
 		float getAvg(int n);
+		bool isPressed(int n);
+		bool isApproached(int n);
+		bool isReleased(int n);
+		bool isCalibrating(int n);
+		bool anyButtonIsCalibrating(void);
 		const char * getStateLabel(int n);
 		enum TLStruct::ButtonState getState(int n);
 		void setState(int n, enum TLStruct::ButtonState newState);
@@ -319,6 +332,7 @@ class TLSensors
 		bool isPressed(TLStruct * d);
 		bool isApproached(TLStruct * d);
 		bool isReleased(TLStruct * d);
+		bool isCalibrating(TLStruct * d);
 		void updateAvg(TLStruct * d);
 		void processStatePreCalibrating(uint8_t ch);
 		void processStateCalibrating(uint8_t ch);
@@ -353,7 +367,7 @@ class TLSensors
 #define TL_ENABLE_SLEWRATE_LIMITER_DEFAULT			false
 #define TL_PRE_CALIBRATION_TIME_DEFAULT				100
 #define TL_CALIBRATION_TIME_DEFAULT				500
-#define TL_FILTER_COEFF_DEFAULT					128
+#define TL_FILTER_COEFF_DEFAULT					16
 #define TL_APPROACHED_TIMEOUT_DEFAULT				300000
 #define TL_PRESSED_TIMEOUT_DEFAULT				TL_APPROACHED_TIMEOUT_DEFAULT
 #define TL_FORCE_CALIBRATION_WHEN_RELEASING_FROM_APPROACHED_DEFAULT	0
@@ -905,39 +919,91 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addSample(uint8_t ch, int3
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isReleased(TLStruct * d)
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::anyButtonIsCalibrating(void)
 {
-	bool isReleased = false;
+	bool ret = false;
+	uint8_t n;
 
-	if (d->delta <= d->approachedToReleasedThreshold) {
-		isReleased = true;
+	for (n = 0; n < N_SENSORS; n++) {
+		if (isCalibrating(&(data[n]))) {
+			ret = true;
+			break;
+		}
 	}
 
-	return isReleased;
+	return ret;
+}
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isCalibrating(TLStruct * d)
+{
+	bool ret = false;
+
+	if (d->buttonState <= TLStruct::buttonStateNoisePowerMeasurement) {
+		ret = true;
+	}
+
+	return ret;
+}
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isCalibrating(int n)
+{
+	return isCalibrating(&(data[n]));
+}
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isReleased(TLStruct * d)
+{
+	bool ret = false;
+
+	if (d->delta <= d->approachedToReleasedThreshold) {
+		ret = true;
+	}
+
+	return ret;
+}
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isReleased(int n)
+{
+	return isReleased(&(data[n]));
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isApproached(TLStruct * d)
 {
-	bool isApproached = false;
+	bool ret = false;
 
 	if (d->delta >= d->releasedToApproachedThreshold) {
-		isApproached = true;
+		ret = true;
 	}
 
-	return isApproached;
+	return ret;
+}
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isApproached(int n)
+{
+	return isApproached(&(data[n]));
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isPressed(TLStruct * d)
 {
-	bool isPressed = false;
+	bool ret = false;
 
 	if (d->delta >= d->approachedToPressedThreshold) {
-		isPressed = true;
+		ret = true;
 	}
 
-	return isPressed;
+	return ret;
+}
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isPressed(int n)
+{
+	return isPressed(&(data[n]));
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
@@ -1529,83 +1595,81 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-int TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::printBar(uint8_t ch,
-		uint8_t length)
+int TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::findSensorPair(uint8_t ch,
+		uint8_t chStart)
 {
 	TLStruct * d;
-	int (*sampleMethodCh)(struct TLStruct * d, uint8_t nSensors, uint8_t ch);
-	int n, k;
+	int pin;
+	int k, n = -1;
+
+	d = &(data[ch]);
+
+	pin = *(d->pin);
+
+	for (k = chStart; k != ch; k++) {
+		if (k >= N_SENSORS) {
+			k = 0;
+			if (k == ch) {
+				break;
+			}
+		}
+		if (pin == *(data[k].pin)) {
+			n = k;
+			break;
+		}
+	}
+
+	return n;
+}
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+int TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::printBar(uint8_t ch_k,
+		int length)
+{
+	int ch_n;
+	TLStruct * d_n = NULL;
+	TLStruct * d_k;
 	int nHashes = -1; /* Number of #'s; for resistive sensor */
 	int nDashes = -1; /* Number of -'s; for capacitive sensor */
 	int tmp;
+	int barLength = length - 2; /* Reserve 2 characters for start and end */
+	int k = 0, n;
 	char s[201] = {'\0'};
-	int chPin, kPin;
 
-	if (length > sizeof(s) - 1) {
+	if (length > int(sizeof(s) - 1)) {
 		return -1;
 	}
-	d = &(data[ch]);
 
-	chPin = *(d->pin);
-
-	sampleMethodCh = d->sampleMethod;
-
-	if (data[ch].sampleMethod == TLSampleMethodCVD) {
-		tmp = map(10 * data[ch].delta, 0, 40 *
-			data[ch].approachedToPressedThreshold, 0, length - 2);
-	}
-	if (data[ch].sampleMethod == TLSampleMethodResistive) {
-		tmp = map(10 * data[ch].delta, 0, 10 * 
-			data[ch].calibratedMaxDelta, 0, length - 2);
+	if (barLength < 0) {
+		return -1;
 	}
 
-	tmp = (tmp > length - 2) ? length - 2 : tmp;
-	tmp = (tmp < 0) ? 0 : tmp;
+	d_k = &(data[ch_k]);
 
-	if (data[ch].sampleMethod == TLSampleMethodCVD) {
-		nDashes = tmp;
+	ch_n = findSensorPair(ch_k, (ch_k + 1) % N_SENSORS);
+
+	Serial.print(ch_k);
+	Serial.print(ch_n);
+
+	if (ch_n >= 0) {
+		d_n = &(data[ch_n]);
+		tmp = d_n->sampleMethodMapDelta(data, N_SENSORS, ch_n,
+			barLength);
+		if (d_n->sampleMethod == TLSampleMethodResistive) {
+			nHashes = tmp;
+		}
+		if (d_n->sampleMethod == TLSampleMethodCVD) {
+			nDashes = tmp;
+		}
 	}
-	if (data[ch].sampleMethod == TLSampleMethodResistive) {
+	tmp = d_k->sampleMethodMapDelta(data, N_SENSORS, ch_k, barLength);
+	if (d_k->sampleMethod == TLSampleMethodResistive) {
 		nHashes = tmp;
 	}
-	/*
-	 * Search for another channel with different sample method but same pin.
-	 */
-	for (n = 0; n < N_SENSORS; n++) {
-		if (n == ch) {
-			continue;
-		}
-
-		kPin = *(data[k].pin);
-		if ((data[n].sampleMethod != sampleMethodCh) &&
-				(chPin == kPin)) {
-			/*
-			 * Channels ch and k use same pin but different sample
-			 * methods. 
-			 */
-			if (data[n].sampleMethod == TLSampleMethodCVD) {
-				tmp = map(10 * data[n].delta, 0, 40 *
-					data[n].approachedToPressedThreshold,
-					0, length - 2);
-			}
-			if (data[n].sampleMethod == TLSampleMethodResistive) {
-				tmp = map(10 * data[n].delta, 0, 10 *
-					data[n].calibratedMaxDelta, 0, length -
-					2);
-			}
-
-			tmp = (tmp > length - 2) ? length - 2 : tmp;
-			tmp = (tmp < 0) ? 0 : tmp;
-
-			if (data[n].sampleMethod == TLSampleMethodCVD) {
-				nDashes = tmp;
-			}
-			if (data[n].sampleMethod == TLSampleMethodResistive) {
-				nHashes = tmp;
-			}
-		}
+	if (d_k->sampleMethod == TLSampleMethodCVD) {
+		nDashes = tmp;
 	}
-	k = 0;
+
 	s[k++] = '|';
 	if (nHashes > k - 1) {
 		for (n = k - 1; n < nHashes - 1; n++) {
@@ -1627,10 +1691,6 @@ int TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::printBar(uint8_t ch,
 	s[k++] = '|';
 	s[k++] = '\0';
 	Serial.print(s);
-	Serial.print(" ");
-	Serial.print(data[ch].delta);
-	Serial.print(" / ");
-	Serial.print(4 * data[ch].approachedToPressedThreshold);
 
 	return 0;
 }

@@ -263,6 +263,12 @@ int TLSampleMethodCVDSample(struct TLStruct * data, uint8_t nSensors,
 	dCh = &(data[ch]);
 	dRef = &(data[ref]);
 	ch_pin = dCh->tlStructSampleMethod.CVD.pin;
+
+	if (ch_pin < 0) {
+		/* An error occurred! */
+		return 0;
+	}
+
 	ref_pin = dRef->tlStructSampleMethod.CVD.pin;
 
 	TLSetSensorAndReferencePins(ch_pin, ref_pin, inv);
@@ -308,6 +314,26 @@ int TLSampleMethodCVDPostSample(struct TLStruct * data, uint8_t nSensors,
 	return 0;
 }
 
+int TLSampleMethodCVDMapDelta(struct TLStruct * data, uint8_t nSensors,
+                uint8_t ch, int length)
+{
+	int n = -1;
+	struct TLStruct * d;
+	float delta;
+
+	d = &(data[ch]);
+
+	delta = d->delta;
+
+	n = map(100 * log(delta), 0, 80 * log(d->calibratedMaxDelta), 0,
+		length);
+
+	n = (n < 0) ? 0 : n;
+	n = (n > length) ? length : n;
+
+	return n;
+}
+
 int TLSampleMethodCVD(struct TLStruct * data, uint8_t nSensors, uint8_t ch)
 {
 	struct TLStruct * d;
@@ -317,6 +343,7 @@ int TLSampleMethodCVD(struct TLStruct * data, uint8_t nSensors, uint8_t ch)
 	d->sampleMethodPreSample = TLSampleMethodCVDPreSample;
 	d->sampleMethodSample = TLSampleMethodCVDSample;
 	d->sampleMethodPostSample = TLSampleMethodCVDPostSample;
+	d->sampleMethodMapDelta = TLSampleMethodCVDMapDelta;
 
 	d->tlStructSampleMethod.CVD.pin = A0 + ch;
 	d->tlStructSampleMethod.CVD.useNChargesPadding =

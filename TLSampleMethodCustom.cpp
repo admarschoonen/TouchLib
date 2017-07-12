@@ -60,6 +60,12 @@ int TLSampleMethodCustomPostSample(struct TLStruct * data, uint8_t nSensors,
 	return 0;
 }
 
+int TLSampleMethodCustomMapDelta(struct TLStruct * data, uint8_t nSensors,
+		uint8_t ch, int length)
+{
+	return 0;
+}
+
 int TLSampleMethodCustom(struct TLStruct * data, uint8_t nSensors, uint8_t ch)
 {
 	struct TLStruct * d;
@@ -69,6 +75,7 @@ int TLSampleMethodCustom(struct TLStruct * data, uint8_t nSensors, uint8_t ch)
 	d->sampleMethodPreSample = TLSampleMethodCustomPreSample;
 	d->sampleMethodSample = TLSampleMethodCustomSample;
 	d->sampleMethodPostSample = TLSampleMethodCustomPostSample;
+	d->sampleMethodMapDelta = TLSampleMethodCustomMapDelta;
 
 	d->tlStructSampleMethod.custom.pin = A0 + ch;
 

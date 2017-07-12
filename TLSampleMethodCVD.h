@@ -57,6 +57,9 @@ int TLSampleMethodCVDSample(struct TLStruct * data, uint8_t nSensors, uint8_t ch
 int TLSampleMethodCVDPostSample(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch);
 
+int TLSampleMethodCVDMapDelta(struct TLStruct * d, uint8_t nSensors, uint8_t ch,
+		int length);
+
 int TLSampleMethodCVD(struct TLStruct * data, uint8_t nSensors, uint8_t ch);
 
 #endif
