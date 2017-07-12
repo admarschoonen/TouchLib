@@ -348,6 +348,8 @@ int TLSampleMethodCVD(struct TLStruct * data, uint8_t nSensors, uint8_t ch)
 	d->direction = TLStruct::directionPositive;
 	d->sampleType = TLStruct::sampleTypeDifferential;
 
+	d->pin = &(d->tlStructSampleMethod.CVD.pin);
+
 	return 0;
 }
 

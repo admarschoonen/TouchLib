@@ -193,12 +193,11 @@ int TLSampleMethodResistive(struct TLStruct * data, uint8_t nSensors,
 	d->pressedToApproachedThreshold =
 		TL_PRESSED_TO_APPROACHED_THRESHOLD_DEFAULT; 
 
-	#if (USE_CORRECT_TRANSFER_FUNCTION == 1)
 	d->direction = TLStruct::directionNegative;
-	#else
-	d->direction = TLStruct::directionPositive;
-	#endif
+
 	d->sampleType = TLStruct::sampleTypeNormal;
+
+	d->pin = &(d->tlStructSampleMethod.resistive.pin);
 
 	return 0;
 }

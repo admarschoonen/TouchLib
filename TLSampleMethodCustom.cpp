@@ -83,5 +83,8 @@ int TLSampleMethodCustom(struct TLStruct * data, uint8_t nSensors, uint8_t ch)
 
 	d->direction = TLStruct::directionPositive;
 	d->sampleType = TLStruct::sampleTypeNormal;
+
+	d->pin = &(d->tlStructSampleMethod.custom.pin);
+
 	return 0;
 }

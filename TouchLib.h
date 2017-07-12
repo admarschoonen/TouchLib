@@ -139,6 +139,7 @@ struct TLStruct {
 	 */
 	enum Direction direction;
 	enum SampleType sampleType;
+	int * pin;
 	float releasedToApproachedThreshold; /* stored in EEPROM */
 	float approachedToReleasedThreshold; /* stored in EEPROM */
 	float approachedToPressedThreshold; /* stored in EEPROM */
@@ -267,6 +268,7 @@ class TLSensors
 		int initialize(uint8_t ch, int (*sampleMethod)(
 			struct TLStruct * d, uint8_t nSensors, uint8_t ch));
 		int8_t sample(void);
+		void printBar(uint8_t ch);
 		void printScanOrder(void);
 		bool setForceCalibratingStates(int ch, uint32_t mask,
 			enum TLStruct::ButtonState * newState);
@@ -1524,6 +1526,16 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 	}
 
 	return error;
+}
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::printBar(uint8_t ch)
+{
+	TLStruct * d;
+
+	d = &(data[ch]);
+
+	int chPin = *(d->pin);
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>

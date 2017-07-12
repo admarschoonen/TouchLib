@@ -143,5 +143,7 @@ int TLSampleMethodTouchRead(struct TLStruct * data, uint8_t nSensors,
 	d->direction = TLStruct::directionPositive;
 	d->sampleType = TLStruct::sampleTypeNormal;
 
+	d->pin = &(d->tlStructSampleMethod.touchRead.pin);
+
 	return 0;
 }
