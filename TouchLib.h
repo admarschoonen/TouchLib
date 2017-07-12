@@ -1648,9 +1648,6 @@ int TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::printBar(uint8_t ch_k,
 
 	ch_n = findSensorPair(ch_k, (ch_k + 1) % N_SENSORS);
 
-	Serial.print(ch_k);
-	Serial.print(ch_n);
-
 	if (ch_n >= 0) {
 		d_n = &(data[ch_n]);
 		tmp = d_n->sampleMethodMapDelta(data, N_SENSORS, ch_n,
