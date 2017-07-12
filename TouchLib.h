@@ -1,7 +1,7 @@
 /*
  * TLSensor.h - Capacitive sensing library based on TL method for Arduino
  * https://github.com/AdmarSchoonen/TLSensor
- * Copyright (c) 2016 Admar Schoonen
+ * Copyright (c) 2016, 2017 Admar Schoonen
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -907,12 +907,7 @@ bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isReleased(TLStruct * d)
 {
 	bool isReleased = false;
 
-	if ((d->direction == TLStruct::directionPositive) &&
-			(d->delta <= d->approachedToReleasedThreshold)) {
-		isReleased = true;
-	}
-	if ((d->direction == TLStruct::directionNegative) &&
-			(-d->delta <= d->approachedToReleasedThreshold)) {
+	if (d->delta <= d->approachedToReleasedThreshold) {
 		isReleased = true;
 	}
 
@@ -924,12 +919,7 @@ bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isApproached(TLStruct * d)
 {
 	bool isApproached = false;
 
-	if ((d->direction == TLStruct::directionPositive) &&
-			(d->delta >= d->releasedToApproachedThreshold)) {
-		isApproached = true;
-	}
-	if ((d->direction == TLStruct::directionNegative) &&
-			(-d->delta >= d->releasedToApproachedThreshold)) {
+	if (d->delta >= d->releasedToApproachedThreshold) {
 		isApproached = true;
 	}
 
@@ -941,12 +931,7 @@ bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isPressed(TLStruct * d)
 {
 	bool isPressed = false;
 
-	if ((d->direction == TLStruct::directionPositive) &&
-			(d->delta >= d->approachedToPressedThreshold)) {
-		isPressed = true;
-	}
-	if ((d->direction == TLStruct::directionNegative) &&
-			(-d->delta >= d->approachedToPressedThreshold)) {
+	if (d->delta >= d->approachedToPressedThreshold) {
 		isPressed = true;
 	}
 
@@ -1391,7 +1376,12 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processSample(uint8_t ch)
 
 	d = &(data[ch]);
 
-	d->delta = d->value - d->avg;
+	if (d->direction == TLStruct::directionNegative) {
+		d->delta = d->avg - d->value;
+	} else {
+		d->delta = d->value - d->avg;
+	}
+
 	if (d->maxDelta < d->delta) {
 		d->maxDelta = d->delta;
 	}
