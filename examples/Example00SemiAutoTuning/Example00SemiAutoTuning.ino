@@ -821,7 +821,8 @@ void printCode(void)
 	Serial.print("        Serial.print(s);\n");
 	Serial.print("}\n");
 	Serial.print("\n");
-	Serial.print("#define BAR_LENGTH                     100\n");
+	Serial.print("#define BAR_LENGTH                     60 /* <-- Change "
+		"this to print longer or shorter visualizations */\n");
 	Serial.print("\n");
 	Serial.print("void loop(void)\n");
 	Serial.print("{\n");
