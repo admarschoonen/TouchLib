@@ -659,7 +659,7 @@ void printCode(void)
 	Serial.print(" * sensor. For 2 or more sensors you don't need to add"
 		" an unused analog input.\n");
  	Serial.print(" */\n");
-	Serial.print("#define N_SENSORS                         ");
+	Serial.print("#define N_SENSORS                       ");
 	Serial.print(N_SENSORS);
 	Serial.print("\n");
 	Serial.print("\n");
@@ -680,8 +680,6 @@ void printCode(void)
 	Serial.print("\n");
 	Serial.print("void setup()\n");
 	Serial.print("{\n");
-        Serial.print("        int n;\n");
-	Serial.print("\n");
         Serial.print("        Serial.begin(9600);\n");
 	Serial.print("        /* Delay to make sure serial monitor receives "
 		"first message */\n");
@@ -808,8 +806,13 @@ void printCode(void)
 	Serial.print("}\n");
 
 	Serial.print("\n");
+	Serial.print("#define BAR_LENGTH                     200\n");
+	Serial.print("\n");
 	Serial.print("void loop(void)\n");
 	Serial.print("{\n");
+	Serial.print("        tlSensors.sample();\n");
+	Serial.print("        tlSensors.printBar(0, BAR_LENGTH);\n");
+	Serial.print("        Serial.println(\"\");\n");
 	Serial.print("}\n");
 
 	Serial.print("\n");
