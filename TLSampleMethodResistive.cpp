@@ -31,6 +31,8 @@
 #include "TouchLib.h"
 #include "TLSampleMethodResistive.h"
 
+#define USE_CORRECT_TRANSFER_FUNCTION			0
+
 #define TL_SAMPLE_METHOD_RESISTIVE_GND_PIN		2
 #define TL_SAMPLE_METHOD_RESISTIVE_USE_INTERNAL_PULLUP	true
 
@@ -42,6 +44,8 @@
 
 #define TL_SET_OFFSET_VALUE_MANUALLY_DEFAULT		false
 
+#if (USE_CORRECT_TRANSFER_FUNCTION == 1)
+
 #define TL_RELEASED_TO_APPROACHED_THRESHOLD_DEFAULT	\
 	(TL_VALUE_MAX_DEFAULT - 4500)
 #define TL_APPROACHED_TO_RELEASED_THRESHOLD_DEFAULT	\
@@ -50,6 +54,15 @@
 	(TL_VALUE_MAX_DEFAULT - 800)
 #define TL_PRESSED_TO_APPROACHED_THRESHOLD_DEFAULT	\
 	(TL_VALUE_MAX_DEFAULT - 1000)
+
+#else
+
+#define TL_RELEASED_TO_APPROACHED_THRESHOLD_DEFAULT	2
+#define TL_APPROACHED_TO_RELEASED_THRESHOLD_DEFAULT	1.5
+#define TL_APPROACHED_TO_PRESSED_THRESHOLD_DEFAULT	5
+#define TL_PRESSED_TO_APPROACHED_THRESHOLD_DEFAULT	4
+
+#endif
 
 int TLSampleMethodResistivePreSample(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch)
@@ -119,20 +132,29 @@ int TLSampleMethodResistivePostSample(struct TLStruct * data, uint8_t nSensors,
 	}
 
 	tmp = d->raw / scale;
-	if (tmp > 1) {
-		tmp = 1;
-	}
+
+	#if (USE_CORRECT_TRANSFER_FUNCTION == 1)
 
 	/*
 	 * Actual transfer function is tmp / (1 - tmp), but this is very
 	 * sensitive to noise when sensor is not pressed (since tmp will then be
 	 * very close to 1). Instead, clip the value to a predefined maximum.
 	 */
+	if (tmp > 1) {
+		tmp = 1;
+	}
 	tmp = d->scaleFactor * d->referenceValue * tmp / (1 - tmp);
 
 	if (tmp > d->tlStructSampleMethod.resistive.valueMax) {
 		tmp = d->tlStructSampleMethod.resistive.valueMax;
 	}
+
+	#else
+
+	tmp = d->scaleFactor * d->referenceValue * tmp;
+
+	#endif
+
 	d->value = tmp;
 	/* Resistance can be negative due to noise! */
 
@@ -171,7 +193,11 @@ int TLSampleMethodResistive(struct TLStruct * data, uint8_t nSensors,
 	d->pressedToApproachedThreshold =
 		TL_PRESSED_TO_APPROACHED_THRESHOLD_DEFAULT; 
 
+	#if (USE_CORRECT_TRANSFER_FUNCTION == 1)
 	d->direction = TLStruct::directionNegative;
+	#else
+	d->direction = TLStruct::directionPositive;
+	#endif
 	d->sampleType = TLStruct::sampleTypeNormal;
 
 	return 0;
