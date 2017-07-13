@@ -2,16 +2,61 @@
 #include <stdlib.h>
 
 /*
- * Touch Library Demo Sketch
- * Admar Schoonen 2016
- * Connect 4 electrodes (piece of metal sheet / foil) to analog pins A0 - A3
+ * Touch Library tuning program
+ *
+ * Admar Schoonen 2016-2017
+ *
+ * To types of sensors are supported: capacitive sensors and resistive sensors.
+ * The library even supports to use a resistive sensor as both resistive
+ * (pressure) sensor and capacitive (presence / proximity) sensor.
+ *
+ * To use capacitive only sensors: connect up to 16 electrodes (piece of metal
+ * sheet / foil or conductive fabric) to analog pins A0 - A15 to use as
+ * capacitive touch sensors or capacitive distance sensors.
+ *
+ * Note that if you want to use capacitive sensors, the program needs a minimum
+ * of 2 capacitive sensors (only 1 will not work for technical reasons). If you
+ * really only want 1 capacitive sensor, just tell the program you have 2
+ * capacitive sensors and use an unused analog input for the 2nd sensor. Do not
+ * connect an electrode to that input.
+ *
+ * To use resistive only sensors: connect up to 16 resistive pressure sensors to
+ * analog pins A0 - A15. Connect the other electrode of the resistive sensors to
+ * digital pins 2 - 17. You can make these sensors yourself by sandwiching a
+ * piece of ESD foam or Velostat between two electrodes (metal foil or
+ * conductive fabric). Connect the top electrode to an analog pin and the bottom
+ * electrode to a digital pin.
+ *
+ * To use the resistive sensors as both resistive and capacitive sensors:
+ * connect them just like you would do for resistive only sensors. In the
+ * tuning program, just configure twice the number of actual sensors you have,
+ * with the first half being capacitive sensors and the second half the
+ * resistive sensors. The library will rapidly switch the sensor back and forth
+ * between resistive sensing and capacitive sensing mode.
+ *
+ * Stackup of a sensor that can be used as resistive pressure sensor and
+ * capacitive proximity sensor:
+ *
+ *   +---------------------+
+ *   |  conductive fabric  *----------> to Arduino pin A0
+ *  ,+=====================+.
+ *  |       ESD foam        |
+ *  `+=====================+'
+ *   |  conductive fabric  *----------> to Arduino pin 2
+ *   +---------------------+
+ *
+ * A second sensor would be connected to pin A1 and pin 3, a third to A2 and
+ * pin 4 etc.
+ *
+ * The capacitive sensor part is connected to A0 (respectively A1, A2 etc). The
+ * resistive sensor part is connected to A1 and pin 2 (respectively A2 / pin 3,
+ * A3 / pin 4 etc).
+ *
+ * For ESD foam, MULTICOMP 039-0050 (sold at http://nl.farnell.com with order
+ * code 1687866) is known to work very well.
  */
 
-/*
- * Number of capacitive sensors. Needs a minimum of 2. When using only one
- * sensor, set N_SENSORS to 2 and use an unused analog input pin for the second
- * sensor. For 2 or more sensors you don't need to add an unused analog input.
- */
+/* Number of sensors. */
 #define N_SENSORS			32
 
 /*
@@ -73,6 +118,8 @@ void setup()
 		 */
 		tlSensors.data[n].enableTouchStateMachine = false;
 
+		tlSensors.data[n].disableUpdateIfAnyButtonIsApproached = false;
+		tlSensors.data[n].disableUpdateIfAnyButtonIsPressed = false;
 		/* Enable noise power measurement */
 		tlSensors.data[n].enableNoisePowerMeasurement = true;
 
@@ -397,16 +444,15 @@ bool askSampleMethod(int n)
 	return false;
 }
 
-void noiseTuning(int n)
+void noiseTuning(void)
 {
 	char c;
 	bool highNoise = false;
+	uint8_t n;
 
-	Serial.print(F("Performing noise measurement for sensor "));
-	Serial.print(n);
-	Serial.print(F(". "));
+	Serial.print(F("Performing noise measurement for all sensors. "));
 	do {
-		Serial.print(F("Make sure to not touch the sensor. Enter y to "
+		Serial.print(F("Make sure to not touch any sensor. Enter y to "
 			"start the noise measurement. "));
 		c = Serial_getChar();
 		Serial.println(c);
@@ -416,45 +462,57 @@ void noiseTuning(int n)
 	} while (lower(c) != 'y');
 
 	Serial.println(F("Noise measurement started... "));
-	tlSensors.data[n].enableTouchStateMachine = true;
-	tlSensors.data[n].enableNoisePowerMeasurement = true;
-	tlSensors.setState(n, TLStruct::buttonStatePreCalibrating);
-	while (tlSensors.getState(n) != TLStruct::buttonStateReleased) {
+	for (n = 0; n < nSensors; n++) {
+		tlSensors.data[n].enableTouchStateMachine = false;
+		tlSensors.data[n].enableNoisePowerMeasurement = true;
+		tlSensors.setState(n, TLStruct::buttonStatePreCalibrating);
+	}
+	while (tlSensors.getState(0) != TLStruct::buttonStateReleased) {
 		tlSensors.sample();
 	}
-	Serial.print(F("Noise measurement for sensor "));
-	Serial.print(n);
-	Serial.println(F(" is finished."));
+	Serial.println(F("Noise measurement finished. Found the following "
+		"thresholds:"));
 
-	highNoise = false;
-
-	if (tlSensors.data[n].releasedToApproachedThreshold <
-			3 * sqrt(tlSensors.data[n].noisePower)) {
-		tlSensors.data[n].releasedToApproachedThreshold =
-			3 * sqrt(tlSensors.data[n].noisePower);
-		highNoise = true;
-	}
-
-	if (tlSensors.data[n].approachedToReleasedThreshold <
-			0.9 * 3 * sqrt(tlSensors.data[n].noisePower)) {
-		tlSensors.data[n].approachedToReleasedThreshold =
-			0.9 * 3 * sqrt(tlSensors.data[n].noisePower);
-		highNoise = true;
-	}
-
-	if (highNoise) {
+	for (n = 0; n < nSensors; n++) {
+		highNoise = false;
+	
+		/*
+		 * Disabled adjusting thresholds based on noise. Seems to be not
+		 * very reliable.
+		 */
+		#if (0)
+		if (tlSensors.data[n].releasedToApproachedThreshold <
+				3 * sqrt(tlSensors.data[n].noisePower)) {
+			tlSensors.data[n].releasedToApproachedThreshold =
+				3 * sqrt(tlSensors.data[n].noisePower);
+			highNoise = true;
+		}
+	
+		if (tlSensors.data[n].approachedToReleasedThreshold <
+				0.9 * 3 * sqrt(tlSensors.data[n].noisePower)) {
+			tlSensors.data[n].approachedToReleasedThreshold =
+				0.9 * 3 * sqrt(tlSensors.data[n].noisePower);
+			highNoise = true;
+		}
+		#endif
+	
+		Serial.print(F("  Sensor "));
+		Serial.print(n);
+		Serial.println(F(":"));
+		if (highNoise) {
+			Serial.print(F("    Warning! High noise levels detected! "
+				"Increased released to approached and approached to "
+				"released thresholds for sensor "));
+			Serial.print(n);
+			Serial.println("!");
+		}
+	
+		Serial.print(F("    released -> approached: "));
+		Serial.println(tlSensors.data[n].releasedToApproachedThreshold);
+		Serial.print(F("    approached -> released: "));
+		Serial.println(tlSensors.data[n].approachedToReleasedThreshold);
 		Serial.println("");
-		Serial.println(F("Warning! High noise levels detected! "
-			"Increased released to approached and approached to "
-			"released thresholds!"));
-		Serial.println("");
 	}
-
-	Serial.println(F("Found the following thresholds:"));
-	Serial.print(F("  released -> approached: "));
-	Serial.println(tlSensors.data[n].releasedToApproachedThreshold);
-	Serial.print(F("  approached -> released: "));
-	Serial.println(tlSensors.data[n].approachedToReleasedThreshold);
 
 	Serial.println("");
 }
@@ -486,6 +544,7 @@ void touchTuning(int n)
 			}
 		} while (lower(c) != 'y');
 	
+		tlSensors.data[n].enableTouchStateMachine = false;
 		tlSensors.setState(n, TLStruct::buttonStatePressed);
 	
 		for (k = 0; k < N_MEASUREMENTS; k++) {
@@ -508,8 +567,10 @@ void touchTuning(int n)
 		if (tlSensors.data[n].pressedToApproachedThreshold < 1.1 *
 				tlSensors.data[n].releasedToApproachedThreshold) {
 			Serial.print(F("Error! Detected signal is too low: "));
-			Serial.print(tlSensors.data[n].releasedToApproachedThreshold);
-			Serial.print(" ");
+			Serial.print(tlSensors.data[n].pressedToApproachedThreshold);
+			Serial.print(F(" < "));
+			Serial.print(1.1 * tlSensors.data[n].releasedToApproachedThreshold);
+			Serial.print(". ");
 		} else {
 			done = true;
 		}
@@ -542,7 +603,7 @@ void maxTouchTuning(int n)
 				Serial.print(F("Make sure to cover and hold "
 					"the sensor with as many fingers as "
 					"will fit or with your whole hand, then"
-					"press y to start the touch "
+					" press y to start the touch "
 					"measurement. "));
 			}
 			if (tlSensors.data[n].sampleMethod == 
@@ -560,6 +621,7 @@ void maxTouchTuning(int n)
 			}
 		} while (lower(c) != 'y');
 	
+		tlSensors.data[n].enableTouchStateMachine = false;
 		tlSensors.setState(n, TLStruct::buttonStatePressed);
 	
 		for (k = 0; k < N_MEASUREMENTS; k++) {
@@ -710,10 +772,10 @@ void printCode(void)
 	Serial.print(F("\n"));
 
 	Serial.print(F("/*\n"));
-	Serial.print(F(" *  Number of sensors. Needs a minimum of 2. When "
-		"using only one\n"));
-	Serial.print(F(" * sensor, set N_SENSORS to 2 and use an unused analog "
-		"input pin for the second\n"));
+	Serial.print(F(" *  Number of sensors. For capacitive sensors: needs to"
+		" be a minimum of 2. When\n"));
+	Serial.print(F(" * using only one sensor, set N_SENSORS to 2 and use an"
+		" unused analog input pin for the second\n"));
 	Serial.print(F(" * sensor. For 2 or more sensors you don't need to add"
 		" an unused analog input.\n"));
  	Serial.print(F(" */\n"));
@@ -962,8 +1024,8 @@ void loop()
 	}
 
 	Serial.println(F("Next step is to tune the sensors."));
+	noiseTuning();
 	for (n = 0; n < nSensors; n++) {
-		noiseTuning(n);
 		touchTuning(n);
 		maxTouchTuning(n);
 		Serial.print(F("Finished tuning sensor "));
