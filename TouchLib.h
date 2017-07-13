@@ -1526,6 +1526,8 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 	}
 
 	for (pos = 0; pos < length; pos++) {
+		sample1 = 0;
+		sample2 = 0;
 		ch = scanOrder[pos];
 		if (data[ch].sampleType &
 				TLStruct::sampleTypeNormal) {
