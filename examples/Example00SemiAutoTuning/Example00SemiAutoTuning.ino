@@ -424,7 +424,7 @@ bool askSampleMethod(int n)
 	Serial.print(F(" a capacitive sensor (using CVD method) or a resistive "
 		"sensor (using resistive method)? "));
 	do {
-		Serial.print(F("Enter c for capacitive or r for resistive: "));
+		Serial.print(F("Enter c for capacitive or r for\nresistive: "));
 		c = Serial_getChar();
 		Serial.println(c);
 		if ((lower(c) != 'c') && (lower(c) != 'r')) {
@@ -527,14 +527,21 @@ void touchTuning(int n)
 	int k;
 	bool done = false;
 
-	Serial.print(F("Performing touch measurement for sensor "));
+	Serial.print(F("Performing touch measurement for "));
+	if (tlSensors.data[n].sampleMethod == TLSampleMethodCVD) {
+		Serial.print(F("capacitive"));
+	}
+	if (tlSensors.data[n].sampleMethod == TLSampleMethodResistive) {
+		Serial.print(F("resistive"));
+	}
+	Serial.print(F(" sensor "));
 	Serial.print(n);
 	Serial.print(F(". "));
 
 	do {
 		do {
 			Serial.print(F("Make sure to touch and hold the sensor,"
-				" then press y to start the touch "
+				" then press y to start the touch\n"
 				"measurement. "));
 			c = Serial_getChar();
 			Serial.println(c);
@@ -592,7 +599,14 @@ void maxTouchTuning(int n)
 	int k;
 	bool done = false;
 
-	Serial.print(F("Performing maximum range measurement for sensor "));
+	Serial.print(F("Performing maximum range measurement for "));
+	if (tlSensors.data[n].sampleMethod == TLSampleMethodCVD) {
+		Serial.print(F("capacitive"));
+	}
+	if (tlSensors.data[n].sampleMethod == TLSampleMethodResistive) {
+		Serial.print(F("resistive"));
+	}
+	Serial.print(F(" sensor "));
 	Serial.print(n);
 	Serial.print(". ");
 
@@ -602,14 +616,14 @@ void maxTouchTuning(int n)
 					TLSampleMethodCVD) {
 				Serial.print(F("Make sure to cover and hold "
 					"the sensor with as many fingers as "
-					"will fit or with your whole hand, then"
+					"will\nfit or with your whole hand, then"
 					" press y to start the touch "
 					"measurement. "));
 			}
 			if (tlSensors.data[n].sampleMethod == 
 					TLSampleMethodResistive) {
 				Serial.print(F("Make sure to press and hold the"
-					"sensor as firmly as possible, then "
+					"sensor as firmly as possible, then\n"
 					"press y to start the touch "
 					"measurement. "));
 			}
@@ -963,7 +977,7 @@ void printCode(void)
 	Serial.print(F("        Serial.print(s);\n"));
 	Serial.print(F("}\n"));
 	Serial.print(F("\n"));
-	Serial.print(F("#define BAR_LENGTH                     60 /* <-- Change "
+	Serial.print(F("#define BAR_LENGTH                     58 /* <-- Change "
 		"this to print longer or shorter visualizations */\n"));
 	Serial.print(F("\n"));
 	Serial.print(F("void loop(void)\n"));
@@ -1004,7 +1018,7 @@ void loop()
 	askPower();
 	askNSensors();
 	Serial.println(F("First we need to know what type of sensors the system"
-		"has and to which pins they are connected."));
+		" has and to which pins they are connected."));
 	for (n = 0; n < nSensors; n++) {
 		askSampleMethod(n);
 		askPinning(n);
@@ -1019,7 +1033,7 @@ void loop()
 			" only need 1 sensor, just add a 2nd one but do not "
 			"connect it to a touchpad."));
 		Serial.println();
-		Serial.println(F("Tuning program aborted."));
+		Serial.println(F("TouchLib tuning program aborted."));
 		while (true);
 	}
 
@@ -1048,6 +1062,6 @@ void loop()
 
 	printCode();
 	Serial.println("");
-	Serial.println(F("Tuning program finished"));
+	Serial.println(F("TouchLib tuning program finished"));
 	while (true);
 }
