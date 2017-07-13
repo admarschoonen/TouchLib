@@ -892,6 +892,8 @@ void printCode(void)
 	Serial.print(F("        Serial.print(\" \");\n"));
 	Serial.print(F("        Serial.print(tlSensors.isPressed(n));\n"));
 	Serial.print(F("        Serial.print(\" \");\n"));
+	Serial.print(F("        Serial.print(tlSensors.getState(n));\n"));
+	Serial.print(F("        Serial.print(\" \");\n"));
 	Serial.print(F("        Serial.print(tlSensors.getStateLabel(n));\n"));
 	Serial.print(F("        memset(s, '\\0', sizeof(s));\n"));
 	Serial.print(F("        memset(s, ' ', 22 - "
