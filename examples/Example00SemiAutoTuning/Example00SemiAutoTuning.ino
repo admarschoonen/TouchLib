@@ -734,6 +734,11 @@ void checkResistiveCapacitiveSensor(int n)
 
 void printCode(void)
 {
+	/*
+	 * Yo dawg, I heard you like code, so I put code in your code so you can
+	 * program while you program.
+	 */
+
 	char c;
 	int n, pin;
 
