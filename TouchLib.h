@@ -380,8 +380,8 @@ class TLSensors
 #define TL_ENABLE_TOUCH_STATE_MACHINE_DEFAULT			true
 #define TL_ENABLE_NOISE_POWER_MEASUREMENT_DEFAULT		false
 
-#define TL_DISABLE_UPDATE_IF_ANY_BUTTON_IS_APPROACHED_DEFAULT	true
-#define TL_DISABLE_UPDATE_IF_ANY_BUTTON_IS_PRESSED_DEFAULT	true
+#define TL_DISABLE_UPDATE_IF_ANY_BUTTON_IS_APPROACHED_DEFAULT	false
+#define TL_DISABLE_UPDATE_IF_ANY_BUTTON_IS_PRESSED_DEFAULT	false
 #ifdef EEPROM_h
 #define TL_ENABLE_READ_SETTINGS_FROM_EEPROM_DEFAULT		true
 #else
@@ -1011,11 +1011,15 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(TLStruct * d)
 {
 	float s;
 
-	if (!d->forcedCal && (d->disableUpdateIfAnyButtonIsApproached &&
+	if (!d->forcedCal && (d->buttonState >=
+			TLStruct::buttonStateReleased) && 
+			(d->disableUpdateIfAnyButtonIsApproached &&
 			this->anyButtonIsApproached)) {
 		return;
 	}
-	if (!d->forcedCal && (d->disableUpdateIfAnyButtonIsPressed &&
+	if (!d->forcedCal && (d->buttonState >=
+			TLStruct::buttonStateReleased) &&
+			(d->disableUpdateIfAnyButtonIsPressed &&
 			this->anyButtonIsPressed)) {
 		return;
 	}
