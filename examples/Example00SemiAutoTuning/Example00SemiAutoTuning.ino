@@ -374,7 +374,8 @@ bool askSampleMethod(int n)
 	Serial.println("");
 	Serial.print(F("Is sensor "));
 	Serial.print(n);
-	Serial.print(F(" a capacitive or a resistive sensor? "));
+	Serial.print(F(" a capacitive sensor (using CVD method) or a resistive "
+		"sensor (using resistive method)? "));
 	do {
 		Serial.print(F("Enter c for capacitive or r for resistive: "));
 		c = Serial_getChar();
@@ -593,6 +594,22 @@ void maxTouchTuning(int n)
 	Serial.print(F("Found the following maximum: "));
 	Serial.println(maxDelta[N_MEASUREMENTS - 1]);
 	Serial.println("");
+}
+
+int countNSensors(int (*sampleMethod)(struct TLStruct * d, uint8_t nSensors,
+		uint8_t ch))
+{
+	int k, n;
+
+	k = 0;
+
+	for (n = 0; n < nSensors; n++) {
+		if (tlSensors.data[n].sampleMethod == sampleMethod) {
+			k++;
+		}
+	}
+
+	return k;
 }
 
 void checkResistiveCapacitiveSensor(int n)
@@ -930,6 +947,18 @@ void loop()
 	}
 	Serial.println("");
 
+	n = countNSensors(TLSampleMethodCVD);
+	if (n == 1) {
+		Serial.println(F("Error! Detected only 1 capacitive sensor "
+			"using CVD method. CVD method can only work if you have"
+			" at least 2 capacitive sensors with CVD method. If you"
+			" only need 1 sensor, just add a 2nd one but do not "
+			"connect it to a touchpad."));
+		Serial.println();
+		Serial.println(F("Tuning program aborted."));
+		while (true);
+	}
+
 	Serial.println(F("Next step is to tune the sensors."));
 	for (n = 0; n < nSensors; n++) {
 		noiseTuning(n);
@@ -954,5 +983,7 @@ void loop()
 	Serial.println("");
 
 	printCode();
-	while(1);
+	Serial.println("");
+	Serial.println(F("Tuning program finished"));
+	while (true);
 }
