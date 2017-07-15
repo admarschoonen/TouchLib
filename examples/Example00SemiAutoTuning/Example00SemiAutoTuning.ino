@@ -56,9 +56,36 @@
  * code 1687866) is known to work very well.
  */
 
-/* Number of sensors. */
-#define N_SENSORS			32
+/* Maximum number of sensors. Depends on processor type. */
+#if defined(__AVR_ATmega328P__) || defined(__AVR_ATmega328__) || \
+	defined(__AVR_ATmega168__)
+/*
+ * ATmega328P only has enough memory (RAM) for 6 sensors. ATmega168 is untested.
+ */
+#define N_SENSORS			6
+#define KNOWN_BOARD			1
+#endif
 
+#if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
+/*
+ * ATmega2560 is known to be able to support up to 32 sensors. ATmega1280 is
+ * untested.
+ */
+#define N_SENSORS			32
+#define KNOWN_BOARD			1
+#endif
+
+#if defined (__AVR_ATmega32U4__)
+#endif
+
+#if defined (__AVR_ATtiny85__)
+#endif
+
+#ifndef KNOWN_BOARD
+/* Unknown processor; assume it is capable of at least 4 sensors */
+#warning "Unknown processor. Limiting number of sensors to 4."
+#define N_SENSORS			4
+#endif
 /*
  * Number of measurements per sensor to take in one cycle. More measurements
  * means more noise reduction / spreading, but is also slower.
