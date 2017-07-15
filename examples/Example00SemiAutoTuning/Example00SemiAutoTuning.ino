@@ -76,6 +76,11 @@
 #endif
 
 #if defined (__AVR_ATmega32U4__)
+/*
+ * ATmega32u4 is tested up to 6 sensors.
+ */
+#define N_SENSORS			6
+#define KNOWN_BOARD			1
 #endif
 
 #if defined (__AVR_ATtiny85__)
@@ -83,8 +88,8 @@
 
 #ifndef KNOWN_BOARD
 /* Unknown processor; assume it is capable of at least 4 sensors */
-#warning "Unknown processor. Limiting number of sensors to 4."
-#define N_SENSORS			4
+#warning "Unknown processor. Limiting number of sensors to 6."
+#define N_SENSORS			6
 #endif
 /*
  * Number of measurements per sensor to take in one cycle. More measurements
@@ -108,6 +113,9 @@ void setup()
 
 	/* Delay to make sure serial monitor receives first message */
 	Serial.begin(9600);
+
+	while(!Serial); /* Required for ATmega32u4 processors */
+
 	delay(500);
 	Serial.println();
 	Serial.println();
@@ -847,6 +855,10 @@ void printCode(void)
 	Serial.print(F("void setup()\n"));
 	Serial.print(F("{\n"));
         Serial.print(F("        Serial.begin(9600);\n"));
+	Serial.print(F("\n"));
+	Serial.print(F("        while(!Serial); /* Required for ATmega32u4 "
+		"processors */\n"));
+	Serial.print(F("\n"));
 	Serial.print(F("        /* Delay to make sure serial monitor receives "
 		"first message */\n"));
         Serial.print(F("        delay(500);\n"));
