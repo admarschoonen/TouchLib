@@ -382,6 +382,11 @@ bool askPower(void)
 	Serial.println(F("d. Mixed: sometimes system is powered by battery, "
 		"sometimes by a suppy with floating ground."));
 	Serial.println("");
+	Serial.println(F("Options a and b allow to use capacitive distance "
+		"sensing. Options c and d use extra filtering for more robust "
+		"touch / no touch\ndetection but will not work well for "
+		"distance sensing."));
+	Serial.println("");
 
 	do {
 		Serial.print(F("Enter your choice (a, b, c or d): "));
