@@ -15,7 +15,7 @@ Things to do or ideas to implement:
 * add option for RC guard
 * make N_MEASUREMENTS_PER_SENSOR optional (default to 16)?
 * allow shorter time for recalibration if forceCalibrationAfterRelease is set?
-* move some parameters from per sensor to CvdSensor object
+* move some parameters from per sensor to TouchLib object
 * add wireless to debug conducted noise immunity
 * add reportedCapaticance and reportedDistance which are equal to capacitance
   and distance when capacitance and distance are larger than 0, and 0 elsewhere.
@@ -44,3 +44,6 @@ Things to do or ideas to implement:
 * add ResponsiveAnalogRead method?
 
 * fix bug in printing floating point numbers with fixed width (SNR example)
+* test all 6 channels on ATmega32u4 (lilypad) (mux is slightly different than on
+  mega2560?)
+
