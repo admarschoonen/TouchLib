@@ -463,7 +463,7 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 	
 	error = 0;
 
-	if (nSensors < 2) {
+	if (nSensors < 1) {
 		error = -1;
 	}
 
@@ -850,7 +850,7 @@ TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::TLSensors(void)
 	
 	error = 0;
 
-	if (N_SENSORS < 2) {
+	if (N_SENSORS < 1) {
 		error = -1;
 	} else {
 		nSensors = N_SENSORS;
