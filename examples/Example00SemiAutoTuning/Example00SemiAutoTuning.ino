@@ -994,6 +994,13 @@ void printCode(void)
 	}
 
 	Serial.print(F("\n"));
+	Serial.print(F("        if (tlSensors.error) {\n"));
+	Serial.print(F("                Serial.println(\"Error detected during "
+		"initialization of TouchLib. This is \"\n"));
+	Serial.print(F("                       \"probably a bug; please notify the author.\");\n"));
+	Serial.print(F("                while (1);\n"));
+	Serial.print(F("        }\n"));
+	Serial.print(F("\n"));
 	Serial.print(F("        Serial.println(\"Calibrating sensors...\");\n"));
 	Serial.print(F("        while(tlSensors.anyButtonIsCalibrating()) {\n"));
 	Serial.print(F("                tlSensors.sample();\n"));
