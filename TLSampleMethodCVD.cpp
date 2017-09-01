@@ -30,6 +30,7 @@
 
 #include "TouchLib.h"
 #include "TLSampleMethodCVD.h"
+#include "BoardID.h"
 
 #define TL_N_CHARGES_MIN_DEFAULT			1
 #define TL_N_CHARGES_MAX_DEFAULT			1
@@ -98,28 +99,16 @@ static void TLSetSensorAndReferencePins(int ch_pin, int ref_pin, bool inv)
 
 bool TLHasMux5(void)
 {
-	bool result = false;
-
-	/* 
-	 * From
-	 * http://electronics.stackexchange.com/questions/31048/can-an-atmega-
-	 * or-attiny-device-signature-be-read-while-running
-	 * and http://www.avrfreaks.net/forum/device-signatures.
-	 */
-	if ((SIGNATURE_0 == 0x1E) && (SIGNATURE_1 == 0x97)) {
-		/* ATmega128x */
-		result = true;
-	}
-	if ((SIGNATURE_0 == 0x1E) && (SIGNATURE_1 == 0x98)) {
-		/* ATmega256x */
-		result = true;
-	}
-
-	return result;
+	#if IS_ATMEGA128X_256X
+	return true;
+	#else
+	return false;
+	#endif
 }
 
 void TLSetAdcReferencePin(int pin)
 {
+	#if IS_AVR
 	unsigned char mux;
 
 	if (TLHasMux5()) {
@@ -141,6 +130,7 @@ void TLSetAdcReferencePin(int pin)
 		ADMUX &= ~0x0F;
 		ADMUX |= (mux & 0x0F);
 	}
+	#endif
 }
 
 static void TLChargeADC(struct TLStruct * data, uint8_t nSensors, uint8_t ch, 

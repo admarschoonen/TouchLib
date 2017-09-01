@@ -47,6 +47,7 @@
 #include <TLSampleMethodCVD.h>
 #include <TLSampleMethodResistive.h>
 #include <TLSampleMethodTouchRead.h>
+#include <BoardID.h>
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 class TLSensors;
@@ -1661,7 +1662,9 @@ int TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::printBar(uint8_t ch_k,
 		if (d_n->sampleMethod == TLSampleMethodResistive) {
 			nHashes = tmp;
 		}
-		if (d_n->sampleMethod == TLSampleMethodCVD) {
+		if ((d_n->sampleMethod == TLSampleMethodCVD) ||
+				(d_n->sampleMethod ==
+				TLSampleMethodTouchRead)) {
 			nDashes = tmp;
 		}
 	}
@@ -1669,7 +1672,8 @@ int TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::printBar(uint8_t ch_k,
 	if (d_k->sampleMethod == TLSampleMethodResistive) {
 		nHashes = tmp;
 	}
-	if (d_k->sampleMethod == TLSampleMethodCVD) {
+	if ((d_k->sampleMethod == TLSampleMethodCVD) ||
+			(d_k->sampleMethod == TLSampleMethodTouchRead)) {
 		nDashes = tmp;
 	}
 

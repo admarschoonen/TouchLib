@@ -57,16 +57,16 @@
  */
 
 /* Maximum number of sensors. Depends on processor type. */
-#if defined(__AVR_ATmega328P__) || defined(__AVR_ATmega328__) || \
-	defined(__AVR_ATmega168__)
+#if IS_ATMEGA16X_32X_32U4
 /*
  * ATmega328P only has enough memory (RAM) for 6 sensors. ATmega168 is untested.
+ * ATmega32u4 is tested up to 6 sensors.
  */
 #define N_SENSORS			6
 #define KNOWN_BOARD			1
 #endif
 
-#if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
+#if IS_ATMEGA128X_256X
 /*
  * ATmega2560 is known to be able to support up to 32 sensors. ATmega1280 is
  * untested.
@@ -75,15 +75,17 @@
 #define KNOWN_BOARD			1
 #endif
 
-#if defined (__AVR_ATmega32U4__)
-/*
- * ATmega32u4 is tested up to 6 sensors.
- */
-#define N_SENSORS			6
-#define KNOWN_BOARD			1
+#if IS_ATTINY
+#error "TouchLib is too fat for ATtiny."
 #endif
 
-#if defined (__AVR_ATtiny85__)
+#if IS_TEENSY3X_WITH_TOUCHREAD
+/*
+ * Teensies are not yet tested to how many sensors they can support. Probably a
+ * lot.
+ */
+#define N_SENSORS			32
+#define KNOWN_BOARD			1
 #endif
 
 #ifndef KNOWN_BOARD
@@ -419,19 +421,39 @@ void askPinning(int n)
 {
 	int pin;
 
-	do {
-		Serial.print(F("Which analog pin is sensor "));
-		Serial.print(n);
-		Serial.print(F(" connected to? "));
-		pin = processSerialDataForPin(PIN_TYPE_ANALOG);
-		if (pin == -1) {
-			Serial.print(F("Illegal analog pin. Enter A0 for "
-				"analog pin 0, A1 for analog pin 1 etc. "));
-		}
-	} while (pin == -1);
+	if ((tlSensors.data[n].sampleMethod == TLSampleMethodCVD) ||
+		(tlSensors.data[n].sampleMethod == TLSampleMethodResistive)) {
+		do {
+			Serial.print(F("Which analog pin is sensor "));
+			Serial.print(n);
+			Serial.print(F(" connected to? "));
+			pin = processSerialDataForPin(PIN_TYPE_ANALOG);
+			if (pin == -1) {
+				Serial.print(F("Illegal analog pin. Enter A0 "
+					"for analog pin 0, A1 for analog pin 1"
+					" etc. "));
+			}
+		} while (pin == -1);
+	}
+	if (tlSensors.data[n].sampleMethod == TLSampleMethodTouchRead) {
+		do {
+			Serial.print(F("Which touch pin is sensor "));
+			Serial.print(n);
+			Serial.print(F(" connected to? "));
+			pin = processSerialDataForPin(PIN_TYPE_DIGITAL);
+			if (pin == -1) {
+				Serial.print(F("Illegal pin. Enter 0 for "
+				"digital pin 0, 1 for digital pin 1 etc. "));
+			}
+		} while (pin == -1);
+	}
 
 	if (tlSensors.data[n].sampleMethod == TLSampleMethodCVD) {
 		tlSensors.data[n].tlStructSampleMethod.CVD.pin = pin;
+	}
+
+	if (tlSensors.data[n].sampleMethod == TLSampleMethodTouchRead) {
+		tlSensors.data[n].tlStructSampleMethod.touchRead.pin = pin;
 	}
 
 	if (tlSensors.data[n].sampleMethod == TLSampleMethodResistive) {
@@ -454,6 +476,8 @@ void askPinning(int n)
 	}
 }
 
+#if IS_TEENSY3X
+#define ASK_SAMPLE_METHOD_DEFINED 1
 bool askSampleMethod(int n)
 {
 	char c;
@@ -461,10 +485,49 @@ bool askSampleMethod(int n)
 	Serial.println("");
 	Serial.print(F("Is sensor "));
 	Serial.print(n);
-	Serial.print(F(" a capacitive sensor (using CVD method) or a resistive "
-		"sensor (using resistive method)? "));
+	Serial.print(F(" a capacitive sensor using CVD method, a capacitive "
+		"sensor using touchRead() method or a resistive sensor using\n"
+		"analogRead() method? "));
 	do {
-		Serial.print(F("Enter c for capacitive or r for\nresistive: "));
+		Serial.print(F("Enter c for capacitive using CVD, t for "
+		"capacitive using touchRead() or r for resistive: "));
+		c = Serial_getChar();
+		Serial.println(c);
+		if ((lower(c) != 'c') && (lower(c) != 't') && (lower(c) != 'r')) {
+			Serial.print(F("Illegal sensor type. "));
+		} else {
+			if (lower(c) == 'c') {
+				tlSensors.initialize(n, TLSampleMethodCVD);
+			}
+			if (lower(c) == 't') {
+				tlSensors.initialize(n, TLSampleMethodTouchRead);
+			}
+			if (lower(c) == 'r') {
+				tlSensors.initialize(n, TLSampleMethodResistive);
+				tlSensors.data[n].enableSlewrateLimiter = false;
+			}
+			break;
+		}
+	} while (true);
+
+	return false;
+}
+#endif
+
+#if IS_AVR
+#define ASK_SAMPLE_METHOD_DEFINED 1
+bool askSampleMethod(int n)
+{
+	char c;
+
+	Serial.println("");
+	Serial.print(F("Is sensor "));
+	Serial.print(n);
+	Serial.print(F(" a capacitive sensor using CVD method or a resistive "
+		"sensor using analogRead() method? "));
+	do {
+		Serial.print(F("Enter c for capacitive using CVD or r for "
+			"resistive: "));
 		c = Serial_getChar();
 		Serial.println(c);
 		if ((lower(c) != 'c') && (lower(c) != 'r')) {
@@ -483,6 +546,11 @@ bool askSampleMethod(int n)
 
 	return false;
 }
+#endif
+
+#ifndef ASK_SAMPLE_METHOD_DEFINED
+#error askSampleMethod() is not defined. This is a bug. Please report to the author.
+#endif
 
 void noiseTuning(void)
 {
@@ -569,10 +637,13 @@ void touchTuning(int n)
 
 	Serial.print(F("Performing touch measurement for "));
 	if (tlSensors.data[n].sampleMethod == TLSampleMethodCVD) {
-		Serial.print(F("capacitive"));
+		Serial.print(F("capacitive (CVD method)"));
+	}
+	if (tlSensors.data[n].sampleMethod == TLSampleMethodTouchRead) {
+		Serial.print(F("capacitive (touchRead() method)"));
 	}
 	if (tlSensors.data[n].sampleMethod == TLSampleMethodResistive) {
-		Serial.print(F("resistive"));
+		Serial.print(F("resistive (analogRead() method)"));
 	}
 	Serial.print(F(" sensor "));
 	Serial.print(n);
@@ -611,6 +682,13 @@ void touchTuning(int n)
 		tlSensors.data[n].pressedToApproachedThreshold = 0.9 *
 			tlSensors.data[n].approachedToPressedThreshold;
 
+		Serial.print("raw: ");
+		Serial.println(tlSensors.data[n].raw);
+		Serial.print("avg: ");
+		Serial.println(tlSensors.data[n].avg);
+		Serial.print("delta: ");
+		Serial.println(tlSensors.data[n].delta);
+
 		if (tlSensors.data[n].pressedToApproachedThreshold < 1.1 *
 				tlSensors.data[n].releasedToApproachedThreshold) {
 			Serial.print(F("Error! Detected signal is too low: "));
@@ -641,10 +719,13 @@ void maxTouchTuning(int n)
 
 	Serial.print(F("Performing maximum range measurement for "));
 	if (tlSensors.data[n].sampleMethod == TLSampleMethodCVD) {
-		Serial.print(F("capacitive"));
+		Serial.print(F("capacitive (CVD method)"));
+	}
+	if (tlSensors.data[n].sampleMethod == TLSampleMethodTouchRead) {
+		Serial.print(F("capacitive (touchRead() method)"));
 	}
 	if (tlSensors.data[n].sampleMethod == TLSampleMethodResistive) {
-		Serial.print(F("resistive"));
+		Serial.print(F("resistive (analogRead() method)"));
 	}
 	Serial.print(F(" sensor "));
 	Serial.print(n);
@@ -808,20 +889,20 @@ void printCode(void)
 		Serial.print(n);
 		Serial.print(F(": type: "));
 		if (tlSensors.data[n].sampleMethod == TLSampleMethodCVD) {
-			Serial.print(F("capacitive, "));
-		}
-		if (tlSensors.data[n].sampleMethod == TLSampleMethodResistive) {
-			Serial.print(F("resistive,  "));
-		}
-		Serial.print(F("analog pin A"));
-		if (tlSensors.data[n].sampleMethod == TLSampleMethodCVD) {
+			Serial.print(F("capacitive (CVD method), analog pin A"));
 			pin = tlSensors.data[n].tlStructSampleMethod.CVD.pin;
+			Serial.print(pin - A0);
+		}
+		if (tlSensors.data[n].sampleMethod == TLSampleMethodTouchRead) {
+			Serial.print(F("capacitive (touchRead()) method), pin "));
+			pin = tlSensors.data[n].tlStructSampleMethod.touchRead.pin;
+			Serial.print(pin);
 		}
 		if (tlSensors.data[n].sampleMethod == TLSampleMethodResistive) {
+			Serial.print(F("resistive (analogRead() method),  "
+				"analog pin A"));
 			pin = tlSensors.data[n].tlStructSampleMethod.resistive.pin;
-		}
-		Serial.print(pin - A0);
-		if (tlSensors.data[n].sampleMethod == TLSampleMethodResistive) {
+			Serial.print(pin - A0);
 			Serial.print(F(", ground pin: "));
 			Serial.print(tlSensors.data[n].tlStructSampleMethod.resistive.gndPin);
 		}
@@ -895,19 +976,26 @@ void printCode(void)
 		Serial.print(n);
 		Serial.print(F(":\n"));
 		if (tlSensors.data[n].sampleMethod == TLSampleMethodCVD) {
-			Serial.print(F("         * Type: capacitive\n"));
-		}
-		if (tlSensors.data[n].sampleMethod == TLSampleMethodResistive) {
-			Serial.print(F("         * Type: resistive\n"));
-		}
-		Serial.print(F("         * Analog pin: A"));
-		if (tlSensors.data[n].sampleMethod == TLSampleMethodCVD) {
+			Serial.print(F("         * Type: capacitive (CVD "
+				"method)\n"));
+			Serial.print(F("         * Analog pin: A"));
 			pin = tlSensors.data[n].tlStructSampleMethod.CVD.pin;
+			Serial.print(pin - A0);
+		}
+		if (tlSensors.data[n].sampleMethod == TLSampleMethodTouchRead) {
+			Serial.print(F("         * Type: capacitive "
+				"(touchRead() method)\n"));
+			Serial.print(F("         * Pin: "));
+			pin = tlSensors.data[n].tlStructSampleMethod.touchRead.pin;
+			Serial.print(pin);
 		}
 		if (tlSensors.data[n].sampleMethod == TLSampleMethodResistive) {
+			Serial.print(F("         * Type: resistive "
+				"(analogRead() method)\n"));
+			Serial.print(F("         * Analog pin: A"));
 			pin = tlSensors.data[n].tlStructSampleMethod.resistive.pin;
+			Serial.print(pin - A0);
 		}
-		Serial.print(pin - A0);
 		Serial.print(F("\n"));
 		if (tlSensors.data[n].sampleMethod == TLSampleMethodResistive) {
 			Serial.print(F("         * Ground pin: "));
@@ -920,6 +1008,9 @@ void printCode(void)
 		if (tlSensors.data[n].sampleMethod == TLSampleMethodCVD) {
 			Serial.print(F(", TLSampleMethodCVD);\n"));
 		}
+		if (tlSensors.data[n].sampleMethod == TLSampleMethodTouchRead) {
+			Serial.print(F(", TLSampleMethodTouchRead);\n"));
+		}
 		if (tlSensors.data[n].sampleMethod == TLSampleMethodResistive) {
 			Serial.print(F(", TLSampleMethodResistive);\n"));
 		}
@@ -928,11 +1019,19 @@ void printCode(void)
 		Serial.print(F("].tlStructSampleMethod."));
 		if (tlSensors.data[n].sampleMethod == TLSampleMethodCVD) {
 			Serial.print(F("CVD.pin =               A"));
+			pin = tlSensors.data[n].tlStructSampleMethod.CVD.pin;
+			Serial.print(pin - A0);
+		}
+		if (tlSensors.data[n].sampleMethod == TLSampleMethodTouchRead) {
+			Serial.print(F("touchRead.pin =         "));
+			pin = tlSensors.data[n].tlStructSampleMethod.touchRead.pin;
+			Serial.print(pin);
 		}
 		if (tlSensors.data[n].sampleMethod == TLSampleMethodResistive) {
 			Serial.print(F("resistive.pin =         A"));
+			pin = tlSensors.data[n].tlStructSampleMethod.resistive.pin;
+			Serial.print(pin - A0);
 		}
-		Serial.print(pin - A0);
 		Serial.print(F(";\n"));
 		if (tlSensors.data[n].sampleMethod == TLSampleMethodResistive) {
 			Serial.print(F("        tlSensors.data["));

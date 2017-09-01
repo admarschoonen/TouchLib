@@ -31,16 +31,17 @@
 #include "TouchLib.h"
 #include "TLSampleMethodTouchRead.h"
 
-#define TL_REFERENCE_VALUE_DEFAULT			((float) 2) /* 2 pF */
+#define TL_REFERENCE_VALUE_DEFAULT			((float) 20000) /* 0.02 pF */
 #define TL_SCALE_FACTOR_DEFAULT				((float) 1)
 #define TL_OFFSET_VALUE_DEFAULT				((float) 0) /* pF */
 
 #define TL_SET_OFFSET_VALUE_MANUALLY_DEFAULT	    	false
 
-#define TL_RELEASED_TO_APPROACHED_THRESHOLD_DEFAULT	50.0
-#define TL_APPROACHED_TO_RELEASED_THRESHOLD_DEFAULT	40.0
-#define TL_APPROACHED_TO_PRESSED_THRESHOLD_DEFAULT	150.0
-#define TL_PRESSED_TO_APPROACHED_THRESHOLD_DEFAULT	120.0
+#define TL_RELEASED_TO_APPROACHED_THRESHOLD_DEFAULT	2.5
+#define TL_APPROACHED_TO_RELEASED_THRESHOLD_DEFAULT	2.0
+#define TL_APPROACHED_TO_PRESSED_THRESHOLD_DEFAULT	7.5
+#define TL_PRESSED_TO_APPROACHED_THRESHOLD_DEFAULT	6.0
+#define TL_TOUCHREAD_MAX				((1 << 16) - 1)
 
 int TLSampleMethodTouchReadPreSample(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch)
@@ -53,23 +54,9 @@ int TLSampleMethodTouchReadSample(struct TLStruct * data, uint8_t nSensors,
 {
 	int sample = 0;
 	
-	/*
-	 * touchRead() is only available on Teensy 3.x:
-	 *
-	 * Teensy 3.0: MK20DX128
-	 * Teensy 3.1: MK20DX256
-	 * Teensy LC:  MKL26Z64
-	 * Teensy 3.2: MK20DX256
-	 * Teensy 3.5: MK64FX512
-	 * Teensy 3.6: MK64FX1M0
-	*/
+	/* touchRead() is only available on Teensy 3.x and not Teensy 3.5 */
 
-	#if !(defined(__MK20DX128__) || defined(__MK20DX256__) || \
-		defined(__MKL26Z64__) || defined(__MK64FX512) || \
-		defined(__MK64FX1M0__))
-
-	/* Error! Not a Teensy! */
-	#else
+	#if IS_TEENSY_WITH_TOUCHREAD
 	struct TLStruct * dCh;
 	int ch_pin;
 
@@ -99,10 +86,10 @@ int TLSampleMethodTouchReadPostSample(struct TLStruct * data, uint8_t nSensors,
         d = &(data[ch]);
 
         if (d->enableSlewrateLimiter) {
-                scale = (float) ((TL_ADC_MAX + 1) << 2);
+                scale = (float) ((TL_TOUCHREAD_MAX + 1) << 2);
         } else {
                 scale = ((float) (d->nMeasurementsPerSensor << 1)) *
-                        ((float) (TL_ADC_MAX + 1));
+                        ((float) (TL_TOUCHREAD_MAX + 1));
         }
 
         tmp = d->raw / scale;
@@ -119,11 +106,14 @@ int TLSampleMethodTouchReadMapDelta(struct TLStruct * data, uint8_t nSensors,
 {
 	int n = -1;
 	struct TLStruct * d;
+	float delta;
 
 	d = &(data[ch]);
 
-	n = map(100 * d->delta, 0, 100 * log(d->approachedToPressedThreshold), 
-		0, length);
+	delta = d->delta;
+
+	n = map(100 * log(delta), 0, 80 * log(d->calibratedMaxDelta), 0,
+		length);
 
 	n = (n < 0) ? 0 : n;
 	n = (n > length) ? length : n;
@@ -143,8 +133,15 @@ int TLSampleMethodTouchRead(struct TLStruct * data, uint8_t nSensors,
 	d->sampleMethodPostSample = TLSampleMethodTouchReadPostSample;
 	d->sampleMethodMapDelta = TLSampleMethodTouchReadMapDelta;
 
-	d->tlStructSampleMethod.touchRead.pin = A0 + ch;
-
+	if (ch < 2) {
+		d->tlStructSampleMethod.touchRead.pin = (ch + 0);
+	} else if (ch < 7) {
+		d->tlStructSampleMethod.touchRead.pin = (ch - 2 + 15);
+	} else if (ch < 9) {
+		d->tlStructSampleMethod.touchRead.pin = (ch - 7 + 22);
+	} else {
+		d->tlStructSampleMethod.touchRead.pin = (ch - 9 + 29);
+	}
 
 	d->referenceValue = TL_REFERENCE_VALUE_DEFAULT;
 	d->offsetValue = TL_OFFSET_VALUE_DEFAULT;
