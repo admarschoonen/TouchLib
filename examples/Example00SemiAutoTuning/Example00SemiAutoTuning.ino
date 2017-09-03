@@ -137,9 +137,6 @@ void setup()
 	Serial.println();
 	Serial.println();
 
-	Serial.println(F("Welcome to the TouchLib tuning program."));
-	Serial.println("");
-
 	for (n = 0; n < nSensors; n++) {
 		/* By default, assume all sensors are capacitive */
 		tlSensors.initialize(n, TLSampleMethodCVD);
@@ -162,6 +159,16 @@ void setup()
 
 		tlSensors.data[n].forceCalibrationWhenApproachingFromPressed = 0UL;
 	}
+
+	if (tlSensors.error) {
+		Serial.println(F("Error detected during initialization of "
+			"TouchLib. This is \nprobably a bug; please notify the"
+			" author."));
+		while (1);
+	}
+
+	Serial.println(F("Welcome to the TouchLib tuning program."));
+	Serial.println("");
 }
 
 char Serial_getChar()
