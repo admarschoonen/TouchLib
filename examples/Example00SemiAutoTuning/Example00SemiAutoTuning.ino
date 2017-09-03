@@ -6,7 +6,7 @@
  *
  * Admar Schoonen 2016-2017
  *
- * To types of sensors are supported: capacitive sensors and resistive sensors.
+ * Two types of sensors are supported: capacitive sensors and resistive sensors.
  * The library even supports to use a resistive sensor as both resistive
  * (pressure) sensor and capacitive (presence / proximity) sensor.
  *
