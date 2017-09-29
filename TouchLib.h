@@ -243,6 +243,7 @@ struct TLStruct {
 	bool buttonIsPressed; /* use this to see if button is pressed */
 	bool forcedCal;
 	uint32_t counter;
+	uint32_t noiseCounter;
 	uint32_t recalCounter;
 	unsigned long lastSampledAtTime;
 	unsigned long stateChangedAtTime;
@@ -334,7 +335,7 @@ class TLSensors
 		bool isApproached(TLStruct * d);
 		bool isReleased(TLStruct * d);
 		bool isCalibrating(TLStruct * d);
-		void updateAvg(TLStruct * d);
+		void updateAvg(uint8_t ch);
 		void processStatePreCalibrating(uint8_t ch);
 		void processStateCalibrating(uint8_t ch);
 		void processStateNoisePowerMeasurement(uint8_t ch);
@@ -880,6 +881,7 @@ TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::TLSensors(void)
 			data[n].buttonStateLabel =
 				this->buttonStateLabels[data[n].buttonState];
 			data[n].counter = 0;
+			data[n].noiseCounter = 0;
 			data[n].forcedCal = false;
 			data[n].raw = 0;
 			data[n].value = 0;
@@ -1008,9 +1010,12 @@ bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isPressed(int n)
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(TLStruct * d)
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(uint8_t ch)
 {
 	float s;
+	TLStruct * d;
+
+	d = &(data[ch]);
 
 	if (!d->forcedCal && (d->buttonState >=
 			TLStruct::buttonStateReleased) && 
@@ -1026,14 +1031,38 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(TLStruct * d)
 	}
 
 	d->avg = (d->counter * d->avg + d->value) / (d->counter + 1);
+	/*Serial.print("ch: ");
+	Serial.print(ch);
+	Serial.print("; state: ");
+	Serial.print(d->buttonState);
+	Serial.print("; counter: ");
+	Serial.print(d->counter);
+	Serial.print("; value: ");
+	Serial.print(d->value);
+	Serial.print("; avg: ");
+	Serial.print(d->avg);*/
 
 	/* Only perform noise measurement when not calibrating any more */
 	if ((d->enableNoisePowerMeasurement) && (d->buttonState >
 			TLStruct::buttonStateCalibrating)) {
 		s = d->delta * d->delta;
-		d->noisePower = (d->counter * d->noisePower + s) / 
-			(d->counter + 1);
+		d->noisePower = (d->noiseCounter * d->noisePower + s) / 
+			(d->noiseCounter + 1);
+		
+		/*Serial.print("; noiseCounter: ");
+		Serial.print(d->noiseCounter);
+		Serial.print("; delta: ");
+		Serial.print(d->delta);
+		Serial.print(", s: ");
+		Serial.print(s);
+		Serial.print("; noisePower: ");
+		Serial.print(d->noisePower);*/
+	
+		if (d->noiseCounter < d->filterCoeff - 1) {
+			d->noiseCounter++;
+		}
 	}
+	//Serial.println("");
 
 	if (d->counter < d->filterCoeff - 1) {
 		d->counter++;
@@ -1164,6 +1193,7 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(int ch,
 			break;
 		case TLStruct::buttonStateCalibrating:
 			d->counter = 0;
+			d->noiseCounter = 0;
 			d->avg = 0;
 			d->maxDelta = 0;
 			d->noisePower = 0;
@@ -1276,7 +1306,7 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateCalibrating(ui
 	t_max = d->calibrationTime;
 
 	if ((d->counter < d->filterCoeff - 1) || (t < t_max)) {
-		updateAvg(d);
+		updateAvg(ch);
 	} else {
 		setState(ch, TLStruct::buttonStateNoisePowerMeasurement);
 	
@@ -1298,7 +1328,7 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateNoisePowerMeas
 	t_max = d->calibrationTime;
 
 	if ((d->enableNoisePowerMeasurement) && (t < t_max)) {
-		updateAvg(d);
+		updateAvg(ch);
 	} else {
 		setState(ch, TLStruct::buttonStateReleased);
 	}
@@ -1314,7 +1344,7 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateReleased(uint8
 	if ((d->enableTouchStateMachine) && (isApproached(d))) {
 		setState(ch, TLStruct::buttonStateReleasedToApproached);
 	} else {
-		updateAvg(d);
+		updateAvg(ch);
 	}
 }
 
@@ -1449,15 +1479,32 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processSample(uint8_t ch)
 
 	d = &(data[ch]);
 
-	if (d->direction == TLStruct::directionNegative) {
-		d->delta = d->avg - d->value;
+	if (d->buttonState < TLStruct::buttonStateNoisePowerMeasurement) {
+		/* Do not calculate delta when avg is not yet known */
+		d->delta = 0;
 	} else {
-		d->delta = d->value - d->avg;
+		if (d->direction == TLStruct::directionNegative) {
+			d->delta = d->avg - d->value;
+		} else {
+			d->delta = d->value - d->avg;
+		}
+	
+		if (d->maxDelta < d->delta) {
+			d->maxDelta = d->delta;
+		}
 	}
-
-	if (d->maxDelta < d->delta) {
-		d->maxDelta = d->delta;
-	}
+	/*Serial.print("ch: ");
+	Serial.print(ch);
+	Serial.print("; state: ");
+	Serial.print(d->buttonState);
+	Serial.print("; counter: ");
+	Serial.print(d->counter);
+	Serial.print("; value: ");
+	Serial.print(d->value);
+	Serial.print("; avg: ");
+	Serial.print(d->avg);
+	Serial.print("; delta: ");
+	Serial.println(d->delta);*/
 
 	switch (d->buttonState) {
 	case TLStruct::buttonStatePreCalibrating:
@@ -1534,6 +1581,20 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 		sample1 = 0;
 		sample2 = 0;
 		ch = scanOrder[pos];
+		/*Serial.print("ch: ");
+		Serial.print(ch);
+		Serial.print("; sampleMethodSample: ");
+		if (data[ch].sampleMethod == NULL) {
+			Serial.print("NULL");
+		} else if (data[ch].sampleMethod == TLSampleMethodCVD) {
+			Serial.print("CVD");
+		} else if (data[ch].sampleMethod == TLSampleMethodResistive) {
+			Serial.print("Resistive");
+		} else if (data[ch].sampleMethod == TLSampleMethodTouchRead) {
+			Serial.print("touchRead");
+		}
+		Serial.println("");*/
+			
 		if (data[ch].sampleType &
 				TLStruct::sampleTypeNormal) {
 			if (data[ch].sampleMethodSample != NULL) {
