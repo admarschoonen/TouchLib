@@ -106,9 +106,9 @@ bool TLHasMux5(void)
 	#endif
 }
 
+#if IS_AVR
 void TLSetAdcReferencePin(int pin)
 {
-	#if IS_AVR
 	unsigned char mux;
 
 	if (TLHasMux5()) {
@@ -130,8 +130,36 @@ void TLSetAdcReferencePin(int pin)
 		ADMUX &= ~0x0F;
 		ADMUX |= (mux & 0x0F);
 	}
-	#endif
 }
+#elif IS_TEENSY3X
+void TLSetAdcReferencePin(int pin)
+{
+	volatile uint32_t * ADCx_CFG2 = &ADC0_CFG2;
+	volatile uint32_t * ADCx_SC1A = &ADC0_SC1A;
+
+	#if IS_TEENSY32_WITH_ADC1
+	if ((pin - A0) & 0x80) {
+		*ADCx_CFG2 = ADC1_CFG2;
+		*ADCx_SC1A = ADC1_SC1A;
+	}
+	#endif
+
+	#if IS_TEENSYLC
+	if ((pin - A0) & 0x40) {
+		*ADCx_CFG2 &= ~ADC_CFG2_MUXSEL;
+	} else {
+		*ADCx_CFG2 |= ADC_CFG2_MUXSEL;
+	}
+	#endif
+	*ADCx_SC1A = (pin - A0) & 0x1F;
+}
+#else
+#warning CVD sensors has not yet been ported to this architecture. Please \
+	inform the author.
+void TLSetAdcReferencePin(int pin)
+{
+}
+#endif
 
 static void TLChargeADC(struct TLStruct * data, uint8_t nSensors, uint8_t ch, 
 		int ref_pin, bool delay)

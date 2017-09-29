@@ -122,15 +122,23 @@
  * Teensy 3.5: MK64FX512 (does not have touchRead()!)
  * Teensy 3.6: MK64FX1M0
 */
-#define IS_TEENSYLC			(defined(__MKL26Z64__))
-#define IS_TEENSY3X			(defined(__MK20DX128__) || \
-		defined(__MK20DX256__) || defined(__MK64FX512) || \
-		defined(__MK64FX1M0__))
 
-#define IS_TEENSY3X_WITH_TOUCHREAD	(defined(__MK20DX128__) || \
-		defined(__MK20DX256__) || defined(__MK64FX1M0__))
+#define IS_TEENSYLC			(defined(__MKL26Z64__))
+#define IS_TEENSY30			(defined(__MK20DX128__))
+#define IS_TEENSY31			(defined(__MK20DX256__))
+#define IS_TEENSY32			(defined(__MK20DX256__))
+#define IS_TEENSY35			(defined(__MK64FX512__))
+#define IS_TEENSY36			(defined(__MK66FX1M0__))
+#define IS_TEENSY3X			(IS_TEENSY30 || IS_TEENSY31 || \
+		IS_TEENSY32 || IS_TEENSY35 || IS_TEENSY36)
+
+#define IS_TEENSY3X_WITH_TOUCHREAD	(IS_TEENSY30 || IS_TEENSY31 || \
+		IS_TEENSY32 || IS_TEENSY36)
 
 #define IS_TEENSY_WITH_TOUCHREAD	(IS_TEENSYLC || \
 		IS_TEENSY3X_WITH_TOUCHREAD)
+
+#define IS_TEENSY32_WITH_ADC1		(IS_TEENSY31 || IS_TEENSY32 || \
+		IS_TEENSY35 || IS_TEENSY36)
 
 #endif

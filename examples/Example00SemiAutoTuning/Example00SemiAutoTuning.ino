@@ -689,13 +689,6 @@ void touchTuning(int n)
 		tlSensors.data[n].pressedToApproachedThreshold = 0.9 *
 			tlSensors.data[n].approachedToPressedThreshold;
 
-		Serial.print("raw: ");
-		Serial.println(tlSensors.data[n].raw);
-		Serial.print("avg: ");
-		Serial.println(tlSensors.data[n].avg);
-		Serial.print("delta: ");
-		Serial.println(tlSensors.data[n].delta);
-
 		if (tlSensors.data[n].pressedToApproachedThreshold < 1.1 *
 				tlSensors.data[n].releasedToApproachedThreshold) {
 			Serial.print(F("Error! Detected signal is too low: "));
