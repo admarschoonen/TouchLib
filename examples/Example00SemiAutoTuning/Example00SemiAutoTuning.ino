@@ -374,6 +374,8 @@ void askNSensors(void)
 	nSensors = processSerialDataForNumber(1, N_SENSORS);
 	Serial.println("");
 	Serial.println("");
+
+	//tlSensors.nSensors = nSensors;
 }
 
 bool askPower(void)
@@ -487,25 +489,31 @@ void askPinning(int n)
 #define ASK_SAMPLE_METHOD_DEFINED 1
 bool askSampleMethod(int n)
 {
+	/* Disabled CVD for Teensy as it is not yet very reliable */
 	char c;
 
 	Serial.println("");
 	Serial.print(F("Is sensor "));
 	Serial.print(n);
-	Serial.print(F(" a capacitive sensor using CVD method, a capacitive "
+	/*Serial.print(F(" a capacitive sensor using CVD method, a capacitive "
 		"sensor using touchRead() method or a resistive sensor using\n"
-		"analogRead() method? "));
+		"analogRead() method? "));*/
+	Serial.print(F(" a capacitive sensor using touchRead() method or a "
+		"resistive sensor using analogRead() method? "));
 	do {
-		Serial.print(F("Enter c for capacitive using CVD, t for "
-		"capacitive using touchRead() or r for resistive: "));
+		/*Serial.print(F("Enter c for capacitive using CVD, t for "
+		"capacitive using touchRead() or r for resistive: "));*/
+		Serial.print(F("Enter t for capacitive using touchRead() or r "
+			"for resistive: "));
 		c = Serial_getChar();
 		Serial.println(c);
-		if ((lower(c) != 'c') && (lower(c) != 't') && (lower(c) != 'r')) {
+		//if ((lower(c) != 'c') && (lower(c) != 't') && (lower(c) != 'r')) {
+		if ((lower(c) != 't') && (lower(c) != 'r')) {
 			Serial.print(F("Illegal sensor type. "));
 		} else {
-			if (lower(c) == 'c') {
+			/*if (lower(c) == 'c') {
 				tlSensors.initialize(n, TLSampleMethodCVD);
-			}
+			}*/
 			if (lower(c) == 't') {
 				tlSensors.initialize(n, TLSampleMethodTouchRead);
 			}
@@ -595,7 +603,7 @@ void noiseTuning(void)
 		 * Disabled adjusting thresholds based on noise. Seems to be not
 		 * very reliable.
 		 */
-		#if (0)
+		#if (1)
 		if (tlSensors.data[n].releasedToApproachedThreshold <
 				3 * sqrt(tlSensors.data[n].noisePower)) {
 			tlSensors.data[n].releasedToApproachedThreshold =
@@ -614,13 +622,13 @@ void noiseTuning(void)
 		Serial.print(F("  Sensor "));
 		Serial.print(n);
 		Serial.println(F(":"));
-		if (highNoise) {
+		/*if (highNoise) {
 			Serial.print(F("    Warning! High noise levels detected! "
 				"Increased released to approached and approached to "
 				"released thresholds for sensor "));
 			Serial.print(n);
 			Serial.println("!");
-		}
+		}*/
 	
 		Serial.print(F("    released -> approached: "));
 		Serial.println(tlSensors.data[n].releasedToApproachedThreshold);
