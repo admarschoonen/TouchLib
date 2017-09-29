@@ -293,6 +293,8 @@ class TLSensors
 		bool anyButtonIsCalibrating(void);
 		const char * getStateLabel(int n);
 		enum TLStruct::ButtonState getState(int n);
+		bool checkForMajorChange(enum TLStruct::ButtonState oldState,
+			enum TLStruct::ButtonState newState);
 		void setState(int n, enum TLStruct::ButtonState newState);
 		TLSensors(void);
 		~TLSensors(void);
@@ -1154,6 +1156,36 @@ enum TLStruct::ButtonState TLSensors<N_SENSORS,
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::checkForMajorChange(
+		enum TLStruct::ButtonState oldState,
+		enum TLStruct::ButtonState newState)
+{
+	bool majorChange = false;
+
+	if (newState == TLStruct::buttonStatePreCalibrating)
+		majorChange = true;
+
+	if ((newState == TLStruct::buttonStateCalibrating) &&
+			(oldState != TLStruct::buttonStatePreCalibrating))
+		majorChange = true;
+
+	if ((newState == TLStruct::buttonStateReleased) && (oldState !=
+			TLStruct::buttonStateReleasedToApproached))
+		majorChange = true;
+
+	if ((newState == TLStruct::buttonStateApproached) && ((oldState !=
+			TLStruct::buttonStateApproachedToReleased) &&
+			(oldState != TLStruct::buttonStateApproachedToPressed)))
+		majorChange = true;
+
+	if ((newState == TLStruct::buttonStatePressed) && (oldState !=
+			TLStruct::buttonStatePressedToApproached))
+		majorChange = true;
+
+	return majorChange;
+}
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(int ch,
 		enum TLStruct::ButtonState newState)
 {
@@ -1253,7 +1285,8 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(int ch,
 		oldState = d->buttonState;
 		d->buttonState = newState; 
 
-		if (buttonStateChangeCallback != NULL) {
+		if (checkForMajorChange(oldState, newState) &&
+				(buttonStateChangeCallback != NULL)) {
 			(*buttonStateChangeCallback)(ch, oldState, newState);
 		}
 		d->stateIsBeingChanged = false;
