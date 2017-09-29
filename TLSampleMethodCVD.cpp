@@ -343,7 +343,9 @@ int TLSampleMethodCVDMapDelta(struct TLStruct * data, uint8_t nSensors,
 
 	delta = d->delta;
 
-	n = map(100 * log(delta), 0, 80 * log(d->calibratedMaxDelta), 0,
+	/* Ignore everything below 40% of log(maxDelta); it's mostly noise */
+	n = map(100 * log(delta),  40 * log(d->calibratedMaxDelta), 
+		80 * log(d->calibratedMaxDelta), 0,
 		length);
 
 	n = (n < 0) ? 0 : n;
