@@ -60,17 +60,25 @@ int TLSampleMethodTouchReadSample(struct TLStruct * data, uint8_t nSensors,
 	struct TLStruct * dCh;
 	int ch_pin;
 
+	dCh = &(data[ch]);
+	ch_pin = dCh->tlStructSampleMethod.touchRead.pin;
 	if (inv) {
 		/* Pseudo differential measurements are not supported */
 		sample = 0;
 	} else {
-		dCh = &(data[ch]);
-		ch_pin = dCh->tlStructSampleMethod.touchRead.pin;
 
 		if (ch_pin >= 0) {
 			sample = touchRead(ch_pin);
 		}
 	}
+	/*Serial.print("ch: ");
+	Serial.print(ch);
+	Serial.print("; ch_pin: ");
+	Serial.print(ch_pin);
+	Serial.print("; sample: ");
+	Serial.println(sample);
+	#else
+	Serial.println("Error! touchRead() not available!");*/
 
 	#endif
 
