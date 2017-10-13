@@ -196,9 +196,16 @@ int Serial_getString(char * s, int length)
 
 	while (!Serial.available()); /* Wait for first character */
 
-	pos = Serial.readBytes(s, length);
+	/* Read 1 character less than length to reserve space for \0. */
+	pos = Serial.readBytes(s, length - 1);
 
+	/* Force string termination */
 	s[pos] = '\0';
+
+	/* Strip CR & LF */
+	while ((pos >= 0) && ((s[pos - 1] == '\r') || (s[pos - 1] == '\n'))) {
+		s[--pos] = '\0';
+	}
 
 	return pos;
 }
