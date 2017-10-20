@@ -32,6 +32,11 @@
 #include "TLSampleMethodCVD.h"
 #include "BoardID.h"
 
+#if IS_PARTICLE
+#include "pinmap_hal.h"
+#include "stm32f2xx.h"
+#endif
+
 #define TL_N_CHARGES_MIN_DEFAULT			1
 #define TL_N_CHARGES_MAX_DEFAULT			1
 
@@ -50,6 +55,10 @@
 #define TL_APPROACHED_TO_RELEASED_THRESHOLD_DEFAULT	4.0
 #define TL_APPROACHED_TO_PRESSED_THRESHOLD_DEFAULT	10.0
 #define TL_PRESSED_TO_APPROACHED_THRESHOLD_DEFAULT	80.0
+
+#if IS_PARTICLE
+static const unsigned char pin_to_adc_channel[8] = {15, 13, 12, 5, 6, 7, 4, 0};
+#endif
 
 static uint8_t TLChannelToReference(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch)
@@ -152,6 +161,19 @@ void TLSetAdcReferencePin(int pin)
 	}
 	#endif
 	*ADCx_SC1A = (pin - A0) & 0x1F;
+}
+#elif IS_PARTICLE
+void TLSetAdcReferencePin(int pin)
+{
+	long unsigned int reg;
+	long unsigned int *p;
+
+	p = (long unsigned int *) ADC1_BASE + offsetof(ADC_TypeDef, CR1);
+	reg = *p;
+	reg &= ~(0x1F);
+	//reg |= pin_to_adc_channel[pin - A0];
+	reg |= PIN_MAP[pin].adc_channel;
+	*p = reg;
 }
 #else
 #warning CVD sensors has not yet been ported to this architecture. Please \

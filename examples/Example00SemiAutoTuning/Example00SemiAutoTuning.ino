@@ -88,6 +88,14 @@
 #define KNOWN_BOARD			1
 #endif
 
+#if IS_PARTICLE
+/*
+ * Particle boards all use STM32F205.
+ */
+#define N_SENSORS			16
+#define KNOWN_BOARD			1
+#endif
+
 #ifndef KNOWN_BOARD
 /* Unknown processor; assume it is capable of at least 4 sensors */
 #warning "Unknown processor. Limiting number of sensors to 6."
@@ -109,6 +117,20 @@ TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> tlSensors;
 
 static int nSensors = N_SENSORS;
 
+void photon_debug(int pin)
+{
+	pinMode(pin, OUTPUT);
+
+	while(1) {
+		digitalWrite(pin, HIGH);
+		Serial.println("pin high");
+		delay(100);
+		digitalWrite(pin, LOW);
+		Serial.println("pin low");
+		delay(100);
+	}
+}
+
 void setup()
 {
 	int n;
@@ -116,7 +138,9 @@ void setup()
 	/* Delay to make sure serial monitor receives first message */
 	Serial.begin(9600);
 
+	#if IS_ATMEGA32U4
 	while(!Serial); /* Required for ATmega32u4 processors */
+	#endif
 
 	delay(500);
 	Serial.println();
@@ -171,15 +195,38 @@ void setup()
 	Serial.println("");
 }
 
+void Serial_waitForFirstChar()
+{
+	/* Wait for first character */
+
+	#if IS_PARTICLE
+	while (!Serial.available()) {
+		Spark.process();
+	}
+	#else
+	while (!Serial.available());
+	#endif
+}
+
 char Serial_getChar()
 {
-	char c;
+	char c = '\0', tmp;
 
 	Serial.setTimeout(10);
 
-	while (!Serial.available()); /* Wait for first character */
+	Serial_waitForFirstChar();
 
-	c = Serial.read();
+	while (Serial.available()) {
+		tmp = Serial.read();
+
+		/* Eat CR and LF */
+		if ((tmp != '\r') && (tmp != '\n')) {
+			c = tmp;
+		}
+		#if IS_PARTICLE
+		Spark.process();
+		#endif
+	}
 
 	return c;
 }
@@ -194,15 +241,22 @@ int Serial_getString(char * s, int length)
 
 	Serial.setTimeout(10);
 
-	while (!Serial.available()); /* Wait for first character */
+	Serial_waitForFirstChar();
 
 	/* Read 1 character less than length to reserve space for \0. */
+	#if IS_PARTICLE
+	while ((pos < length - 1) && (Serial.available())) {
+		s[pos++] = Serial.read();
+		Spark.process();
+	}
+	#else
 	pos = Serial.readBytes(s, length - 1);
+	#endif
 
 	/* Force string termination */
 	s[pos] = '\0';
 
-	/* Strip CR & LF */
+	/* Strip CR and LF */
 	while ((pos >= 0) && ((s[pos - 1] == '\r') || (s[pos - 1] == '\n'))) {
 		s[--pos] = '\0';
 	}
@@ -388,7 +442,7 @@ void askNSensors(void)
 bool askPower(void)
 {
 	char s[20];
-	bool ret;
+	bool ret = false, do_reset = false;
 	int n;
 
 	Serial.println(F("How is your system powered:"));
@@ -411,9 +465,14 @@ bool askPower(void)
 		n = Serial_getString(s, sizeof(s));
 		Serial.println(s);
 		if ((n != 1) || ((s[0] != 'a') && (s[0] != 'b') &&
-				(s[0] != 'c') && (s[0] != 'd'))) {
+				(s[0] != 'c') && (s[0] != 'd') &&
+				(s[0] != 'q'))) {
 			Serial.print(F("Illegal choice. "));
 		} 
+		if ((n == 1) && (s[0] == '~')) {
+			do_reset = true;
+			break;
+		}
 		if ((n == 1) && ((s[0] == 'a') || (s[0] == 'b'))) {
 			ret = false; /* no need for slewrate limiter */
 			break;
@@ -430,7 +489,7 @@ bool askPower(void)
 		tlSensors.data[n].enableSlewrateLimiter = ret;
 	}
 	
-	return ret;
+	return do_reset;
 }
 
 void askPinning(int n)
@@ -536,7 +595,7 @@ bool askSampleMethod(int n)
 }
 #endif
 
-#if IS_AVR
+#if (IS_AVR || IS_PARTICLE)
 #define ASK_SAMPLE_METHOD_DEFINED 1
 bool askSampleMethod(int n)
 {
@@ -704,7 +763,7 @@ void touchTuning(int n)
 		tlSensors.data[n].pressedToApproachedThreshold = 0.9 *
 			tlSensors.data[n].approachedToPressedThreshold;
 
-		if (tlSensors.data[n].pressedToApproachedThreshold < 1.1 *
+		/*if (tlSensors.data[n].pressedToApproachedThreshold < 1.1 *
 				tlSensors.data[n].releasedToApproachedThreshold) {
 			Serial.print(F("Error! Detected signal is too low: "));
 			Serial.print(tlSensors.data[n].pressedToApproachedThreshold);
@@ -713,7 +772,8 @@ void touchTuning(int n)
 			Serial.print(". ");
 		} else {
 			done = true;
-		}
+		}*/
+			done = true;
 	} while (!done);
 
 	Serial.println(F("Found the following thresholds:"));
@@ -1185,7 +1245,17 @@ void loop()
 {
 	int n;
 
-	askPower();
+	/*
+	 * Ugly hack for boards that do not reset upon opening serial monitor:
+	 * answer '~' on first question to force displaying the messages from
+	 * setup and askPower() again.
+	 */
+	while (askPower() == true) {
+		Serial.println("reboot :)!");
+		//Serial.end();
+		//setup();
+	}
+
 	askNSensors();
 	Serial.println(F("First we need to know what type of sensors the system"
 		" has and to which pins they are connected."));

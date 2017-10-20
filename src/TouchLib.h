@@ -31,12 +31,16 @@
 
 #if ARDUINO >= 100
 #include "Arduino.h"
+#include <avr/io.h>
+#elif defined(SPARK)
+#include "application.h"
+#include "Particle.h"
 #else
 #include "WProgram.h"
 #include "pins_arduino.h"
 #include "WConstants.h"
-#endif
 #include <avr/io.h>
+#endif
 #include <math.h>
 
 #ifdef EEPROM_h

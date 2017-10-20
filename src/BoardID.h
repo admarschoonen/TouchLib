@@ -31,13 +31,15 @@
 
 #if ARDUINO >= 100
 #include "Arduino.h"
+#include <avr/io.h>
+#elif defined(SPARK)
+#include "application.h"
 #else
 #include "WProgram.h"
 #include "pins_arduino.h"
 #include "WConstants.h"
-#endif
 #include <avr/io.h>
-#include <math.h>
+#endif
 
 #define IS_AVR			(defined(SIGNATURE_0))
 
@@ -140,5 +142,11 @@
 
 #define IS_TEENSY32_WITH_ADC1		(IS_TEENSY31 || IS_TEENSY32 || \
 		IS_TEENSY35 || IS_TEENSY36)
+
+/*
+ * From
+ * https://community.particle.io/t/preprocessor-ifdef-to-detect-platform-type-core-photon-at-compile-time/13085
+ */
+#define IS_PARTICLE			(defined(SPARK) || defined(PLATFORM_ID))
 
 #endif
