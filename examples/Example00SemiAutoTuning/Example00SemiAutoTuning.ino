@@ -763,7 +763,7 @@ void touchTuning(int n)
 		tlSensors.data[n].pressedToApproachedThreshold = 0.9 *
 			tlSensors.data[n].approachedToPressedThreshold;
 
-		/*if (tlSensors.data[n].pressedToApproachedThreshold < 1.1 *
+		if (tlSensors.data[n].pressedToApproachedThreshold < 1.1 *
 				tlSensors.data[n].releasedToApproachedThreshold) {
 			Serial.print(F("Error! Detected signal is too low: "));
 			Serial.print(tlSensors.data[n].pressedToApproachedThreshold);
@@ -772,8 +772,7 @@ void touchTuning(int n)
 			Serial.print(". ");
 		} else {
 			done = true;
-		}*/
-			done = true;
+		}
 	} while (!done);
 
 	Serial.println(F("Found the following thresholds:"));
