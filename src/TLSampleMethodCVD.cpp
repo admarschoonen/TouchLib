@@ -35,6 +35,7 @@
 #if IS_PARTICLE
 #include "pinmap_hal.h"
 #include "stm32f2xx.h"
+#include "stm32f2xx_rcc.h"
 #endif
 
 #define TL_N_CHARGES_MIN_DEFAULT			1
@@ -140,6 +141,11 @@ void TLSetAdcReferencePin(int pin)
 		ADMUX |= (mux & 0x0F);
 	}
 }
+
+int TLAnalogRead(int pin)
+{
+	return analogRead(pin);
+}
 #elif IS_TEENSY3X
 void TLSetAdcReferencePin(int pin)
 {
@@ -162,6 +168,11 @@ void TLSetAdcReferencePin(int pin)
 	#endif
 	*ADCx_SC1A = (pin - A0) & 0x1F;
 }
+
+int TLAnalogRead(int pin)
+{
+	return analogRead(pin);
+}
 #elif IS_PARTICLE
 void TLSetAdcReferencePin(int pin)
 {
@@ -174,6 +185,64 @@ void TLSetAdcReferencePin(int pin)
 	//reg |= pin_to_adc_channel[pin - A0];
 	reg |= PIN_MAP[pin].adc_channel;
 	*p = reg;
+}
+
+int ADC_Init(void)
+{
+	ADC_CommonInitTypeDef ADC_CommonInitStructure;
+	ADC_InitTypeDef ADC_InitStructure;
+
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1 | RCC_APB2Periph_ADC2,
+		ENABLE);
+	ADC_DeInit();
+
+	ADC_CommonInitStructure.ADC_Mode = ADC_DualMode_RegSimult;
+	ADC_CommonInitStructure.ADC_Prescaler = ADC_Prescaler_Div2;
+	ADC_CommonInitStructure.ADC_DMAAccessMode = ADC_DMAAccessMode_1;
+	ADC_CommonInitStructure.ADC_TwoSamplingDelay = ADC_TwoSamplingDelay_5Cycles;
+	ADC_CommonInit(&ADC_CommonInitStructure);
+
+	ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
+	ADC_InitStructure.ADC_ScanConvMode = DISABLE;
+	ADC_InitStructure.ADC_ContinuousConvMode = DISABLE;
+	ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
+	ADC_InitStructure.ADC_ExternalTrigConv = 0;
+	ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
+	ADC_InitStructure.ADC_NbrOfConversion = 1;
+
+	ADC_Init(ADC1, &ADC_InitStructure);
+
+	//ADC_Init(ADC2, &ADC_InitStructure);
+
+	ADC_Cmd(ADC1, ENABLE);
+
+	return 0;
+}
+
+int TLAnalogRead(int pin)
+{
+	/*
+	 * Cannot use analogRead() here since Photons analogRead() reads 10 ADC
+	 * samples at once. This influences the capacitive signal too much.
+	 */
+	uint8_t adc_ch;
+	uint8_t ADC_Sample_Time = ADC_SampleTime_3Cycles;
+	int value;
+
+	adc_ch = PIN_MAP[pin + A0].adc_channel;
+
+	ADC_Init();
+
+	HAL_Pin_Mode(pin + A0, AN_INPUT);
+	ADC_RegularChannelConfig(ADC1, adc_ch, 1, ADC_Sample_Time);
+	// ADC_RegularChannelConfig(ADC2, adc_ch, 1, ADC_Sample_Time);
+
+	ADC_SoftwareStartConv(ADC1);
+	while(ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC) == RESET);
+
+	value = ADC_GetConversionValue(ADC1);
+
+	return value;
 }
 #else
 #warning CVD sensors has not yet been ported to this architecture. Please \
@@ -318,7 +387,7 @@ int TLSampleMethodCVDSample(struct TLStruct * data, uint8_t nSensors,
 
 	/*
 	 * Charge nCharges - 1 times to account for the charge during the
-	 * analogRead() below.
+	 * TLAnalogRead() below.
 	 */
 	for (i = 0; i < dCh->tlStructSampleMethod.CVD.nCharges - 1; i++) {
 		TLCharge(data, nSensors, ch, ch_pin, ref_pin);
@@ -328,12 +397,12 @@ int TLSampleMethodCVDSample(struct TLStruct * data, uint8_t nSensors,
 	TLChargeADC(data, nSensors, ch, ref_pin, true);
 
 	/* Read sensor. */
-	sample = analogRead(ch_pin - A0);
+	sample = TLAnalogRead(ch_pin - A0);
 
 	if (dCh->tlStructSampleMethod.CVD.useNChargesPadding) {
 		/*
 		 * Increment i before starting the loop to account for the
-		 * charge during the analogRead() above.
+		 * charge during the TLAnalogRead() above.
 		 */
 		for (++i; i < dCh->tlStructSampleMethod.CVD.nChargesMax; i++) {
 			TLCharge(data, nSensors, ch, ch_pin, ref_pin);
