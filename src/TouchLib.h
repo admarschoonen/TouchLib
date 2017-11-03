@@ -383,8 +383,7 @@ class TLSensors
 #define TL_FORCE_CALIBRATION_WHEN_APPROACHING_FROM_PRESSED_DEFAULT	0
 #define TL_FORCE_CALIBRATION_WHEN_PRESSING_DEFAULT		0
 #define TL_USE_CUSTOM_SCAN_ORDER_DEFAULT			false
-#define TL_ADC_RESOLUTION_BIT					10
-#define TL_ADC_MAX						((1 << TL_ADC_RESOLUTION_BIT) - 1)
+
 #define TL_ENABLE_TOUCH_STATE_MACHINE_DEFAULT			true
 #define TL_ENABLE_NOISE_POWER_MEASUREMENT_DEFAULT		false
 
@@ -1642,8 +1641,7 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 		if (data[ch].sampleType &
 				TLStruct::sampleTypeInverted) {
 			if (data[ch].sampleMethodSample != NULL) {
-				sample2 = TL_ADC_MAX - 
-					data[ch].sampleMethodSample(data,
+				sample2 = data[ch].sampleMethodSample(data,
 					nSensors, ch, true);
 			}
 		}
@@ -1660,6 +1658,7 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 		}
 
 		sum = sample1 + sample2;
+
 		addSample(ch, sum);
 	}
 	

@@ -44,6 +44,17 @@
 
 #define TL_SET_OFFSET_VALUE_MANUALLY_DEFAULT		false
 
+#if IS_PARTICLE
+#define TL_ADC_RESOLUTION_BIT                                   12
+#elif IS_ATMEGA
+#define TL_ADC_RESOLUTION_BIT                                   10
+#else
+#define TL_ADC_RESOLUTION_BIT                                   10
+#endif
+
+#define TL_ADC_MAX                                              ((1 << TL_ADC_RESOLUTION_BIT) - 1)
+
+
 #if (USE_CORRECT_TRANSFER_FUNCTION == 1)
 
 #define TL_RELEASED_TO_APPROACHED_THRESHOLD_DEFAULT	\

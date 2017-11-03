@@ -117,20 +117,6 @@ TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> tlSensors;
 
 static int nSensors = N_SENSORS;
 
-void photon_debug(int pin)
-{
-	pinMode(pin, OUTPUT);
-
-	while(1) {
-		digitalWrite(pin, HIGH);
-		Serial.println("pin high");
-		delay(100);
-		digitalWrite(pin, LOW);
-		Serial.println("pin low");
-		delay(100);
-	}
-}
-
 void setup()
 {
 	int n;
@@ -195,17 +181,33 @@ void setup()
 	Serial.println("");
 }
 
-void Serial_waitForFirstChar()
+bool Serial_waitForFirstChar(int timeout)
 {
+	int t_start = millis();
+	int now;
+	bool charAvailable = true;
+
 	/* Wait for first character */
 
-	#if IS_PARTICLE
 	while (!Serial.available()) {
+		if (timeout > 0) {
+			now = millis();
+			if ((now - t_start) > timeout) {
+				charAvailable = false;
+				break;
+			}
+		}
+		#if IS_PARTICLE
 		Spark.process();
+		#endif
 	}
-	#else
-	while (!Serial.available());
-	#endif
+
+	return charAvailable;
+}
+
+bool Serial_waitForFirstChar()
+{
+	return Serial_waitForFirstChar(-1);
 }
 
 char Serial_getChar()
@@ -231,7 +233,7 @@ char Serial_getChar()
 	return c;
 }
 
-int Serial_getString(char * s, int length)
+int Serial_getString(char * s, int length, int timeout)
 {
 	int pos = 0;
 
@@ -241,27 +243,32 @@ int Serial_getString(char * s, int length)
 
 	Serial.setTimeout(10);
 
-	Serial_waitForFirstChar();
-
-	/* Read 1 character less than length to reserve space for \0. */
-	#if IS_PARTICLE
-	while ((pos < length - 1) && (Serial.available())) {
-		s[pos++] = Serial.read();
-		Spark.process();
-	}
-	#else
-	pos = Serial.readBytes(s, length - 1);
-	#endif
-
-	/* Force string termination */
-	s[pos] = '\0';
-
-	/* Strip CR and LF */
-	while ((pos >= 0) && ((s[pos - 1] == '\r') || (s[pos - 1] == '\n'))) {
-		s[--pos] = '\0';
+	if (Serial_waitForFirstChar(timeout)) {
+		/* Read 1 character less than length to reserve space for \0. */
+		#if IS_PARTICLE
+		while ((pos < length - 1) && (Serial.available())) {
+			s[pos++] = Serial.read();
+			Spark.process();
+		}
+		#else
+		pos = Serial.readBytes(s, length - 1);
+		#endif
+	
+		/* Force string termination */
+		s[pos] = '\0';
+	
+		/* Strip CR and LF */
+		while ((pos >= 0) && ((s[pos - 1] == '\r') || (s[pos - 1] == '\n'))) {
+			s[--pos] = '\0';
+		}
 	}
 
 	return pos;
+}
+
+int Serial_getString(char * s, int length)
+{
+	return Serial_getString(s, length, -1);
 }
 
 bool isNum(char c)
@@ -439,11 +446,13 @@ void askNSensors(void)
 	//tlSensors.nSensors = nSensors;
 }
 
-bool askPower(void)
+bool askPower(int timeout)
 {
 	char s[20];
 	bool ret = false, do_reset = false;
 	int n;
+	int t_start = millis();
+	int now;
 
 	Serial.println(F("How is your system powered:"));
 	Serial.println(F("a. Battery only"));
@@ -462,23 +471,30 @@ bool askPower(void)
 
 	do {
 		Serial.print(F("Enter your choice (a, b, c or d): "));
-		n = Serial_getString(s, sizeof(s));
-		Serial.println(s);
-		if ((n != 1) || ((s[0] != 'a') && (s[0] != 'b') &&
-				(s[0] != 'c') && (s[0] != 'd') &&
-				(s[0] != 'q'))) {
-			Serial.print(F("Illegal choice. "));
-		} 
-		if ((n == 1) && (s[0] == '~')) {
+		n = Serial_getString(s, sizeof(s), timeout);
+		if (n > 0) {
+			Serial.println(s);
+			if ((n != 1) || ((s[0] != 'a') && (s[0] != 'b') &&
+					(s[0] != 'c') && (s[0] != 'd') &&
+					(s[0] != '~'))) {
+				Serial.print(F("Illegal choice. "));
+			} 
+			if ((n == 1) && (s[0] == '~')) {
+				do_reset = true;
+				break;
+			}
+			if ((n == 1) && ((s[0] == 'a') || (s[0] == 'b'))) {
+				ret = false; /* no need for slewrate limiter */
+				break;
+			}
+			if ((n == 1) && ((s[0] == 'c') || (s[0] == 'd'))) {
+				ret = true; /* enable slewrate limiter */
+				break;
+			}
+		} else {
+			/* Timeout occurred */
 			do_reset = true;
-			break;
-		}
-		if ((n == 1) && ((s[0] == 'a') || (s[0] == 'b'))) {
-			ret = false; /* no need for slewrate limiter */
-			break;
-		}
-		if ((n == 1) && ((s[0] == 'c') || (s[0] == 'd'))) {
-			ret = true; /* enable slewrate limiter */
+			Serial.println("");
 			break;
 		}
 	} while (true);
@@ -1016,8 +1032,10 @@ void printCode(void)
 	Serial.print(F("{\n"));
         Serial.print(F("        Serial.begin(9600);\n"));
 	Serial.print(F("\n"));
+	Serial.print(F("        #if IS_ATMEGA32U4\n"));
 	Serial.print(F("        while(!Serial); /* Required for ATmega32u4 "
 		"processors */\n"));
+	Serial.print(F("        #endif\n"));
 	Serial.print(F("\n"));
 	Serial.print(F("        /* Delay to make sure serial monitor receives "
 		"first message */\n"));
@@ -1249,11 +1267,7 @@ void loop()
 	 * answer '~' on first question to force displaying the messages from
 	 * setup and askPower() again.
 	 */
-	while (askPower() == true) {
-		Serial.println("reboot :)!");
-		//Serial.end();
-		//setup();
-	}
+	while (askPower(10000) == true);
 
 	askNSensors();
 	Serial.println(F("First we need to know what type of sensors the system"
@@ -1302,5 +1316,9 @@ void loop()
 	printCode();
 	Serial.println("");
 	Serial.println(F("TouchLib tuning program finished"));
-	while (true);
+	while (true) {
+		#if IS_PARTICLE
+		Spark.process();
+		#endif
+	}
 }

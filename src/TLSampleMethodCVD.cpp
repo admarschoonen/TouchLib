@@ -61,6 +61,22 @@
 static const unsigned char pin_to_adc_channel[8] = {15, 13, 12, 5, 6, 7, 4, 0};
 #endif
 
+#if IS_PARTICLE
+#define TL_ADC_RESOLUTION_BIT					12
+#define TL_BAR_LOWER_PCT					50
+#define TL_BAR_UPPER_PCT					95
+#elif IS_ATMEGA
+#define TL_ADC_RESOLUTION_BIT					10
+#define TL_BAR_LOWER_PCT					40
+#define TL_BAR_UPPER_PCT					80
+#else
+#define TL_ADC_RESOLUTION_BIT					10
+#define TL_BAR_LOWER_PCT					40
+#define TL_BAR_UPPER_PCT					80
+#endif
+
+#define TL_ADC_MAX                                              ((1 << TL_ADC_RESOLUTION_BIT) - 1)
+
 static uint8_t TLChannelToReference(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch)
 {
@@ -144,7 +160,7 @@ void TLSetAdcReferencePin(int pin)
 
 int TLAnalogRead(int pin)
 {
-	return analogRead(pin);
+	return analogRead(pin - A0);
 }
 #elif IS_TEENSY3X
 void TLSetAdcReferencePin(int pin)
@@ -171,7 +187,7 @@ void TLSetAdcReferencePin(int pin)
 
 int TLAnalogRead(int pin)
 {
-	return analogRead(pin);
+	return analogRead(pin - A0);
 }
 #elif IS_PARTICLE
 void TLSetAdcReferencePin(int pin)
@@ -229,11 +245,11 @@ int TLAnalogRead(int pin)
 	uint8_t ADC_Sample_Time = ADC_SampleTime_3Cycles;
 	int value;
 
-	adc_ch = PIN_MAP[pin + A0].adc_channel;
+	adc_ch = PIN_MAP[pin].adc_channel;
 
 	ADC_Init();
 
-	HAL_Pin_Mode(pin + A0, AN_INPUT);
+	HAL_Pin_Mode(pin, AN_INPUT);
 	ADC_RegularChannelConfig(ADC1, adc_ch, 1, ADC_Sample_Time);
 	// ADC_RegularChannelConfig(ADC2, adc_ch, 1, ADC_Sample_Time);
 
@@ -397,7 +413,11 @@ int TLSampleMethodCVDSample(struct TLStruct * data, uint8_t nSensors,
 	TLChargeADC(data, nSensors, ch, ref_pin, true);
 
 	/* Read sensor. */
-	sample = TLAnalogRead(ch_pin - A0);
+	sample = TLAnalogRead(ch_pin);
+
+	if (inv) {
+		sample = TL_ADC_MAX - sample;
+	}
 
 	if (dCh->tlStructSampleMethod.CVD.useNChargesPadding) {
 		/*
@@ -434,9 +454,13 @@ int TLSampleMethodCVDMapDelta(struct TLStruct * data, uint8_t nSensors,
 
 	delta = d->delta;
 
-	/* Ignore everything below 40% of log(maxDelta); it's mostly noise */
-	n = map(100 * log(delta),  40 * log(d->calibratedMaxDelta), 
-		80 * log(d->calibratedMaxDelta), 0,
+	/*
+	 * Ignore everything below TL_BAR_LOWER_PCT of log(maxDelta); it's
+	 * mostly noise
+	 */
+	n = map(100 * log(delta), TL_BAR_LOWER_PCT * 
+		log(d->calibratedMaxDelta),
+		TL_BAR_UPPER_PCT * log(d->calibratedMaxDelta), 0,
 		length);
 
 	n = (n < 0) ? 0 : n;
