@@ -611,7 +611,7 @@ bool askSampleMethod(int n)
 }
 #endif
 
-#if (IS_AVR || IS_PARTICLE)
+#if IS_AVR
 #define ASK_SAMPLE_METHOD_DEFINED 1
 bool askSampleMethod(int n)
 {
@@ -640,6 +640,27 @@ bool askSampleMethod(int n)
 			break;
 		}
 	} while (true);
+
+	return false;
+}
+#endif
+
+#if IS_PARTICLE
+#define ASK_SAMPLE_METHOD_DEFINED 1
+bool askSampleMethod(int n)
+{
+	static bool firstTime = true;
+
+	if (firstTime) {
+	 	Serial.println(F("\nParticle board detected. TouchLib only "
+			"supports capacitive sensors using CVD method for these"
+			" boards\nfor now (until bug "
+			"https://github.com/admarschoonen/TouchLib/issues/12 is"
+			" resolved).\n"));
+		firstTime = false;
+	}
+
+	tlSensors.initialize(n, TLSampleMethodCVD);
 
 	return false;
 }
@@ -723,7 +744,7 @@ void noiseTuning(void)
 }
 
 #define N_MEASUREMENTS 10
-void touchTuning(int n)
+bool touchTuning(int n)
 {
 	char c;
 	float delta[N_MEASUREMENTS];
@@ -731,6 +752,7 @@ void touchTuning(int n)
 	float min_val;
 	int k;
 	bool done = false;
+	bool isTuned = false;
 
 	Serial.print(F("Performing touch measurement for "));
 	if (tlSensors.data[n].sampleMethod == TLSampleMethodCVD) {
@@ -750,14 +772,20 @@ void touchTuning(int n)
 		do {
 			Serial.print(F("Make sure to touch and hold the sensor,"
 				" then press y to start the touch\n"
-				"measurement. "));
+				"measurement or press s to skip tuning this "
+				"sensor."));
 			c = Serial_getChar();
 			Serial.println(c);
-			if (lower(c) != 'y') {
-				Serial.println(F("Illegal choice. Only y is "
-					"allowed. "));
+			if ((lower(c) != 'y') && (lower(c) != 's')) {
+				Serial.println(F("Illegal choice. Only y or s "
+					"are allowed. "));
 			}
-		} while (lower(c) != 'y');
+		} while ((lower(c) != 'y') && (lower(c) != 's'));
+
+		if (lower(c) == 's') {
+			done = true;
+			break;
+		}
 	
 		tlSensors.data[n].enableTouchStateMachine = false;
 		tlSensors.setState(n, TLStruct::buttonStatePressed);
@@ -788,15 +816,31 @@ void touchTuning(int n)
 			Serial.print(". ");
 		} else {
 			done = true;
+			isTuned = true;
 		}
 	} while (!done);
 
-	Serial.println(F("Found the following thresholds:"));
-	Serial.print(F("  approached -> pressed: "));
-	Serial.println(tlSensors.data[n].approachedToPressedThreshold);
-	Serial.print(F("  pressed -> approached: "));
-	Serial.println(tlSensors.data[n].pressedToApproachedThreshold);
+	if (isTuned) {
+		Serial.println(F("Found the following thresholds:"));
+		Serial.print(F("  approached -> pressed: "));
+		Serial.println(tlSensors.data[n].approachedToPressedThreshold);
+		Serial.print(F("  pressed -> approached: "));
+		Serial.println(tlSensors.data[n].pressedToApproachedThreshold);
+	} else {
+		/* 
+		 * Skip tuning for this sensor; instead set some sensible
+		 * defaults
+		 */
+		tlSensors.data[n].approachedToPressedThreshold =
+			tlSensors.data[n].releasedToApproachedThreshold * 10;
+		tlSensors.data[n].pressedToApproachedThreshold = 0.9 *
+			tlSensors.data[n].approachedToPressedThreshold;
+		Serial.print(F("\nSkipped tuning sensor "));
+		Serial.print(n);
+	}
 	Serial.println("");
+
+	return isTuned;
 }
 
 void maxTouchTuning(int n)
@@ -1293,11 +1337,12 @@ void loop()
 	Serial.println(F("Next step is to tune the sensors."));
 	noiseTuning();
 	for (n = 0; n < nSensors; n++) {
-		touchTuning(n);
-		maxTouchTuning(n);
-		Serial.print(F("Finished tuning sensor "));
-		Serial.println(n);
-		Serial.println("");
+		if (touchTuning(n)) {
+			maxTouchTuning(n);
+			Serial.print(F("Finished tuning sensor "));
+			Serial.println(n);
+			Serial.println("");
+		}
 		Serial.println("");
 	}
 	
