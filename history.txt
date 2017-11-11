@@ -1,5 +1,7 @@
 Version history:
 
+v0.0.7: Fixed bug that caused generated code to crash if sensor tuning was skipped
+
 v0.0.6: Updated some descriptive files
 
 v0.0.5: Added support for resistive and capacitive touch on Particle boards.
