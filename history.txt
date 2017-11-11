@@ -1,5 +1,9 @@
 Version history:
 
+v0.0.6: Updated some descriptive files
+
+v0.0.5: Added support for resistive and capacitive touch on Particle boards.
+
 v0.0.4: Added option to skip tuning a sensor. Disabled resisitive sensing on Particle boards.
 
 v0.0.3: First official release
