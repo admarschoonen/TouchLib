@@ -253,6 +253,7 @@ struct TLStruct {
 	unsigned long stateChangedAtTime;
 	bool slewrateFirstSample;
 	bool stateIsBeingChanged;
+	bool disableSensor; /* set to true for dummy sensors */
 };
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>

@@ -198,7 +198,7 @@ bool Serial_waitForFirstChar(int timeout)
 			}
 		}
 		#if IS_PARTICLE
-		Spark.process();
+		Particle.process();
 		#endif
 	}
 
@@ -226,7 +226,7 @@ char Serial_getChar()
 			c = tmp;
 		}
 		#if IS_PARTICLE
-		Spark.process();
+		Particle.process();
 		#endif
 	}
 
@@ -248,7 +248,7 @@ int Serial_getString(char * s, int length, int timeout)
 		#if IS_PARTICLE
 		while ((pos < length - 1) && (Serial.available())) {
 			s[pos++] = Serial.read();
-			Spark.process();
+			Particle.process();
 		}
 		#else
 		pos = Serial.readBytes(s, length - 1);
@@ -451,8 +451,6 @@ bool askPower(int timeout)
 	char s[20];
 	bool ret = false, do_reset = false;
 	int n;
-	int t_start = millis();
-	int now;
 
 	Serial.println(F("How is your system powered:"));
 	Serial.println(F("a. Battery only"));
@@ -763,6 +761,7 @@ bool touchTuning(int n)
 
 		if (lower(c) == 's') {
 			done = true;
+			tlSensors.data[n].disableSensor = true;
 			break;
 		}
 	
@@ -796,6 +795,7 @@ bool touchTuning(int n)
 		} else {
 			done = true;
 			isTuned = true;
+			tlSensors.data[n].disableSensor = false;
 		}
 	} while (!done);
 
@@ -1053,8 +1053,57 @@ void printCode(void)
 	Serial.print(F("TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> "
 		"tlSensors;\n"));
 	Serial.print(F("\n"));
+
+	#if IS_PARTICLE
+	Serial.print(F("/*\n"));
+	Serial.print(F(" * Declaration of all the web variables. \n"));
+	Serial.print(F(" *\n"));
+	Serial.print(F(" * For every sensor there are 2 variables:\n"));
+	Serial.print(F(" * double snsrX_delta:      difference between "
+		"current value and average\n"));
+	Serial.print(F(" * int    snsrX_press:      0 if not pressed, 1 if "
+		"pressed\n"));
+	Serial.print(F(" *\n"));
+	Serial.print(F(" * The variable state can have the following values:\n"));
+	Serial.print(F(" *   0: PreCalibrating\n"));
+	Serial.print(F(" *   1: Calibrating\n"));
+	Serial.print(F(" *   2: NoisePowerMeasurement\n"));
+	Serial.print(F(" *   3: Released\n"));
+	Serial.print(F(" *   4: ReleasedToApproached\n"));
+	Serial.print(F(" *   5: Approached\n"));
+	Serial.print(F(" *   6: ApproachedToPressed\n"));
+	Serial.print(F(" *   7: ApproachedToReleased\n"));
+	Serial.print(F(" *   8: Pressed\n"));
+	Serial.print(F(" *   9: PressedToApproached\n"));
+	Serial.print(F(" */\n\n"));
+	
+        for (n = 0; n < nSensors; n++) {
+		if (tlSensors.data[n].disableSensor == false) {
+			Serial.print(F("double snsr"));
+			Serial.print(n);
+			Serial.print(F("_delta = 0;\n"));
+			Serial.print(F("int    snsr"));
+			Serial.print(n);
+			Serial.print(F("_press = 0;\n"));
+		}
+	}
+	#endif
+
 	Serial.print(F("void setup()\n"));
 	Serial.print(F("{\n"));
+
+	#if IS_PARTICLE
+        for (n = 0; n < nSensors; n++) {
+		if (tlSensors.data[n].disableSensor == false) {
+			Serial.print(F("        Particle.variable(\"snsr"));
+			Serial.print(n);
+			Serial.print(F("_delta\", snsr"));
+			Serial.print(n);
+			Serial.print(F("_delta);\n"));
+		}
+	}
+	#endif
+
         Serial.print(F("        Serial.begin(9600);\n"));
 	Serial.print(F("\n"));
 	Serial.print(F("        #if IS_ATMEGA32U4\n"));
@@ -1228,6 +1277,9 @@ void printCode(void)
 	Serial.print(F("void print_sensor_state(int n)\n"));
 	Serial.print(F("{\n"));
 	Serial.print(F("        char s[32] = {'\\0'};\n"));
+	#if IS_PARTICLE
+	Serial.print(F("        char sInt[12] = {'\\0'};\n"));
+	#endif
 	Serial.print(F("\n"));
 	Serial.print(F("        Serial.print(\" #\");\n"));
 	Serial.print(F("        Serial.print(n);\n"));
@@ -1247,6 +1299,41 @@ void printCode(void)
 	Serial.print(F("        memset(s, ' ', 22 - "
 			"strlen(tlSensors.getStateLabel(n)));\n"));
 	Serial.print(F("        Serial.print(s);\n"));
+
+	#if IS_PARTICLE
+	Serial.println("");
+        for (n = 0; n < nSensors; n++) {
+		if (tlSensors.data[n].disableSensor == false) {
+			Serial.print(F("        if (snsr"));
+			Serial.print(n);
+			Serial.print(F("_press != tlSensors.isPressed("));
+			Serial.print(n);
+			Serial.print(F(")) {\n"));
+			
+			Serial.print(F("                snsr"));
+			Serial.print(n);
+			Serial.print(F("_press = tlSensors.isPressed("));
+			Serial.print(n);
+			Serial.print(F(");\n"));
+	
+			Serial.print(F("                snprintf(sInt, sizeof(sInt) - 1, "
+				"\"%d\", snsr"));
+			Serial.print(n);
+			Serial.print(F("_press);\n"));
+			Serial.print(F("                Particle.publish(\"snsr"));
+			Serial.print(n);
+			Serial.print(F("_press\", sInt);\n"));
+			Serial.print(F("        }\n"));
+
+			Serial.print(F("                snsr"));
+			Serial.print(n);
+			Serial.print(F("_delta = tlSensors.getDelta("));
+			Serial.print(n);
+			Serial.print(F(");\n"));
+		}
+	}
+	#endif
+
 	Serial.print(F("}\n"));
 	Serial.print(F("\n"));
 	Serial.print(F("#define BAR_LENGTH                     58 /* <-- Change "
@@ -1344,7 +1431,7 @@ void loop()
 	Serial.println(F("TouchLib tuning program finished"));
 	while (true) {
 		#if IS_PARTICLE
-		Spark.process();
+		Particle.process();
 		#endif
 	}
 }
