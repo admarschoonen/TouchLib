@@ -212,9 +212,9 @@ int ADC_Init(void)
 		ENABLE);
 	ADC_DeInit();
 
-	ADC_CommonInitStructure.ADC_Mode = ADC_DualMode_RegSimult;
+	ADC_CommonInitStructure.ADC_Mode = ADC_Mode_Independent;
 	ADC_CommonInitStructure.ADC_Prescaler = ADC_Prescaler_Div2;
-	ADC_CommonInitStructure.ADC_DMAAccessMode = ADC_DMAAccessMode_1;
+	ADC_CommonInitStructure.ADC_DMAAccessMode = ADC_DMAAccessMode_Disabled;
 	ADC_CommonInitStructure.ADC_TwoSamplingDelay = ADC_TwoSamplingDelay_5Cycles;
 	ADC_CommonInit(&ADC_CommonInitStructure);
 
@@ -235,6 +235,43 @@ int ADC_Init(void)
 	return 0;
 }
 
+int ADC_ReInit(void)
+{
+	ADC_CommonInitTypeDef ADC_CommonInitStructure;
+	ADC_InitTypeDef ADC_InitStructure;
+
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1 | RCC_APB2Periph_ADC2,
+		ENABLE);
+	ADC_DeInit();
+
+	/* ADC Common Init */
+	ADC_CommonInitStructure.ADC_Mode = ADC_DualMode_RegSimult;
+	ADC_CommonInitStructure.ADC_Prescaler = ADC_Prescaler_Div2;
+	ADC_CommonInitStructure.ADC_DMAAccessMode = ADC_DMAAccessMode_1;
+	ADC_CommonInitStructure.ADC_TwoSamplingDelay = ADC_TwoSamplingDelay_5Cycles;
+	ADC_CommonInit(&ADC_CommonInitStructure);
+
+	// ADC1 configuration
+	ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
+	ADC_InitStructure.ADC_ScanConvMode = ENABLE;
+	ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;
+	ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
+	ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_CC1;
+	ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
+	ADC_InitStructure.ADC_NbrOfConversion = 1;
+	ADC_Init(ADC1, &ADC_InitStructure);
+
+	// ADC2 configuration
+	ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
+	ADC_InitStructure.ADC_ScanConvMode = ENABLE;
+	ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;
+	ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
+	ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_CC1;
+	ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
+	ADC_InitStructure.ADC_NbrOfConversion = 1;
+	ADC_Init(ADC2, &ADC_InitStructure);
+}
+
 int TLAnalogRead(int pin)
 {
 	/*
@@ -243,6 +280,7 @@ int TLAnalogRead(int pin)
 	 */
 	uint8_t adc_ch;
 	uint8_t ADC_Sample_Time = ADC_SampleTime_3Cycles;
+	uint8_t ADC_Sample_Time_Default = ADC_SampleTime_480Cycles;
 	int value;
 
 	adc_ch = PIN_MAP[pin].adc_channel;
@@ -257,6 +295,11 @@ int TLAnalogRead(int pin)
 	while(ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC) == RESET);
 
 	value = ADC_GetConversionValue(ADC1);
+
+	ADC_ReInit();
+
+	ADC_RegularChannelConfig(ADC1, adc_ch, 1, ADC_Sample_Time_Default);
+	ADC_RegularChannelConfig(ADC2, adc_ch, 1, ADC_Sample_Time_Default);
 
 	return value;
 }

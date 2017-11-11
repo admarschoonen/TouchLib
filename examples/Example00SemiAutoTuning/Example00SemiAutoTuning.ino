@@ -611,7 +611,7 @@ bool askSampleMethod(int n)
 }
 #endif
 
-#if IS_AVR
+#if ((IS_AVR) || (IS_PARTICLE))
 #define ASK_SAMPLE_METHOD_DEFINED 1
 bool askSampleMethod(int n)
 {
@@ -640,27 +640,6 @@ bool askSampleMethod(int n)
 			break;
 		}
 	} while (true);
-
-	return false;
-}
-#endif
-
-#if IS_PARTICLE
-#define ASK_SAMPLE_METHOD_DEFINED 1
-bool askSampleMethod(int n)
-{
-	static bool firstTime = true;
-
-	if (firstTime) {
-	 	Serial.println(F("\nParticle board detected. TouchLib only "
-			"supports capacitive sensors using CVD method for these"
-			" boards\nfor now (until bug "
-			"https://github.com/admarschoonen/TouchLib/issues/12 is"
-			" resolved).\n"));
-		firstTime = false;
-	}
-
-	tlSensors.initialize(n, TLSampleMethodCVD);
 
 	return false;
 }
