@@ -814,6 +814,8 @@ bool touchTuning(int n)
 			tlSensors.data[n].releasedToApproachedThreshold * 10;
 		tlSensors.data[n].pressedToApproachedThreshold = 0.9 *
 			tlSensors.data[n].approachedToPressedThreshold;
+		tlSensors.data[n].calibratedMaxDelta = 
+			tlSensors.data[n].approachedToPressedThreshold * 1.1;
 		Serial.print(F("\nSkipped tuning sensor "));
 		Serial.print(n);
 	}
