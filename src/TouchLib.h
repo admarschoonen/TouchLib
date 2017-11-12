@@ -53,8 +53,52 @@
 #include <TLSampleMethodTouchRead.h>
 #include <BoardID.h>
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
 class TLSensors;
+
+struct OutputSlider {
+	float position;
+};
+
+struct OutputWheel {
+	float angle;
+};
+
+struct OutputRectangularMatrix {
+	float posX;
+	float posY;
+};
+
+struct OutputCircularMatrix {
+	float angle;
+	float radius;
+};
+
+struct TLObject {
+	enum Shape {
+		shapeSlider = 0,
+		shapeWheel,
+		shapeRectangularMatrix,
+		shapeCircularMatrix,
+	};
+
+	enum InterpolationMethod {
+		interpolationMethodNone = 0,
+		interpolationMethodWeightedPosition,
+		interpolationMethodWeightedSignal
+	};
+
+	enum Shape shape;
+	enum InterpolationMethod interpolationMethod;
+	uint32_t sensors;
+
+	union Output {
+		struct OutputSlider;
+		struct OutputWheel;
+		struct OutputRectangularMatrix;
+		struct OutputCircularMatrix;
+	} output;
+};
 
 struct TLStruct {
 	/* enum definitions */
@@ -256,7 +300,7 @@ struct TLStruct {
 	bool disableSensor; /* set to true for dummy sensors */
 };
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
 class TLSensors
 {
 	public:
@@ -415,8 +459,8 @@ class TLSensors
  */
 #define TL_EEPROM_N_BYTES_OVERHEAD				(1+1+1+2)
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addChannel(uint8_t ch)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::addChannel(uint8_t ch)
 {
 	long r;
 	uint16_t n, pos, length;
@@ -439,8 +483,8 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addChannel(uint8_t ch)
 	return err;
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::initScanOrder(void)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::initScanOrder(void)
 {
 	uint16_t pos, length;
 	uint8_t n, k;
@@ -464,8 +508,8 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::initScanOrder(void)
 	}
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::setDefaults(void)
 {
 	uint8_t n;
 	
@@ -565,8 +609,8 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
  *  - Algorithm     = bit-by-bit-fast
  */
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-uint16_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::crcUpdate(uint16_t
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+uint16_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::crcUpdate(uint16_t
 		crc, unsigned char c)
 {
 	unsigned int i;
@@ -590,8 +634,8 @@ uint16_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::crcUpdate(uint16_t
  * Older versions of EEPROM library don't have length(). Add function here for
  * compatibility.
  */
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-uint16_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::EEPROM_length(void)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+uint16_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::EEPROM_length(void)
 {
 	#ifdef EEPROM_h
 	return E2END + 1;
@@ -604,8 +648,8 @@ uint16_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::EEPROM_length(void)
  * Older versions of EEPROM library don't have update(). Add function here for
  * compatibility.
  */
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::EEPROM_update(int
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::EEPROM_update(int
 		addr, uint8_t b)
 {
 	#ifdef EEPROM_h
@@ -615,8 +659,8 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::EEPROM_update(int
 	#endif
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readFloatFromEeprom(int
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::readFloatFromEeprom(int
 		* addr, uint16_t * crc)
 {
 	#ifdef EEPROM_h
@@ -640,8 +684,8 @@ float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readFloatFromEeprom(int
 	#endif
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeFloatToEeprom(float f,
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::writeFloatToEeprom(float f,
 		int * addr, uint16_t * crc)
 {
 	#ifdef EEPROM_h
@@ -660,8 +704,8 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeFloatToEeprom(float f
 	#endif
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSensorSettingFromEeprom(int n, 
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::readSensorSettingFromEeprom(int n, 
 		int * addr, uint16_t * crc, bool applySettings)
 {
 	#ifdef EEPROM_h
@@ -686,8 +730,8 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSensorSettingFromEepro
 	#endif
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSensorSettingToEeprom(int n, 
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::writeSensorSettingToEeprom(int n, 
 		int * addr, uint16_t * crc)
 {
 	#ifdef EEPROM_h
@@ -707,14 +751,14 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSensorSettingToEeprom
 	#endif
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-uint16_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::eepromSizeRequired(void)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+uint16_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::eepromSizeRequired(void)
 {
 	return nSensors * 4 * sizeof(float) + TL_EEPROM_N_BYTES_OVERHEAD;
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSettingsToEeprom(void)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::writeSettingsToEeprom(void)
 {
 	#ifdef EEPROM_h
 	int addr = eepromOffset;
@@ -756,8 +800,8 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSettingsToEeprom(void
 	#endif
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSettingsFromEeprom(void)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::readSettingsFromEeprom(void)
 {
 	#ifdef EEPROM_h
 	int addr = eepromOffset;
@@ -843,15 +887,14 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSettingsFromEeprom(voi
 	#endif
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::~TLSensors(void)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::~TLSensors(void)
 {
 	/* Nothing to destroy */
 }
 
-#warning overload constructor with uint8_t customScanOrder[]
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::TLSensors(void)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::TLSensors(void)
 {
 	uint8_t n;
 	unsigned long now;
@@ -907,8 +950,8 @@ TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::TLSensors(void)
 	}
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addSample(uint8_t ch, int32_t sample)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::addSample(uint8_t ch, int32_t sample)
 {
 	if (data[ch].enableSlewrateLimiter) {
 		if (data[ch].slewrateFirstSample) {
@@ -927,8 +970,8 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addSample(uint8_t ch, int3
 	}
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::anyButtonIsCalibrating(void)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::anyButtonIsCalibrating(void)
 {
 	bool ret = false;
 	uint8_t n;
@@ -943,8 +986,8 @@ bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::anyButtonIsCalibrating(voi
 	return ret;
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isCalibrating(TLStruct * d)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::isCalibrating(TLStruct * d)
 {
 	bool ret = false;
 
@@ -955,14 +998,14 @@ bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isCalibrating(TLStruct * d
 	return ret;
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isCalibrating(int n)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::isCalibrating(int n)
 {
 	return isCalibrating(&(data[n]));
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isReleased(TLStruct * d)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::isReleased(TLStruct * d)
 {
 	bool ret = false;
 
@@ -973,14 +1016,14 @@ bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isReleased(TLStruct * d)
 	return ret;
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isReleased(int n)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::isReleased(int n)
 {
 	return isReleased(&(data[n]));
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isApproached(TLStruct * d)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::isApproached(TLStruct * d)
 {
 	bool ret = false;
 
@@ -991,14 +1034,14 @@ bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isApproached(TLStruct * d)
 	return ret;
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isApproached(int n)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::isApproached(int n)
 {
 	return isApproached(&(data[n]));
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isPressed(TLStruct * d)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::isPressed(TLStruct * d)
 {
 	bool ret = false;
 
@@ -1009,14 +1052,14 @@ bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isPressed(TLStruct * d)
 	return ret;
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isPressed(int n)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::isPressed(int n)
 {
 	return isPressed(&(data[n]));
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(uint8_t ch)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::updateAvg(uint8_t ch)
 {
 	float s;
 	TLStruct * d;
@@ -1075,8 +1118,8 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(uint8_t ch)
 	}
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setForceCalibratingStates(
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::setForceCalibratingStates(
 		int ch, uint32_t mask, enum TLStruct::ButtonState * newState)
 {
 	int n;
@@ -1097,8 +1140,8 @@ bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setForceCalibratingStates(
 	return chStateChanged;
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getRaw(int ch)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::getRaw(int ch)
 {
 	TLStruct * d;
 
@@ -1107,8 +1150,8 @@ float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getRaw(int ch)
 	return d->raw; 
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getValue(int ch)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::getValue(int ch)
 {
 	TLStruct * d;
 
@@ -1117,8 +1160,8 @@ float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getValue(int ch)
 	return d->value; 
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getDelta(int ch)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::getDelta(int ch)
 {
 	TLStruct * d;
 
@@ -1127,8 +1170,8 @@ float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getDelta(int ch)
 	return d->delta; 
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getAvg(int ch)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::getAvg(int ch)
 {
 	TLStruct * d;
 
@@ -1137,9 +1180,9 @@ float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getAvg(int ch)
 	return d->avg; 
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-const char * TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getStateLabel(int
-		ch)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+const char * TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, 
+		N_OBJECTS>::getStateLabel(int ch)
 {
 	TLStruct * d;
 
@@ -1148,9 +1191,9 @@ const char * TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getStateLabel(int
 	return d->buttonStateLabel; 
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
 enum TLStruct::ButtonState TLSensors<N_SENSORS,
-		N_MEASUREMENTS_PER_SENSOR>::getState(int ch)
+		N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::getState(int ch)
 {
 	TLStruct * d;
 
@@ -1159,8 +1202,8 @@ enum TLStruct::ButtonState TLSensors<N_SENSORS,
 	return d->buttonState; 
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::checkForMajorChange(
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::checkForMajorChange(
 		enum TLStruct::ButtonState oldState,
 		enum TLStruct::ButtonState newState)
 {
@@ -1189,8 +1232,8 @@ bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::checkForMajorChange(
 	return majorChange;
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(int ch,
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::setState(int ch,
 		enum TLStruct::ButtonState newState)
 {
 	bool setStateChangedAtTime = true;
@@ -1297,8 +1340,8 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setState(int ch,
 	}
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-int TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::initialize(
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+int TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::initialize(
 		uint8_t ch, int (*sampleMethod)(struct TLStruct * d,
 		uint8_t nSensors, uint8_t ch))
 {
@@ -1319,8 +1362,8 @@ int TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::initialize(
 	return ret;
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePreCalibrating(uint8_t ch)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::processStatePreCalibrating(uint8_t ch)
 {
 	TLStruct * d;
 
@@ -1331,8 +1374,8 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePreCalibrating
 	}
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateCalibrating(uint8_t ch)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::processStateCalibrating(uint8_t ch)
 {
 	unsigned long t, t_max;
 	TLStruct * d;
@@ -1353,8 +1396,8 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateCalibrating(ui
 	}
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateNoisePowerMeasurement(uint8_t ch)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::processStateNoisePowerMeasurement(uint8_t ch)
 {
 	unsigned long t, t_max;
 	TLStruct * d;
@@ -1371,8 +1414,8 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateNoisePowerMeas
 	}
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateReleased(uint8_t ch)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::processStateReleased(uint8_t ch)
 {
 	TLStruct * d;
 
@@ -1385,8 +1428,8 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateReleased(uint8
 	}
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateReleasedToApproached(uint8_t ch)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::processStateReleasedToApproached(uint8_t ch)
 {
 	TLStruct * d;
 
@@ -1407,8 +1450,8 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateReleasedToAppr
 	}
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproached(uint8_t ch)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::processStateApproached(uint8_t ch)
 {
 	TLStruct * d;
 
@@ -1427,8 +1470,8 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproached(uin
 	}
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproachedToPressed(uint8_t ch)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::processStateApproachedToPressed(uint8_t ch)
 {
 	TLStruct * d;
 
@@ -1449,8 +1492,8 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproachedToPr
 	}
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproachedToReleased(uint8_t ch)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::processStateApproachedToReleased(uint8_t ch)
 {
 	TLStruct * d;
 
@@ -1469,8 +1512,8 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateApproachedToRe
 	}
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressed(uint8_t ch)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::processStatePressed(uint8_t ch)
 {
 	TLStruct * d;
 
@@ -1489,8 +1532,8 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressed(uint8_
 	}
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressedToApproached(uint8_t ch)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::processStatePressedToApproached(uint8_t ch)
 {
 	TLStruct * d;
 
@@ -1509,8 +1552,8 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStatePressedToAppro
 	}
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processSample(uint8_t ch)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::processSample(uint8_t ch)
 {
 	TLStruct * d;
 
@@ -1582,8 +1625,8 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processSample(uint8_t ch)
 	d->buttonStateLabel = this->buttonStateLabels[d->buttonState];
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::resetButtonStateSummaries(uint8_t ch)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::resetButtonStateSummaries(uint8_t ch)
 {
 	data[ch].buttonIsCalibrating = false;
 	data[ch].buttonIsReleased = false;
@@ -1591,8 +1634,8 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::resetButtonStateSummaries(
 	data[ch].buttonIsPressed = false;
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::sample(void)
 {
 	uint16_t length, pos;
 	uint8_t ch;
@@ -1699,8 +1742,8 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 	return error;
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-int TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::findSensorPair(uint8_t ch,
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+int TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::findSensorPair(uint8_t ch,
 		uint8_t chStart)
 {
 	TLStruct * d;
@@ -1727,8 +1770,8 @@ int TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::findSensorPair(uint8_t ch,
 	return n;
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-int TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::printBar(uint8_t ch_k,
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+int TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::printBar(uint8_t ch_k,
 		int length)
 {
 	int ch_n;
@@ -1800,8 +1843,8 @@ int TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::printBar(uint8_t ch_k,
 	return 0;
 }
 
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::printScanOrder(void)
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR, uint8_t N_OBJECTS>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS>::printScanOrder(void)
 {
 	uint16_t n;
 

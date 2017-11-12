@@ -24,8 +24,10 @@
  */
 #define N_MEASUREMENTS_PER_SENSOR       16
 
+#define N_OBJECTS			2
+
 /* tlSensors is the actual object that contains all the sensors */
-TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> tlSensors;
+TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS> tlSensors;
 
 void setup()
 {
@@ -37,8 +39,7 @@ void setup()
         delay(500);
         Serial.println();
         Serial.println();
-        Serial.println("Switching baudrate to 115200. Make sure to adjust
-baudrate in serial monitor as well!");
+        Serial.println("Switching baudrate to 115200. Make sure to adjust baudrate in serial monitor as well!");
         Serial.println();
         Serial.println();
         Serial.end();
@@ -98,8 +99,7 @@ baudrate in serial monitor as well!");
         tlSensors.data[2].enableSlewrateLimiter =                      false;
 
         if (tlSensors.error) {
-                Serial.println("Error detected during initialization of
-TouchLib. This is "
+                Serial.println("Error detected during initialization of TouchLib. This is "
                        "probably a bug; please notify the author.");
                 while (1);
         }

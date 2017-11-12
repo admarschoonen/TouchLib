@@ -64,6 +64,7 @@
  */
 #define N_SENSORS			6
 #define KNOWN_BOARD			1
+#define N_OBJECTS			6
 #endif
 
 #if IS_ATMEGA128X_256X
@@ -73,6 +74,7 @@
  */
 #define N_SENSORS			32
 #define KNOWN_BOARD			1
+#define N_OBJECTS			6
 #endif
 
 #if IS_ATTINY
@@ -86,6 +88,7 @@
  */
 #define N_SENSORS			32
 #define KNOWN_BOARD			1
+#define N_OBJECTS			6
 #endif
 
 #if IS_PARTICLE
@@ -94,6 +97,7 @@
  */
 #define N_SENSORS			16
 #define KNOWN_BOARD			1
+#define N_OBJECTS			6
 #endif
 
 #ifndef KNOWN_BOARD
@@ -108,7 +112,7 @@
 #define N_MEASUREMENTS_PER_SENSOR	16
 
 /* tlSensors is the actual object that contains all the sensors */
-TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> tlSensors;
+TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, N_OBJECTS> tlSensors;
 
 /* Some defines */
 #define PIN_TYPE_ANY		0
@@ -116,6 +120,7 @@ TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> tlSensors;
 #define PIN_TYPE_DIGITAL	2
 
 static int nSensors = N_SENSORS;
+static int nObjects = N_OBJECTS;
 
 void setup()
 {
@@ -1037,6 +1042,9 @@ void printCode(void)
 	Serial.print(F("#define N_SENSORS                       "));
 	Serial.print(nSensors);
 	Serial.print(F("\n"));
+	Serial.print(F("#define N_OBJECTS                       "));
+	Serial.print(nObjects);
+	Serial.print(F("\n"));
 	Serial.print(F("\n"));
 
 	Serial.print(F("/*\n"));
@@ -1050,8 +1058,8 @@ void printCode(void)
 
 	Serial.print(F("/* tlSensors is the actual object that contains all the"
 		" sensors */\n"));
-	Serial.print(F("TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> "
-		"tlSensors;\n"));
+	Serial.print(F("TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR, "
+		"N_OBJECTS> tlSensors;\n"));
 	Serial.print(F("\n"));
 
 	#if IS_PARTICLE
