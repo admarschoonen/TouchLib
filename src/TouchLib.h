@@ -145,11 +145,11 @@ struct TLStruct {
 	enum Direction direction;
 	enum SampleType sampleType;
 	int * pin;
-	float releasedToApproachedThreshold; /* stored in EEPROM */
-	float approachedToReleasedThreshold; /* stored in EEPROM */
-	float approachedToPressedThreshold; /* stored in EEPROM */
-	float pressedToApproachedThreshold; /* stored in EEPROM */
-	float calibratedMaxDelta;
+	int32_t releasedToApproachedThreshold; /* stored in EEPROM */
+	int32_t approachedToReleasedThreshold; /* stored in EEPROM */
+	int32_t approachedToPressedThreshold; /* stored in EEPROM */
+	int32_t pressedToApproachedThreshold; /* stored in EEPROM */
+	int32_t calibratedMaxDelta;
 	uint32_t releasedToApproachedTime;
 	uint32_t approachedToReleasedTime;
 	uint32_t approachedToPressedTime;
@@ -167,9 +167,9 @@ struct TLStruct {
 	bool setOffsetValueManually;
 	bool disableUpdateIfAnyButtonIsApproached;
 	bool disableUpdateIfAnyButtonIsPressed;
-	float referenceValue; /* in pico Farad (pF) */
-	float offsetValue; /* in pico Farad (pF) */
-	float scaleFactor;
+	int32_t referenceValue; /* in pico Farad (pF) */
+	int32_t offsetValue; /* in pico Farad (pF) */
+	int32_t scaleFactor;
 
 	/* 
 	 * sampleMethod can be set to:
@@ -234,11 +234,11 @@ struct TLStruct {
 	uint8_t nMeasurementsPerSensor;
 	int32_t raw;
 	/* Total value in pico Farad (pF) */
-	float value;
-	float avg;
-	float delta;
-	float maxDelta;
-	float noisePower;
+	int32_t value;
+	int32_t avg;
+	int32_t delta;
+	int32_t maxDelta;
+	uint32_t noisePower;
 	enum ButtonState buttonState;
 	const char * buttonStateLabel; /* human readable label */
 	bool buttonIsCalibrating; /* use this to see if button is calibrating */
@@ -287,10 +287,10 @@ class TLSensors
 		void printScanOrder(void);
 		bool setForceCalibratingStates(int ch, uint32_t mask,
 			enum TLStruct::ButtonState * newState);
-		float getRaw(int n);
-		float getValue(int n);
-		float getDelta(int n);
-		float getAvg(int n);
+		uint32_t getRaw(int n);
+		int32_t getValue(int n);
+		int32_t getDelta(int n);
+		int32_t getAvg(int n);
 		bool isPressed(int n);
 		bool isApproached(int n);
 		bool isReleased(int n);
@@ -329,8 +329,8 @@ class TLSensors
 		void EEPROM_update(int addr, uint8_t b);
 
 		uint16_t eepromSizeRequired(void);
-		float readFloatFromEeprom(int * addr, uint16_t * crc);
-		void writeFloatToEeprom(float f, int * addr, uint16_t * crc);
+		int32_t readFloatFromEeprom(int * addr, uint16_t * crc);
+		void writeFloatToEeprom(int32_t f, int * addr, uint16_t * crc);
 		void readSensorSettingFromEeprom(int n, int * addr, 
 			uint16_t * crc, bool applySettings);
 		void writeSensorSettingToEeprom(int n, int * addr, 
@@ -616,23 +616,23 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::EEPROM_update(int
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readFloatFromEeprom(int
+int32_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readFloatFromEeprom(int
 		* addr, uint16_t * crc)
 {
 	#ifdef EEPROM_h
-	float f;
+	int32_t f;
 	uint32_t i = 0;
 	int k;
 	uint8_t tmp;
 
-	for (k = sizeof(float); k > 0; k--) {
+	for (k = sizeof(int32_t); k > 0; k--) {
 		tmp = EEPROM.read(*addr);
 		*crc = crcUpdate(*crc, tmp);
 		*addr = *addr + 1;
 		i |= (((uint32_t) tmp) << ((k - 1) << 3));
 	}
 
-	memcpy(&f, &i, sizeof(float));
+	memcpy(&f, &i, sizeof(int32_t));
 
 	return f;
 	#else
@@ -641,7 +641,7 @@ float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readFloatFromEeprom(int
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeFloatToEeprom(float f,
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeFloatToEeprom(int32_t f,
 		int * addr, uint16_t * crc)
 {
 	#ifdef EEPROM_h
@@ -649,9 +649,9 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeFloatToEeprom(float f
 	uint32_t i;
 	uint8_t tmp;
 
-	memcpy(&i, &f, sizeof(float));
+	memcpy(&i, &f, sizeof(int32_t));
 
-	for (k = sizeof(float); k > 0; k--) {
+	for (k = sizeof(int32_t); k > 0; k--) {
 		tmp = (i >> ((k - 1) << 3)) & 0xFF;
 		*crc = crcUpdate(*crc, tmp);
 		EEPROM_update(*addr, tmp);
@@ -691,7 +691,7 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSensorSettingToEeprom
 		int * addr, uint16_t * crc)
 {
 	#ifdef EEPROM_h
-	float f;
+	int32_t f;
 
 	f = data[n].releasedToApproachedThreshold;
 	writeFloatToEeprom(f, addr, crc);
@@ -710,7 +710,7 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSensorSettingToEeprom
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 uint16_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::eepromSizeRequired(void)
 {
-	return nSensors * 4 * sizeof(float) + TL_EEPROM_N_BYTES_OVERHEAD;
+	return nSensors * 4 * sizeof(int32_t) + TL_EEPROM_N_BYTES_OVERHEAD;
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
@@ -1018,7 +1018,7 @@ bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isPressed(int n)
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(uint8_t ch)
 {
-	float s;
+	uint32_t s;
 	TLStruct * d;
 
 	d = &(data[ch]);
@@ -1051,7 +1051,11 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(uint8_t ch)
 	/* Only perform noise measurement when not calibrating any more */
 	if ((d->enableNoisePowerMeasurement) && (d->buttonState >
 			TLStruct::buttonStateCalibrating)) {
-		s = d->delta * d->delta;
+		if (d->delta <= 0xFFFF) {
+			s = d->delta * d->delta;
+		} else {
+			s = 0xFFFFFFFF;
+		}
 		d->noisePower = (d->noiseCounter * d->noisePower + s) / 
 			(d->noiseCounter + 1);
 		
@@ -1064,13 +1068,13 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(uint8_t ch)
 		Serial.print("; noisePower: ");
 		Serial.print(d->noisePower);*/
 	
-		if (d->noiseCounter < d->filterCoeff - 1) {
+		if (d->noiseCounter < (uint32_t) (d->filterCoeff - 1)) {
 			d->noiseCounter++;
 		}
 	}
 	//Serial.println("");
 
-	if (d->counter < d->filterCoeff - 1) {
+	if (d->counter < (uint32_t) (d->filterCoeff - 1)) {
 		d->counter++;
 	}
 }
@@ -1098,7 +1102,7 @@ bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setForceCalibratingStates(
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getRaw(int ch)
+uint32_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getRaw(int ch)
 {
 	TLStruct * d;
 
@@ -1108,7 +1112,7 @@ float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getRaw(int ch)
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getValue(int ch)
+int32_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getValue(int ch)
 {
 	TLStruct * d;
 
@@ -1118,7 +1122,7 @@ float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getValue(int ch)
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getDelta(int ch)
+int32_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getDelta(int ch)
 {
 	TLStruct * d;
 
@@ -1128,7 +1132,7 @@ float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getDelta(int ch)
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-float TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getAvg(int ch)
+int32_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getAvg(int ch)
 {
 	TLStruct * d;
 
@@ -1342,7 +1346,7 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processStateCalibrating(ui
 	t = d->lastSampledAtTime - d->stateChangedAtTime;
 	t_max = d->calibrationTime;
 
-	if ((d->counter < d->filterCoeff - 1) || (t < t_max)) {
+	if ((d->counter < (uint32_t) (d->filterCoeff - 1)) || (t < t_max)) {
 		updateAvg(ch);
 	} else {
 		setState(ch, TLStruct::buttonStateNoisePowerMeasurement);

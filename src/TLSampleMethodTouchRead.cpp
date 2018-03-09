@@ -31,9 +31,13 @@
 #include "TouchLib.h"
 #include "TLSampleMethodTouchRead.h"
 
-#define TL_REFERENCE_VALUE_DEFAULT			((float) 20000) /* 0.02 pF */
-#define TL_SCALE_FACTOR_DEFAULT				((float) 1)
-#define TL_OFFSET_VALUE_DEFAULT				((float) 0) /* pF */
+/* 
+ * Teensy has 1/50 pF (== 20 fF) per lsb --> set default reference value to 20
+ * https://www.kickstarter.com/projects/paulstoffregen/teensy-30-32-bit-arm-cortex-m4-usable-in-arduino-a/posts
+ */
+#define TL_REFERENCE_VALUE_DEFAULT			((int32_t) 20)
+#define TL_SCALE_FACTOR_DEFAULT				((int32_t) 1)
+#define TL_OFFSET_VALUE_DEFAULT				((int32_t) 0) /* fF */
 
 #define TL_SET_OFFSET_VALUE_MANUALLY_DEFAULT	    	false
 
@@ -42,6 +46,10 @@
 #define TL_APPROACHED_TO_PRESSED_THRESHOLD_DEFAULT	7.5
 #define TL_PRESSED_TO_APPROACHED_THRESHOLD_DEFAULT	6.0
 #define TL_TOUCHREAD_MAX				((1 << 16) - 1)
+
+#define TL_BAR_LOWER_PCT				40
+#define TL_BAR_UPPER_PCT				80
+
 
 int TLSampleMethodTouchReadPreSample(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch)
@@ -89,19 +97,18 @@ int TLSampleMethodTouchReadPostSample(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch)
 {
         TLStruct * d;
-        float tmp, scale;
+        int32_t tmp, scale;
 
         d = &(data[ch]);
 
         if (d->enableSlewrateLimiter) {
-                scale = (float) ((TL_TOUCHREAD_MAX + 1) << 2);
+                scale = 2;
         } else {
-                scale = ((float) (d->nMeasurementsPerSensor << 1)) *
-                        ((float) (TL_TOUCHREAD_MAX + 1));
+                scale = (d->nMeasurementsPerSensor << 1);
         }
 
-        tmp = d->raw / scale;
-        tmp = d->scaleFactor * d->referenceValue * tmp;
+        tmp = (d->scaleFactor * d->referenceValue * d->raw + (scale >> 1)) / 
+		scale;
         d->value = tmp;
         /* Capacitance can be negative due to noise! */
 
@@ -114,14 +121,15 @@ int TLSampleMethodTouchReadMapDelta(struct TLStruct * data, uint8_t nSensors,
 {
 	int n = -1;
 	struct TLStruct * d;
-	float delta;
+	int32_t delta;
 
 	d = &(data[ch]);
 
 	delta = d->delta;
 
-	n = map(100 * log(delta), 0, 80 * log(d->calibratedMaxDelta), 0,
-		length);
+	n = map(100 * log(delta), TL_BAR_LOWER_PCT *
+			log(d->calibratedMaxDelta), TL_BAR_UPPER_PCT *
+			log(d->calibratedMaxDelta), 0, length);
 
 	n = (n < 0) ? 0 : n;
 	n = (n > length) ? length : n;

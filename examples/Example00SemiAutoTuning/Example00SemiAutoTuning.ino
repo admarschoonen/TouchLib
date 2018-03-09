@@ -578,7 +578,7 @@ bool askSampleMethod(int n)
 	/*Serial.print(F(" a capacitive sensor using CVD method, a capacitive "
 		"sensor using touchRead() method or a resistive sensor using\n"
 		"analogRead() method? "));*/
-	Serial.print(F(" a capacitive sensor using touchRead() method or a "
+	Serial.println(F(" a capacitive sensor using touchRead() method or a "
 		"resistive sensor using analogRead() method? "));
 	do {
 		/*Serial.print(F("Enter c for capacitive using CVD, t for "
@@ -619,7 +619,7 @@ bool askSampleMethod(int n)
 	Serial.print(F("Is sensor "));
 	Serial.print(n);
 	Serial.print(F(" a capacitive sensor using CVD method or a resistive "
-		"sensor using analogRead() method? "));
+		"sensor using analogRead() method?\n"));
 	do {
 		Serial.print(F("Enter c for capacitive using CVD or r for "
 			"resistive: "));
@@ -692,9 +692,11 @@ void noiseTuning(void)
 		}
 	
 		if (tlSensors.data[n].approachedToReleasedThreshold <
-				0.9 * 3 * sqrt(tlSensors.data[n].noisePower)) {
+				(9 * 3 * sqrt(tlSensors.data[n].noisePower) +
+				5) / 10) {
 			tlSensors.data[n].approachedToReleasedThreshold =
-				0.9 * 3 * sqrt(tlSensors.data[n].noisePower);
+				(9 * 3 * sqrt(tlSensors.data[n].noisePower) +
+				5) / 10;
 			highNoise = true;
 		}
 		#endif
@@ -724,9 +726,9 @@ void noiseTuning(void)
 bool touchTuning(int n)
 {
 	char c;
-	float delta[N_MEASUREMENTS];
-	float avg = 0;
-	float min_val;
+	int32_t delta[N_MEASUREMENTS];
+	int32_t avg = 0;
+	int32_t min_val;
 	int k;
 	bool done = false;
 	bool isTuned = false;
@@ -743,7 +745,7 @@ bool touchTuning(int n)
 	}
 	Serial.print(F(" sensor "));
 	Serial.print(n);
-	Serial.print(F(". "));
+	Serial.println(F(". "));
 
 	do {
 		do {
@@ -781,16 +783,19 @@ bool touchTuning(int n)
 		}
 		avg = avg / N_MEASUREMENTS;
 		
-		tlSensors.data[n].approachedToPressedThreshold = avg / 2;
-		tlSensors.data[n].pressedToApproachedThreshold = 0.9 *
-			tlSensors.data[n].approachedToPressedThreshold;
+		tlSensors.data[n].approachedToPressedThreshold = (avg >> 1);
+		tlSensors.data[n].pressedToApproachedThreshold = (9 *
+			tlSensors.data[n].approachedToPressedThreshold + 5) / 10;
 
-		if (tlSensors.data[n].pressedToApproachedThreshold < 1.1 *
-				tlSensors.data[n].releasedToApproachedThreshold) {
+		if (tlSensors.data[n].pressedToApproachedThreshold < ((11 *
+				tlSensors.data[n].releasedToApproachedThreshold
+				+ 5) / 10)) {
 			Serial.print(F("Error! Detected signal is too low: "));
 			Serial.print(tlSensors.data[n].pressedToApproachedThreshold);
 			Serial.print(F(" < "));
-			Serial.print(1.1 * tlSensors.data[n].releasedToApproachedThreshold);
+			Serial.print((11 *
+				tlSensors.data[n].releasedToApproachedThreshold
+				+ 5) / 10);
 			Serial.print(". ");
 		} else {
 			done = true;
@@ -812,10 +817,10 @@ bool touchTuning(int n)
 		 */
 		tlSensors.data[n].approachedToPressedThreshold =
 			tlSensors.data[n].releasedToApproachedThreshold * 10;
-		tlSensors.data[n].pressedToApproachedThreshold = 0.9 *
-			tlSensors.data[n].approachedToPressedThreshold;
-		tlSensors.data[n].calibratedMaxDelta = 
-			tlSensors.data[n].approachedToPressedThreshold * 1.1;
+		tlSensors.data[n].pressedToApproachedThreshold = (9 *
+			tlSensors.data[n].approachedToPressedThreshold + 5) / 10;
+		tlSensors.data[n].calibratedMaxDelta = (11 *
+			tlSensors.data[n].approachedToPressedThreshold + 5) / 10;
 		Serial.print(F("\nSkipped tuning sensor "));
 		Serial.print(n);
 	}
@@ -827,8 +832,8 @@ bool touchTuning(int n)
 void maxTouchTuning(int n)
 {
 	char c;
-	float maxDelta[N_MEASUREMENTS];
-	float min_val;
+	int32_t maxDelta[N_MEASUREMENTS];
+	int32_t min_val;
 	int k;
 	bool done = false;
 

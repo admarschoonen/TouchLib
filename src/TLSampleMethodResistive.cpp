@@ -37,10 +37,10 @@
 #define TL_SAMPLE_METHOD_RESISTIVE_USE_INTERNAL_PULLUP	true
 
 /* ATmega2560 has internal pull-ups of 20 - 50 kOhm. Assume it is 35 kOhm */
-#define TL_REFERENCE_VALUE_DEFAULT			((float) 35) /* 35 kOhm */
-#define TL_SCALE_FACTOR_DEFAULT				((float) 1)
-#define TL_VALUE_MAX_DEFAULT				((float) 8000) /* 8 MOhm */
-#define TL_OFFSET_VALUE_DEFAULT				((float) 0) /* Ohm */
+#define TL_REFERENCE_VALUE_DEFAULT			((int32_t) 35000) /* 35 kOhm */
+#define TL_SCALE_FACTOR_DEFAULT				((int32_t) 1)
+#define TL_VALUE_MAX_DEFAULT				((int32_t) 8000000) /* 8 MOhm */
+#define TL_OFFSET_VALUE_DEFAULT				((int32_t) 0) /* Ohm */
 
 #define TL_SET_OFFSET_VALUE_MANUALLY_DEFAULT		false
 
@@ -136,30 +136,32 @@ int TLSampleMethodResistivePostSample(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch)
 {
 	TLStruct * d;
-	float tmp, scale;
+	int32_t tmp, scale;
 
 	d = &(data[ch]);
 
 	if (d->enableSlewrateLimiter) {
-		scale = (float) ((TL_ADC_MAX + 1) << 2);
+		scale = ((TL_ADC_MAX + 1) << 2);
 	} else {
-		scale = ((float) (d->nMeasurementsPerSensor << 1)) *
-			((float) (TL_ADC_MAX + 1));
+		scale = (d->nMeasurementsPerSensor << 1) *
+			(TL_ADC_MAX + 1);
 	}
-
-	tmp = d->raw / scale;
 
 	#if (USE_CORRECT_TRANSFER_FUNCTION == 1)
 
 	/*
-	 * Actual transfer function is tmp / (1 - tmp), but this is very
-	 * sensitive to noise when sensor is not pressed (since tmp will then be
-	 * very close to 1). Instead, clip the value to a predefined maximum.
+	 * Actual transfer function is
+	 * (d->raw / scale) / (1 - (d->raw / scale)), but this is very
+	 * sensitive to noise when sensor is not pressed (since tmp will then
+	 * be very close to 1). Instead, clip the value to a predefined
+	 * maximum.
 	 */
-	if (tmp > 1) {
-		tmp = 1;
+	if (d->raw > scale) {
+		d->raw = scale;
 	}
-	tmp = d->scaleFactor * d->referenceValue * tmp / (1 - tmp);
+	denum = scale - d->raw;
+	tmp = (d->scaleFactor * d->referenceValue * d->raw + (denum >> 1)) / 
+		denum;
 
 	if (tmp > d->tlStructSampleMethod.resistive.valueMax) {
 		tmp = d->tlStructSampleMethod.resistive.valueMax;
@@ -167,7 +169,7 @@ int TLSampleMethodResistivePostSample(struct TLStruct * data, uint8_t nSensors,
 
 	#else
 
-	tmp = d->scaleFactor * d->referenceValue * tmp;
+	tmp = d->scaleFactor * d->referenceValue * d->raw / scale;
 
 	#endif
 
@@ -182,7 +184,7 @@ int TLSampleMethodResistiveMapDelta(struct TLStruct * data, uint8_t nSensors,
 {
 	int n = -1;
 	struct TLStruct * d;
-	float delta;
+	int32_t delta;
 
 	d = &(data[ch]);
 	delta = d->delta - d->releasedToApproachedThreshold / 2;

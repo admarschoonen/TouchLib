@@ -46,9 +46,9 @@
 #define TL_CHARGE_DELAY_SENSOR_DEFAULT			0
 #define TL_CHARGE_DELAY_ADC_DEFAULT			0
 
-#define TL_REFERENCE_VALUE_DEFAULT			((float) 15) /* 15 pF */
-#define TL_SCALE_FACTOR_DEFAULT				((float) 1)
-#define TL_OFFSET_VALUE_DEFAULT				((float) 1000) /* pF */
+#define TL_REFERENCE_VALUE_DEFAULT			((int32_t) 15000) /* 15 pF */
+#define TL_SCALE_FACTOR_DEFAULT				((int32_t) 1)
+#define TL_OFFSET_VALUE_DEFAULT				((int32_t) 1000000) /* fF */
 
 #define TL_SET_OFFSET_VALUE_MANUALLY_DEFAULT		false
 
@@ -367,34 +367,55 @@ static void TLCharge(struct TLStruct * data, uint8_t nSensors, uint8_t ch,
 static void correctSample(struct TLStruct * data, uint8_t nSensors, uint8_t ch)
 {
 	TLStruct * d;
-	float tmp, scale;
+	int32_t tmp, scale;
+	float tmp_f, scale_f;
 
 	d = &(data[ch]);
 
-	if (d->enableSlewrateLimiter) {
-		scale = (float) ((TL_ADC_MAX + 1) << 2);
+	if (d->tlStructSampleMethod.CVD.nCharges > 1) {
+		/* floating point math */
+		if (d->enableSlewrateLimiter) {
+			scale_f = (float) ((TL_ADC_MAX + 1) << 2);
+		} else {
+			scale_f = ((float) (d->nMeasurementsPerSensor << 1)) *
+				((float) (TL_ADC_MAX + 1));
+		}
+	
+		tmp = 1 - ((float) d->raw) / scale_f;
+
+		tmp_f = pow((float) tmp, -((float) 1) /
+			((float) d->tlStructSampleMethod.CVD.nCharges)) - 
+			((float) 1);
+		tmp_f = (((float) 1) / tmp_f);
+		tmp = (int32_t) tmp_f;
+
+		d->tlStructSampleMethod.CVD.nChargesNext = (int32_t)
+			(ceilf(tmp));
+	
+		tmp = (int32_t) (scale_f * tmp * d->scaleFactor / 
+				d->referenceValue);
 	} else {
-		scale = ((float) (d->nMeasurementsPerSensor << 1)) *
-			((float) (TL_ADC_MAX + 1));
+		if (d->enableSlewrateLimiter) {
+			scale = (((int32_t) TL_ADC_MAX) + 1) << 2;
+		} else {
+			scale = (d->nMeasurementsPerSensor << 1) *
+				(((int32_t) TL_ADC_MAX) + 1);
+		}
+		tmp = ((d->referenceValue * d->scaleFactor * (scale - d->raw))
+				+ (scale >> 1)) / scale;
 	}
+	d->value = (int32_t) tmp;
 
-	tmp = 1 - ((float) d->raw) / scale;
-	tmp = pow(tmp, -((float) 1) /
-		((float) d->tlStructSampleMethod.CVD.nCharges)) - ((float) 1);
-	tmp = ((float) 1) / tmp;
-
-	d->tlStructSampleMethod.CVD.nChargesNext = (int32_t) (ceilf(tmp));
-	if (d->tlStructSampleMethod.CVD.nChargesNext < TL_N_CHARGES_MIN_DEFAULT) {
+	if (d->tlStructSampleMethod.CVD.nChargesNext < 
+			TL_N_CHARGES_MIN_DEFAULT) {
 		d->tlStructSampleMethod.CVD.nChargesNext =
 			TL_N_CHARGES_MIN_DEFAULT;
 	}
-	if (d->tlStructSampleMethod.CVD.nChargesNext > TL_N_CHARGES_MAX_DEFAULT) {
+	if (d->tlStructSampleMethod.CVD.nChargesNext > 
+			TL_N_CHARGES_MAX_DEFAULT) {
 		d->tlStructSampleMethod.CVD.nChargesNext =
 			TL_N_CHARGES_MAX_DEFAULT;
 	}
-
-	tmp = scale * tmp * d->scaleFactor / d->referenceValue;
-	d->value = tmp;
 	/* Capacitance can be negative due to noise! */
 }
 
@@ -491,7 +512,7 @@ int TLSampleMethodCVDMapDelta(struct TLStruct * data, uint8_t nSensors,
 {
 	int n = -1;
 	struct TLStruct * d;
-	float delta;
+	int32_t delta;
 
 	d = &(data[ch]);
 
