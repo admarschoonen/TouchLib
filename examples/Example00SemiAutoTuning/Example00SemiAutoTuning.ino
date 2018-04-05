@@ -79,6 +79,15 @@
 #error "TouchLib is too fat for ATtiny."
 #endif
 
+#if IS_ESP32
+/*
+ * ESP32 are not yet tested to how many sensors they can support. Probably a
+ * lot.
+ */
+#define N_SENSORS			32
+#define KNOWN_BOARD			1
+#endif
+
 #if IS_TEENSY3X_WITH_TOUCHREAD
 /*
  * Teensies are not yet tested to how many sensors they can support. Probably a
@@ -114,6 +123,7 @@ TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR> tlSensors;
 #define PIN_TYPE_ANY		0
 #define PIN_TYPE_ANALOG		1
 #define PIN_TYPE_DIGITAL	2
+#define PIN_TYPE_TOUCH		3
 
 static int nSensors = N_SENSORS;
 
@@ -310,6 +320,10 @@ void printPinMsg(int type)
 		Serial.print(F("Illegal digital pin. Enter 0 for digital pin 0,"
 			" 1" " for digital pin 1 etc. "));
 		break;
+	case PIN_TYPE_TOUCH:
+		Serial.print(F("Illegal touch pin. Enter T0 for touch pin 0,"
+			" T1" " for touch pin 1 etc. "));
+		break;
 	default:
 		Serial.println(F("Error! This should never happen!"));
 	}
@@ -368,7 +382,7 @@ int processSerialDataForPin(int type)
 	int pin = -1;
 	char s[20] = {'\0'};
 	int n, k;
-	bool isAnalog = false, illegalChar, kIsNum;
+	bool isAnalog = false, isTouch = false, illegalChar, kIsNum;
 
 	do {
 		n = Serial_getString(s, sizeof(s));
@@ -384,9 +398,14 @@ int processSerialDataForPin(int type)
 				if (k == 0) {
 					if ((s[k] == 'A') || (s[k] == 'a')) {
 						isAnalog = true;
-					} else if (!kIsNum) {
-						illegalChar = true;
-						break;
+					} else {
+						if ((s[k] == 'T') || 
+								(s[k] == 't')) {
+							isTouch = true;
+						} else if (!kIsNum) {
+							illegalChar = true;
+							break;
+						}
 					}
 				}
 				if ((k > 0) && (!kIsNum)) {
@@ -396,7 +415,8 @@ int processSerialDataForPin(int type)
 				k++;
 			}
 
-			if ((illegalChar) || (isAnalog && (n == 1))) {
+			if ((illegalChar) || (isAnalog && (n == 1)) || 
+					(isTouch && (n == 1))) {
 				printPinMsg(type);
 			} else {
 				pin = -1;
@@ -404,7 +424,10 @@ int processSerialDataForPin(int type)
 						(type == PIN_TYPE_ANY))) {
 					pin = atoi(&s[1]) + A0;
 				}
-				if (!isAnalog && ((type == PIN_TYPE_DIGITAL) ||
+				if (isTouch && (type == PIN_TYPE_TOUCH)) {
+					pin = atoi(&s[1]) + T0;
+				}
+				if (!(isAnalog || isTouch) && ((type == PIN_TYPE_DIGITAL) ||
 						(type == PIN_TYPE_ANY))) {
 					pin = atoi(s);
 				}
@@ -508,7 +531,7 @@ bool askPower(int timeout)
 
 void askPinning(int n)
 {
-	int pin;
+	int pin = 0;
 
 	if ((tlSensors.data[n].sampleMethod == TLSampleMethodCVD) ||
 		(tlSensors.data[n].sampleMethod == TLSampleMethodResistive)) {
@@ -525,6 +548,7 @@ void askPinning(int n)
 		} while (pin == -1);
 	}
 	if (tlSensors.data[n].sampleMethod == TLSampleMethodTouchRead) {
+		#if IS_TEENSY3X_WITH_TOUCHREAD
 		do {
 			Serial.print(F("Which touch pin is sensor "));
 			Serial.print(n);
@@ -535,6 +559,19 @@ void askPinning(int n)
 				"digital pin 0, 1 for digital pin 1 etc. "));
 			}
 		} while (pin == -1);
+		#endif
+		#if IS_ESP32
+		do {
+			Serial.print(F("Which touch pin is sensor "));
+			Serial.print(n);
+			Serial.print(F(" connected to? "));
+			pin = processSerialDataForPin(PIN_TYPE_TOUCH);
+			if (pin == -1) {
+				Serial.print(F("Illegal pin. Enter T0 for "
+				"touch pin 0, T1 for touch pin 1 etc. "));
+			}
+		} while (pin == -1);
+		#endif
 	}
 
 	if (tlSensors.data[n].sampleMethod == TLSampleMethodCVD) {
@@ -565,7 +602,7 @@ void askPinning(int n)
 	}
 }
 
-#if IS_TEENSY3X
+#if ((IS_TEENSY3X) || (IS_ESP32))
 #define ASK_SAMPLE_METHOD_DEFINED 1
 bool askSampleMethod(int n)
 {

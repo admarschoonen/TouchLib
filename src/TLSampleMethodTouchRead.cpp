@@ -62,9 +62,9 @@ int TLSampleMethodTouchReadSample(struct TLStruct * data, uint8_t nSensors,
 {
 	int sample = 0;
 	
-	/* touchRead() is only available on Teensy 3.x and not Teensy 3.5 */
+	/* touchRead() is only available on ESP32 and Teensy 3.x and not Teensy 3.5 */
 
-	#if IS_TEENSY_WITH_TOUCHREAD
+	#if ((IS_TEENSY_WITH_TOUCHREAD) || (IS_ESP32))
 	struct TLStruct * dCh;
 	int ch_pin;
 
@@ -173,7 +173,12 @@ int TLSampleMethodTouchRead(struct TLStruct * data, uint8_t nSensors,
 	d->pressedToApproachedThreshold =
 		TL_PRESSED_TO_APPROACHED_THRESHOLD_DEFAULT;
 
+	#if IS_ESP32
+	d->direction = TLStruct::directionNegative;
+	#else
 	d->direction = TLStruct::directionPositive;
+	#endif
+
 	d->sampleType = TLStruct::sampleTypeNormal;
 
 	d->pin = &(d->tlStructSampleMethod.touchRead.pin);

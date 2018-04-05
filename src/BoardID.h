@@ -29,16 +29,20 @@
 #ifndef BoardID_h
 #define BoardID_h
 
-#if ARDUINO >= 100
-#include "Arduino.h"
-#include <avr/io.h>
+#ifdef AVR
+        #if ARDUINO >= 100
+                #include "Arduino.h"
+                #include <avr/io.h>
+        #else
+                #include "WProgram.h"
+                #include "pins_arduino.h"
+                #include "WConstants.h"
+                #include <avr/io.h>
+        #endif
 #elif defined(SPARK)
-#include "application.h"
-#else
-#include "WProgram.h"
-#include "pins_arduino.h"
-#include "WConstants.h"
-#include <avr/io.h>
+        #include "application.h"
+        #include "Particle.h"
+        #include <math.h>
 #endif
 
 #define IS_AVR			(defined(SIGNATURE_0))
@@ -148,5 +152,8 @@
  * https://community.particle.io/t/preprocessor-ifdef-to-detect-platform-type-core-photon-at-compile-time/13085
  */
 #define IS_PARTICLE			(defined(SPARK) || defined(PLATFORM_ID))
+
+/* For ESP32 */
+#define IS_ESP32			(defined(ARDUINO_ARCH_ESP32))
 
 #endif

@@ -28,6 +28,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <stdint.h>
 #include "TouchLib.h"
 #include "TLSampleMethodCVD.h"
 #include "BoardID.h"
@@ -303,9 +304,18 @@ int TLAnalogRead(int pin)
 
 	return value;
 }
+#elif IS_ESP32
+/* ESP32 does not yet have CVD support */
+void TLSetAdcReferencePin(int pin)
+{
+}
+
+int TLAnalogRead(int pin)
+{
+	return 0;
+}
 #else
-#warning CVD sensors has not yet been ported to this architecture. Please \
-	inform the author.
+#warning CVD sensors has not yet been ported to this architecture. Please inform the author.
 void TLSetAdcReferencePin(int pin)
 {
 }
