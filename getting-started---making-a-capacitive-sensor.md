@@ -49,10 +49,10 @@ In many projects, the capacitive sensor will be in a casing. This casing should
 not be made of metal as that can shield off the electrical field from the
 sensor to the users hand and thus prevent the capacitive touch to work
 properly. For the same reason, it is not recommended to use paint with a lot of
-conductive (metal or carbon) particles. Some paints with metallic particles
-seem to work fine though; you'll have to test which paints work well and which
-don't. Also, be aware that some black paints contain large amounts of carbon
-and might affect the capacitive touch sensing.
+conductive particles (such as metal or carbon). Some paints with metallic
+particles seem to work fine though; you'll have to test which paints work well
+and which don't. Also, be aware that some black paints contain large amounts of
+carbon and might affect the capacitive touch sensing.
 
 As said before, the material should not be made of metal. Most other materials
 such as wood, plastic and glass as well as textiles (cotton, nylon, wool) are

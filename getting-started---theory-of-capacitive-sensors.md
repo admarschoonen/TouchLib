@@ -61,16 +61,16 @@ Interference from other sources
 There are several different methods to measure the capacitance of a capacitive
 sensor but most methods rely on a combination of driving the voltage on the
 sensor to a known value (supply or ground), followed by leaving the sensor
-floating and then:
+floating and then either:
 * measuring the time it takes before the voltage on the sensor reaches a
   certain level, or
 * connecting the sensor to a reference capacitor and measuring the voltage on
   the sensor
 
 In both cases, the sensor is floating, which means that the voltage is easily
-disturbed by external electrical fields. These fields can flow from the sensor
-to ground (via the users hand for example). This is usually the desired
-behaviour.
+disturbed by external electrical fields. These fields can for example flow from
+the sensor to ground (via the users hand for example, which is usually the
+desired behaviour for capacitive touch sensors).
 
 However, these fields can also flow to or from other sources, such as another
 large metallic object that has been placed close by or electrical fields from

@@ -7,12 +7,13 @@ weight: 10
 in_book: 1
 ---
 
-TouchLib is a generic touch library for Arduino and Arduino-like boards and can
-be used for both resistive and capacitive touch. It features advanced [signal
-processing techniques](../../touchlib-api/signal-processing/) and an extended
-button state machine as well as a code generator to tune your sensors and
-create an Arduino program tuned for your sensors that you can use as starting
-point for your next touch project.
+[TouchLib](https://github.com/admarschoonen/TouchLib/) is a generic touch
+library for Arduino and Arduino-like boards and can be used for both resistive
+and capacitive touch. It features advanced [signal processing
+techniques](../../touchlib-api/signal-processing/) and an extended button state
+machine as well as a code generator to tune your sensors and create an Arduino
+program tuned for your sensors that you can use as starting point for your next
+touch project.
 
 To get started with TouchLib you need an Arduino UNO board or one of the other
 [supported boards](../supported-boards/) and one or more capacitive (or
