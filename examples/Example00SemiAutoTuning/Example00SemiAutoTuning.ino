@@ -424,9 +424,11 @@ int processSerialDataForPin(int type)
 						(type == PIN_TYPE_ANY))) {
 					pin = atoi(&s[1]) + A0;
 				}
+				#if IS_ESP32
 				if (isTouch && (type == PIN_TYPE_TOUCH)) {
 					pin = atoi(&s[1]) + T0;
 				}
+				#endif
 				if (!(isAnalog || isTouch) && ((type == PIN_TYPE_DIGITAL) ||
 						(type == PIN_TYPE_ANY))) {
 					pin = atoi(s);

@@ -29,32 +29,10 @@
 #ifndef TouchLib_h
 #define TouchLib_h
 
-#ifdef AVR
-	#if ARDUINO >= 100
-		#include "Arduino.h"
-		#include <avr/io.h>
-	#else
-		#include "WProgram.h"
-		#include "pins_arduino.h"
-		#include "WConstants.h"
-		#include <avr/io.h>
-	#endif
-#elif defined(SPARK)
-	#include "application.h"
-	#include "Particle.h"
-	#include <math.h>
-#endif
+#include <BoardID.h>
 
 #ifdef EEPROM_h
 #include <avr/eeprom.h>
-#endif
-
-#include <BoardID.h>
-
-#if IS_ESP32
-	#include "Arduino.h"
-	#include <math.h>
-	#include <cstddef>
 #endif
 
 #include <TLSampleMethodCustom.h>

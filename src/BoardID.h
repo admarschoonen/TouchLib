@@ -29,20 +29,27 @@
 #ifndef BoardID_h
 #define BoardID_h
 
+#if ARDUINO >= 100
+	#include "Arduino.h"
+#else
+	#include "WProgram.h"
+	#include "WConstants.h"
+#endif
+
 #ifdef AVR
         #if ARDUINO >= 100
-                #include "Arduino.h"
                 #include <avr/io.h>
         #else
-                #include "WProgram.h"
                 #include "pins_arduino.h"
-                #include "WConstants.h"
                 #include <avr/io.h>
         #endif
 #elif defined(SPARK)
         #include "application.h"
         #include "Particle.h"
         #include <math.h>
+#elif IS_ESP32
+        #include <math.h>
+        #include <cstddef>
 #endif
 
 #define IS_AVR			(defined(SIGNATURE_0))
