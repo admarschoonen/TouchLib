@@ -11,7 +11,7 @@ email: admar@familieschoonen.nl
 description: > # this means to ignore newlines until "baseurl:"
   Some examples on how to get started and use TouchLib for (capacitive) touch
   sensors on Arduino and Arduino-like boards.
-baseurl: "" # the subpath of your site, e.g. /blog
+baseurl: /TouchLib # the subpath of your site, e.g. /blog
 url: "https://github.com/admarschoonen/TouchLib" # the base hostname & protocol for your site
 # twitter_username: jekyllrb
 github_username:  admarschoonen

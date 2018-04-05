@@ -1,4 +1,0 @@
-CapacitiveSensor	KEYWORD1
-capacitiveSensorRaw	KEYWORD2
-capacitiveSensor	KEYWORD2
-TouchLib		KEYWORD3
