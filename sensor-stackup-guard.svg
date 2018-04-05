@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg1569"
+   sodipodi:docname="sensor-stackup-guard.svg"
+   inkscape:version="0.92.2 (5c3e80d, 2017-08-06)">
+  <defs
+     id="defs1563" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="256"
+     inkscape:cx="505.43989"
+     inkscape:cy="609.551"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="3840"
+     inkscape:window-height="2081"
+     inkscape:window-x="0"
+     inkscape:window-y="41"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata1566">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:#0000ff;stroke:#0000ff;stroke-width:0.6481638;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect1571-8"
+       width="108.81397"
+       height="76.782295"
+       x="18.069891"
+       y="107.12334"
+       inkscape:export-xdpi="96"
+       inkscape:export-ydpi="96" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="50.129093"
+       y="148.69157"
+       id="text1602"
+       inkscape:export-xdpi="96"
+       inkscape:export-ydpi="96"><tspan
+         sodipodi:role="line"
+         id="tspan1600"
+         x="50.129093"
+         y="148.69157"
+         style="fill:#ffffff;stroke-width:0.26458332">Insulation</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="49.971478"
+       y="118.09952"
+       id="text1602-7"
+       inkscape:export-xdpi="96"
+       inkscape:export-ydpi="96"><tspan
+         sodipodi:role="line"
+         id="tspan1600-3"
+         x="49.971478"
+         y="118.09952"
+         style="fill:#ffffff;stroke-width:0.26458332">Insulation</tspan></text>
+    <g
+       id="g1695"
+       transform="translate(-22.483801,-2.2030238)"
+       inkscape:export-xdpi="96"
+       inkscape:export-ydpi="96">
+      <rect
+         y="114.74704"
+         x="233.85938"
+         height="33.145203"
+         width="57.44326"
+         id="rect1686"
+         style="fill:#000000;stroke:#000000;stroke-width:0.29474333;stroke-miterlimit:4;stroke-dasharray:none" />
+      <text
+         id="text1690"
+         y="134.68898"
+         x="242.78618"
+         style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+         xml:space="preserve"><tspan
+           style="fill:#ffffff;stroke-width:0.26458332"
+           y="134.68898"
+           x="242.78618"
+           id="tspan1688"
+           sodipodi:role="line">Arduino</tspan></text>
+    </g>
+    <rect
+       style="fill:#ff0000;stroke:#ff0000;stroke-width:0.28586021;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect1571-3"
+       width="106.73799"
+       height="15.225252"
+       x="19.050974"
+       y="153.05908"
+       inkscape:export-xdpi="96"
+       inkscape:export-ydpi="96" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="49.304691"
+       y="179.58479"
+       id="text1602-9"
+       inkscape:export-xdpi="96"
+       inkscape:export-ydpi="96"><tspan
+         sodipodi:role="line"
+         id="tspan1600-4"
+         x="49.304691"
+         y="179.58479"
+         style="fill:#ffffff;stroke-width:0.26458332">Insulation</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="59.870407"
+       y="164.10582"
+       id="text1738"><tspan
+         sodipodi:role="line"
+         id="tspan1736"
+         x="59.870407"
+         y="164.10582"
+         style="fill:#ffffff;stroke-width:0.26458332">Guard</tspan></text>
+    <ellipse
+       style="fill:#0000ff;fill-opacity:1;stroke:none;stroke-width:0.40000001;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="path1740-8-0"
+       cx="192.05183"
+       cy="128.45789"
+       rx="7.6424861"
+       ry="11.918944" />
+    <rect
+       style="fill:#0000ff;fill-opacity:1;stroke:none;stroke-width:0.78466862;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect1799"
+       width="44.457607"
+       height="23.917652"
+       x="147.79279"
+       y="116.53144" />
+    <ellipse
+       style="fill:#0000ff;fill-opacity:1;stroke:#000000;stroke-width:0.40000001;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="path1740-8"
+       cx="147.27863"
+       cy="128.55507"
+       rx="7.6424861"
+       ry="11.918943" />
+    <rect
+       style="fill:#0000ff;stroke:none;stroke-width:0.02083163;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect1571-9-2-1"
+       width="11.81569"
+       height="0.73040396"
+       x="134.5099"
+       y="136.28528" />
+    <rect
+       style="fill:#0000ff;stroke:none;stroke-width:0.02228961;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect1571-8-1-6"
+       width="13.527501"
+       height="0.73040396"
+       x="132.7981"
+       y="134.82448" />
+    <ellipse
+       style="fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:0.40000001;stroke-miterlimit:4;stroke-dasharray:none"
+       id="path1740"
+       cx="147.31102"
+       cy="128.65225"
+       rx="6.0583153"
+       ry="9.3304529" />
+    <rect
+       style="fill:#ff0000;stroke:none;stroke-width:0.02171565;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect1571-6-0"
+       width="12.796726"
+       height="0.73286313"
+       x="133.53009"
+       y="135.55365" />
+    <rect
+       style="fill:#0000ff;stroke:#0000ff;stroke-width:0.03172749;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect1571-8-1"
+       width="27.503237"
+       height="0.72788644"
+       x="119.43412"
+       y="127.69897" />
+    <ellipse
+       style="fill:#0000ff;fill-opacity:1;stroke:none;stroke-width:0.40000001;stroke-miterlimit:4;stroke-dasharray:none"
+       id="path1740-4"
+       cx="147.34341"
+       cy="128.58746"
+       rx="4.6003122"
+       ry="7.0301175" />
+    <rect
+       style="fill:#0000ff;stroke:#0000ff;stroke-width:0.03172749;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect1571-9-2"
+       width="27.503237"
+       height="0.72788644"
+       x="119.43412"
+       y="129.15474" />
+    <ellipse
+       style="fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:0.40000001;stroke-miterlimit:4;stroke-dasharray:none"
+       id="path1740-5"
+       cx="147.34341"
+       cy="128.81425"
+       rx="3.1385345"
+       ry="5.276763" />
+    <rect
+       style="fill:#ff0000;stroke:#ff0000;stroke-width:0.03172749;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect1571-6"
+       width="27.503237"
+       height="0.72788644"
+       x="119.43412"
+       y="128.42686" />
+    <rect
+       style="fill:#ff0000;stroke:#ff0000;stroke-width:0.26499999;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect1571"
+       width="91.673447"
+       height="15.234363"
+       x="27.79603"
+       y="122.20572"
+       inkscape:export-xdpi="96"
+       inkscape:export-ydpi="96" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="39.973206"
+       y="133.1962"
+       id="text1575"
+       inkscape:export-xdpi="96"
+       inkscape:export-ydpi="96"><tspan
+         sodipodi:role="line"
+         id="tspan1573"
+         x="39.973206"
+         y="133.1962"
+         style="stroke-width:0.26458332;fill:#ffffff">Touch sensor</tspan></text>
+    <rect
+       style="fill:#0000ff;stroke:none;stroke-width:0.02083163;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect1571-9-2-1-6"
+       width="11.81569"
+       height="0.73040396"
+       x="136.28651"
+       y="-134.99336"
+       transform="rotate(90)" />
+    <rect
+       style="fill:#0000ff;stroke:none;stroke-width:0.02417481;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect1571-8-1-6-3"
+       width="15.912518"
+       height="0.73040396"
+       x="135.55365"
+       y="-133.53009"
+       transform="rotate(90)" />
+    <rect
+       style="fill:#ff0000;stroke:none;stroke-width:0.02171565;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect1571-6-0-2"
+       width="12.796727"
+       height="0.73286313"
+       x="136.28651"
+       y="-134.26295"
+       transform="rotate(90)" />
+  </g>
+</svg>
