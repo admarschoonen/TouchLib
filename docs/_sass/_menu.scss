@@ -1,0 +1,39 @@
+$menu-background-color: lighten($brand-color, 40%);
+
+#menu {
+   float: right;
+   right: 0em;
+   width: 16em;
+   margin: 1em 1em 1em 1em;
+   font-size: 83%;
+   color: inherit;
+   background-color: $menu-background-color;
+   border: thin solid $brand-color;
+   line-height: 1.2em;
+}
+
+#menu a:hover {
+   text-decoration: underline;
+}
+
+#menu ul {
+   list-style-type: none;
+   margin-left: 0em;
+   padding-left: 1em;         /* first ul has some padding left & right */
+   padding-right: 1em;
+}
+
+#menu li {
+   padding: 0.5em 0em;        /* inter-item padding */
+}
+
+#menu li a {
+   color: $text-color;
+   background-color: inherit;
+   text-decoration: none;
+   border-bottom: none;
+}
+
+#menu li a.active {
+   font-weight: bold;
+}
