@@ -4,10 +4,10 @@
     <title>TouchLib Documentation</title>
     <description>Some examples on how to get started and use TouchLib for (capacitive) touch sensors on Arduino and Arduino-like boards.
 </description>
-    <link>https://github.com/admarschoonen/TouchLib/</link>
-    <atom:link href="https://github.com/admarschoonen/TouchLib/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Thu, 05 Apr 2018 09:52:03 -0400</pubDate>
-    <lastBuildDate>Thu, 05 Apr 2018 09:52:03 -0400</lastBuildDate>
+    <link>https://github.com/admarschoonen/TouchLib/TouchLib/</link>
+    <atom:link href="https://github.com/admarschoonen/TouchLib/TouchLib/feed.xml" rel="self" type="application/rss+xml"/>
+    <pubDate>Thu, 05 Apr 2018 10:24:30 -0400</pubDate>
+    <lastBuildDate>Thu, 05 Apr 2018 10:24:30 -0400</lastBuildDate>
     <generator>Jekyll v3.1.6</generator>
     
       <item>
@@ -28,8 +28,8 @@
 
 </description>
         <pubDate>Sat, 03 Feb 2018 11:44:52 -0500</pubDate>
-        <link>https://github.com/admarschoonen/TouchLib/jekyll/update/2018/02/03/welcome-to-jekyll.html</link>
-        <guid isPermaLink="true">https://github.com/admarschoonen/TouchLib/jekyll/update/2018/02/03/welcome-to-jekyll.html</guid>
+        <link>https://github.com/admarschoonen/TouchLib/TouchLib/jekyll/update/2018/02/03/welcome-to-jekyll.html</link>
+        <guid isPermaLink="true">https://github.com/admarschoonen/TouchLib/TouchLib/jekyll/update/2018/02/03/welcome-to-jekyll.html</guid>
         
         
         <category>jekyll</category>
