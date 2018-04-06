@@ -9,14 +9,17 @@ in_book: 1
 
 Currently TouchLib supports the following boards:
 
-| Board | Capacitive sensing method | Resistive sensing method | Max number of sensors | Notes | 
-|-----|-----|-----|-----:|-----|
-| [Arduino UNO](https://store.arduino.cc/arduino-uno-rev3) | CVD method | analogRead() method | 6 | [1,2] |
-| [Arduino Mega](https://www.arduino.cc/en/Main/ArduinoBoardMega2560) | CVD method | analogRead() method | 32 | [2] |
-| [Arduino Flora](https://www.adafruit.com/product/659) | CVD method | analogRead() method | 6 | [1,2] |
-| [Teensy 3.2](https://www.pjrc.com/teensy/teensy31.html) | touchRead() method | analogRead() method | 32 | |
-| [Particle Photon](https://www.particle.io/products/hardware/photon-wifi-dev-kit) | CVD method | analogRead() method | 16 | |
-| [ESP32Dev Board](https://github.com/espressif/arduino-esp32) | touchRead() method | analogRead() method | 32 | |
+| Board | Processor | Capacitive sensing method | Resistive sensing method | Max number of sensors | Notes | 
+|-----|-----|-----|-----|-----:|-----|
+| [Arduino UNO](https://store.arduino.cc/arduino-uno-rev3) | ATmega328P | CVD method | analogRead() method | 6 | [1,2] |
+| [Arduino Mega](https://www.arduino.cc/en/Main/ArduinoBoardMega2560) | ATmega2560 | CVD method | analogRead() method | 32 | [2] |
+| [Arduino Lilypad USB](https://store.arduino.cc/lilypad-arduino-usb) | ATmega32u4 | CVD method | analogRead() method | 6 | [1,2] |
+| [Teensy 3.2](https://www.pjrc.com/teensy/teensy31.html) | MK20DX256 | touchRead() method | analogRead() method | 32 | [3] |
+| [Particle Photon](https://www.particle.io/products/hardware/photon-wifi-dev-kit) | STM32F205 | CVD method | analogRead() method | 16 | [4] |
+| [ESP32Dev Board](https://github.com/espressif/arduino-esp32) | ESP32 | touchRead() method | analogRead() method | 32 | |
+
+If a board is not listed but uses the same processor as one of the boards
+listed above, there is a good chance that it will work as well.
 
 Notes:
 
@@ -28,6 +31,17 @@ and consumes up to 77% of RAM and 86% of flash.
 therefore update rate and noise performance are not as good as with some other
 processors.
 
+[3] TouchLib is developed and tested on a Teensy 3.2 but should also work on
+Teensy LC, Teensy 3.0, 3.1 and 3.6. Note that the Teensy 3.5 doesn't have the
+hardware peripheral to do capacitive sensing and is thus not supported at this
+moment.
+
+[4] TouchLib is developed and tested on a Particle Photon but should also work
+on any Particle board that uses the STM32F205 (such as the Electron). Note that
+the 1st generation Particle boards (Spark Core) and the 3rd generation boards
+(Argon, Boron and Xenon) are using a different processor (STM32F103
+respectively Nordic nRF52840) and are not supported at this moment.
+
 ## Untested boards
 Boards that are untested but might work:
 * Any Arduino compatible board based on an ATmega328 processor.
@@ -37,6 +51,7 @@ Boards that are untested but might work:
   MK64FX512 (Teensy 3.5) is __not__ supported currently since it lacks the
   touchRead() function.
 * Any Particle compatible board based on an STM32F2xx processor.
+* Any Arduino compatible board based on an ESP32 processor.
 
 When using an untested board, please check that the pin mappings from GPIO port
 / pin to Arduino pin number and from ADC input to Arduino analog pin number
@@ -45,5 +60,5 @@ supported board.
 
 ## Unsupported boards
 TouchLib does not work on ATtiny processors as these processors
-simply have way to small RAM and flash for TouchLib.
+simply have way to little RAM and flash for TouchLib.
 
