@@ -271,6 +271,8 @@ int ADC_ReInit(void)
 	ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
 	ADC_InitStructure.ADC_NbrOfConversion = 1;
 	ADC_Init(ADC2, &ADC_InitStructure);
+
+	return 0;
 }
 
 int TLAnalogRead(int pin)
@@ -534,8 +536,8 @@ int TLSampleMethodCVDMapDelta(struct TLStruct * data, uint8_t nSensors,
 	 */
 	n = map(100 * log(delta), TL_BAR_LOWER_PCT * 
 		log(d->calibratedMaxDelta),
-		TL_BAR_UPPER_PCT * log(d->calibratedMaxDelta), 0,
-		length);
+		TL_BAR_UPPER_PCT * log(d->calibratedMaxDelta), (float) 0,
+		(float) length);
 
 	n = (n < 0) ? 0 : n;
 	n = (n > length) ? length : n;

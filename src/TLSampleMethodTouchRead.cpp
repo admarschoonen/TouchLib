@@ -129,7 +129,7 @@ int TLSampleMethodTouchReadMapDelta(struct TLStruct * data, uint8_t nSensors,
 
 	n = map(100 * log(delta), TL_BAR_LOWER_PCT *
 			log(d->calibratedMaxDelta), TL_BAR_UPPER_PCT *
-			log(d->calibratedMaxDelta), 0, length);
+			log(d->calibratedMaxDelta), 0.0f, (float) length);
 
 	n = (n < 0) ? 0 : n;
 	n = (n > length) ? length : n;
