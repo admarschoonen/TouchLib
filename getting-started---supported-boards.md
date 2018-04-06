@@ -16,6 +16,7 @@ Currently TouchLib supports the following boards:
 | [Arduino Flora](https://www.adafruit.com/product/659) | CVD method | analogRead() method | 6 | [1,2] |
 | [Teensy 3.2](https://www.pjrc.com/teensy/teensy31.html) | touchRead() method | analogRead() method | 32 | |
 | [Particle Photon](https://www.particle.io/products/hardware/photon-wifi-dev-kit) | CVD method | analogRead() method | 16 | |
+| [ESP32Dev Board](https://github.com/espressif/arduino-esp32) | touchRead() method | analogRead() method | 32 | |
 
 Notes:
 
