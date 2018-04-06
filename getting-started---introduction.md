@@ -22,10 +22,10 @@ resistive) sensors. If you don't have a sensor, you can easily make your own
 sensor](../making-a-resistive-sensor/).
 
 Note that while Arduino UNO boards do work and are supported, they have only
-limited memory and processor power. Since Teensy 3.x and Particle Photon boards
-have much more memory and faster processors, it's recommended to use these or
-similar boards instead. See [supported boards](../supported-boards/) for more
-details.
+limited memory and processor power. Since other boards such as Teensy 3.x,
+Particle Photon and ESP boards have much more memory and faster processors,
+it's recommended to use these or similar boards instead. See [supported
+boards](../supported-boards/) for more details.
 
 On the software side you will probably want the latest release from TouchLib. If you use
 a Particle Photon board, you can simply search for TouchLib in the library
