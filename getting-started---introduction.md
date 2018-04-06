@@ -23,7 +23,7 @@ sensor](../making-a-resistive-sensor/).
 
 Note that while Arduino UNO boards do work and are supported, they have only
 limited memory and processor power. Since other boards such as Teensy 3.x,
-Particle Photon and ESP boards have much more memory and faster processors,
+Particle Photon and ESP32 boards have much more memory and faster processors,
 it's recommended to use these or similar boards instead. See [supported
 boards](../supported-boards/) for more details.
 
