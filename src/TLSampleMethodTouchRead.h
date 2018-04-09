@@ -40,13 +40,13 @@ struct TLStructSampleMethodTouchRead {
 int TLSampleMethodTouchReadPreSample(struct TLStruct * data, uint8_t nSensors,
 	uint8_t ch);
 
-int TLSampleMethodTouchReadSample(struct TLStruct * data, uint8_t nSensors,
+int32_t TLSampleMethodTouchReadSample(struct TLStruct * data, uint8_t nSensors,
 	uint8_t ch, bool inv);
 
 int TLSampleMethodTouchReadPreSample(struct TLStruct * data, uint8_t nSensors,
 	uint8_t ch);
 
-int TLSampleMethodTouchReadMapDelta(struct TLStruct * d, uint8_t nSensors,
+int32_t TLSampleMethodTouchReadMapDelta(struct TLStruct * d, uint8_t nSensors,
 	uint8_t ch, int length);
 
 int TLSampleMethodTouchRead(struct TLStruct * data, uint8_t nSensors,

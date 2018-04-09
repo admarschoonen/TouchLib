@@ -410,7 +410,7 @@ static void correctSample(struct TLStruct * data, uint8_t nSensors, uint8_t ch)
 		if (d->enableSlewrateLimiter) {
 			scale = (((int32_t) TL_ADC_MAX) + 1) << 2;
 		} else {
-			scale = (d->nMeasurementsPerSensor << 1) *
+			scale = (((int32_t) d->nMeasurementsPerSensor) << 1) *
 				(((int32_t) TL_ADC_MAX) + 1);
 		}
 		tmp = ((d->referenceValue * d->scaleFactor * (scale - d->raw))
@@ -446,13 +446,14 @@ int TLSampleMethodCVDPreSample(struct TLStruct * data, uint8_t nSensors,
 	return 0;
 }
 
-int TLSampleMethodCVDSample(struct TLStruct * data, uint8_t nSensors, 
+int32_t TLSampleMethodCVDSample(struct TLStruct * data, uint8_t nSensors, 
 		uint8_t ch, bool inv)
 {
 	struct TLStruct * dCh;
 	struct TLStruct * dRef;
 	uint8_t ref;
-	int ch_pin, ref_pin, sample;
+	int ch_pin, ref_pin;
+	int32_t sample;
 	uint8_t i;
 
 	ref = TLChannelToReference(data, nSensors, ch);
@@ -519,10 +520,10 @@ int TLSampleMethodCVDPostSample(struct TLStruct * data, uint8_t nSensors,
 	return 0;
 }
 
-int TLSampleMethodCVDMapDelta(struct TLStruct * data, uint8_t nSensors,
+int32_t TLSampleMethodCVDMapDelta(struct TLStruct * data, uint8_t nSensors,
                 uint8_t ch, int length)
 {
-	int n = -1;
+	int32_t n = -1;
 	struct TLStruct * d;
 	int32_t delta;
 

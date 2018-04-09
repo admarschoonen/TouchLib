@@ -185,7 +185,7 @@ struct TLStruct {
 	 * This is used in pseudo differential measurements. If inverted
 	 * measurements are not supported, just check return 0 when inv == true.
 	 */
-	int (*sampleMethodSample)(struct TLStruct * d, uint8_t nSensors,
+	int32_t (*sampleMethodSample)(struct TLStruct * d, uint8_t nSensors,
 		uint8_t ch, bool inv);
 
 	/*
@@ -199,7 +199,7 @@ struct TLStruct {
 	 * sampleMethodMapDelta should be set by sampleMethod. It is called by
 	 * the printBar method.
 	 */
-	int (*sampleMethodMapDelta)(struct TLStruct * d, uint8_t nSensors,
+	int32_t (*sampleMethodMapDelta)(struct TLStruct * d, uint8_t nSensors,
 		uint8_t ch, int length);
 
 	/*
@@ -1025,6 +1025,7 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(uint8_t ch)
 	}
 
 	d->avg = (d->counter * d->avg + d->value) / (d->counter + 1);
+
 	/*Serial.print("ch: ");
 	Serial.print(ch);
 	Serial.print("; state: ");
@@ -1588,7 +1589,7 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 {
 	uint16_t length, pos;
 	uint8_t ch;
-	int sample1 = 0, sample2 = 0;
+	int32_t sample1 = 0, sample2 = 0;
 	int32_t sum;
 	unsigned long now;
 

@@ -51,14 +51,14 @@ struct TLStructSampleMethodCVD {
 int TLSampleMethodCVDPreSample(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch);
 
-int TLSampleMethodCVDSample(struct TLStruct * data, uint8_t nSensors, uint8_t ch,
-		bool inv);
+int32_t TLSampleMethodCVDSample(struct TLStruct * data, uint8_t nSensors,
+		uint8_t ch, bool inv);
 
 int TLSampleMethodCVDPostSample(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch);
 
-int TLSampleMethodCVDMapDelta(struct TLStruct * d, uint8_t nSensors, uint8_t ch,
-		int length);
+int32_t TLSampleMethodCVDMapDelta(struct TLStruct * d, uint8_t nSensors,
+		uint8_t ch, int length);
 
 int TLSampleMethodCVD(struct TLStruct * data, uint8_t nSensors, uint8_t ch);
 

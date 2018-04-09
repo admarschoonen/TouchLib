@@ -40,13 +40,13 @@ struct TLStructSampleMethodCustom {
 int TLSampleMethodCustomPreSample(struct TLStruct * data, uint8_t nSensors,
 	uint8_t ch) __attribute__ ((weak));
 
-int TLSampleMethodCustomSample(struct TLStruct * data, uint8_t nSensors,
+int32_t TLSampleMethodCustomSample(struct TLStruct * data, uint8_t nSensors,
 	uint8_t ch, bool inv) __attribute__ ((weak));
 
 int TLSampleMethodCustomPostSample(struct TLStruct * data, uint8_t nSensors,
 	uint8_t ch) __attribute__ ((weak));
 
-int TLSampleMethodCustomMapDelta(struct TLStruct * data, uint8_t nSensors,
+int32_t TLSampleMethodCustomMapDelta(struct TLStruct * data, uint8_t nSensors,
                 uint8_t ch, int length) __attribute__ ((weak));
 
 int TLSampleMethodCustom(struct TLStruct * data, uint8_t nSensors,

@@ -42,7 +42,7 @@ int TLSampleMethodCustomPreSample(struct TLStruct * data, uint8_t nSensors,
 	return 0;
 }
 
-int TLSampleMethodCustomSample(struct TLStruct * data, uint8_t nSensors,
+int32_t TLSampleMethodCustomSample(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch, bool inv)
 {
 	return 0;
@@ -60,7 +60,7 @@ int TLSampleMethodCustomPostSample(struct TLStruct * data, uint8_t nSensors,
 	return 0;
 }
 
-int TLSampleMethodCustomMapDelta(struct TLStruct * data, uint8_t nSensors,
+int32_t TLSampleMethodCustomMapDelta(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch, int length)
 {
 	return 0;

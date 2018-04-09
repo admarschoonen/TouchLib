@@ -37,7 +37,7 @@
 #define TL_SAMPLE_METHOD_RESISTIVE_USE_INTERNAL_PULLUP	true
 
 /* ATmega2560 has internal pull-ups of 20 - 50 kOhm. Assume it is 35 kOhm */
-#define TL_REFERENCE_VALUE_DEFAULT			((int32_t) 35000) /* 35 kOhm */
+#define TL_REFERENCE_VALUE_DEFAULT			((int32_t) 35000) /* 32 kOhm */
 #define TL_SCALE_FACTOR_DEFAULT				((int32_t) 1)
 #define TL_VALUE_MAX_DEFAULT				((int32_t) 8000000) /* 8 MOhm */
 #define TL_OFFSET_VALUE_DEFAULT				((int32_t) 0) /* Ohm */
@@ -81,11 +81,12 @@ int TLSampleMethodResistivePreSample(struct TLStruct * data, uint8_t nSensors,
 	return 0;
 }
 
-int TLSampleMethodResistiveSample(struct TLStruct * data, uint8_t nSensors,
+int32_t TLSampleMethodResistiveSample(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch, bool inv)
 {
 	struct TLStruct * dCh;
-	int ch_pin, gnd_pin, sample;
+	int ch_pin, gnd_pin;
+	int32_t sample;
 	bool useInternalPullup;
 	
 	if (inv) {
@@ -143,7 +144,7 @@ int TLSampleMethodResistivePostSample(struct TLStruct * data, uint8_t nSensors,
 	if (d->enableSlewrateLimiter) {
 		scale = ((TL_ADC_MAX + 1) << 2);
 	} else {
-		scale = (d->nMeasurementsPerSensor << 1) *
+		scale = (((int32_t) d->nMeasurementsPerSensor) << 1) * 
 			(TL_ADC_MAX + 1);
 	}
 
@@ -179,10 +180,10 @@ int TLSampleMethodResistivePostSample(struct TLStruct * data, uint8_t nSensors,
 	return 0;
 }
 
-int TLSampleMethodResistiveMapDelta(struct TLStruct * data, uint8_t nSensors,
-		uint8_t ch, int length)
+int32_t TLSampleMethodResistiveMapDelta(struct TLStruct * data, 
+		uint8_t nSensors, uint8_t ch, int length)
 {
-	int n = -1;
+	int32_t n = -1;
 	struct TLStruct * d;
 	int32_t delta;
 

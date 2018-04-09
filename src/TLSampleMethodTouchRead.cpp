@@ -57,10 +57,10 @@ int TLSampleMethodTouchReadPreSample(struct TLStruct * data, uint8_t nSensors,
 	return 0;
 }
 
-int TLSampleMethodTouchReadSample(struct TLStruct * data, uint8_t nSensors,
+int32_t TLSampleMethodTouchReadSample(struct TLStruct * data, uint8_t nSensors,
 	uint8_t ch, bool inv)
 {
-	int sample = 0;
+	int32_t sample = 0;
 	
 	/* touchRead() is only available on ESP32 and Teensy 3.x and not Teensy 3.5 */
 
@@ -104,7 +104,7 @@ int TLSampleMethodTouchReadPostSample(struct TLStruct * data, uint8_t nSensors,
         if (d->enableSlewrateLimiter) {
                 scale = 2;
         } else {
-                scale = (d->nMeasurementsPerSensor << 1);
+                scale = (((int32_t) d->nMeasurementsPerSensor) << 1);
         }
 
         tmp = (d->scaleFactor * d->referenceValue * d->raw + (scale >> 1)) / 
@@ -116,10 +116,10 @@ int TLSampleMethodTouchReadPostSample(struct TLStruct * data, uint8_t nSensors,
 }
 
 
-int TLSampleMethodTouchReadMapDelta(struct TLStruct * data, uint8_t nSensors,
+int32_t TLSampleMethodTouchReadMapDelta(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch, int length)
 {
-	int n = -1;
+	int32_t n = -1;
 	struct TLStruct * d;
 	int32_t delta;
 
