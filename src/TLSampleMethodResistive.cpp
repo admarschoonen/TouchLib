@@ -46,6 +46,8 @@
 
 #if IS_PARTICLE
 #define TL_ADC_RESOLUTION_BIT                                   12
+#elif IS_ESP32
+#define TL_ADC_RESOLUTION_BIT                                   12
 #elif IS_ATMEGA
 #define TL_ADC_RESOLUTION_BIT                                   10
 #else
