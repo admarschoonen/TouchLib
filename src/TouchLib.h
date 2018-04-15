@@ -31,10 +31,6 @@
 
 #include <BoardID.h>
 
-#ifdef EEPROM_h
-#include <avr/eeprom.h>
-#endif
-
 #include <TLSampleMethodCustom.h>
 #include <TLSampleMethodCVD.h>
 #include <TLSampleMethodResistive.h>
@@ -133,16 +129,16 @@ struct TLStruct {
 	enum Direction direction;
 	enum SampleType sampleType;
 	int * pin;
-	int32_t releasedToApproachedThreshold; /* stored in EEPROM */
-	int32_t approachedToReleasedThreshold; /* stored in EEPROM */
-	int32_t approachedToPressedThreshold; /* stored in EEPROM */
-	int32_t pressedToApproachedThreshold; /* stored in EEPROM */
+	int32_t releasedToApproachedThreshold;
+	int32_t approachedToReleasedThreshold;
+	int32_t approachedToPressedThreshold;
+	int32_t pressedToApproachedThreshold;
 	int32_t calibratedMaxDelta;
 	uint32_t releasedToApproachedTime;
 	uint32_t approachedToReleasedTime;
 	uint32_t approachedToPressedTime;
 	uint32_t pressedToApproachedTime;
-	bool enableSlewrateLimiter; /* stored in EEPROM as global */
+	bool enableSlewrateLimiter;
 	unsigned long preCalibrationTime;
 	unsigned long calibrationTime;
 	unsigned long approachedTimeout;
@@ -250,8 +246,6 @@ class TLSensors
 	public:
 		struct TLStruct data[N_SENSORS];
 		uint8_t nSensors;
-		bool enableReadSettingsFromEeprom;
-		int eepromOffset;
 
 		/*
 		 * Ideally scanOrder would be a static const uint8_t array the
@@ -265,7 +259,6 @@ class TLSensors
 		uint8_t	nMeasurementsPerSensor;
 		int8_t error;
 
-		void writeSettingsToEeprom(void);
 		int8_t setDefaults(void);
 		int initialize(uint8_t ch, int (*sampleMethod)(
 			struct TLStruct * d, uint8_t nSensors, uint8_t ch));
@@ -304,26 +297,6 @@ class TLSensors
 
 		uint16_t crcUpdate(uint16_t crc, unsigned char c);
 
-		/* 
-		 * Older versions of EEPROM library don't have length(). Add
-		 * method here for compatibility.
-		 */
-		uint16_t EEPROM_length();
-
-		/* 
-		 * Older versions of EEPROM library don't have update(). Add
-		 * method here for compatibility.
-		 */
-		void EEPROM_update(int addr, uint8_t b);
-
-		uint16_t eepromSizeRequired(void);
-		int32_t readFloatFromEeprom(int * addr, uint16_t * crc);
-		void writeFloatToEeprom(int32_t f, int * addr, uint16_t * crc);
-		void readSensorSettingFromEeprom(int n, int * addr, 
-			uint16_t * crc, bool applySettings);
-		void writeSensorSettingToEeprom(int n, int * addr, 
-			uint16_t * crc);
-		void readSettingsFromEeprom(void);
 		int8_t addChannel(uint8_t ch);
 		void addSample(uint8_t ch, int32_t sample);
 		bool isPressed(TLStruct * d);
@@ -378,30 +351,8 @@ class TLSensors
 
 #define TL_DISABLE_UPDATE_IF_ANY_BUTTON_IS_APPROACHED_DEFAULT	false
 #define TL_DISABLE_UPDATE_IF_ANY_BUTTON_IS_PRESSED_DEFAULT	false
-#ifdef EEPROM_h
-#define TL_ENABLE_READ_SETTINGS_FROM_EEPROM_DEFAULT		true
-#else
-#define TL_ENABLE_READ_SETTINGS_FROM_EEPROM_DEFAULT		false
-#endif
-#define TL_EEPROM_OFFSET_DEFAULT				0
-#define TL_EEPROM_KEY						0xC7
-#define TL_EEPROM_FORMAT_VERSION				0
-#define TL_EEPROM_FORMAT_MASK					0x7
-#define TL_EEPROM_FORMAT_SHIFT					5
-#define TL_EEPROM_N_SENSORS_MASK				0x1F
-#define TL_EEPROM_N_SENSORS_SHIFT				0
-#define TL_EEPROM_CONFIG_ENABLE_SLEWRATE_LIMITER		0x80
 
 #define TL_SAMPLE_METHOD_DEFAULT				(&TLSampleMethodCVD)
-
-/*
- * EEPROM overhead:
- * 1 byte key
- * 1 byte description (EEPROM format version + nSensors)
- * 1 byte config
- * 2 byte CRC
- */
-#define TL_EEPROM_N_BYTES_OVERHEAD				(1+1+1+2)
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addChannel(uint8_t ch)
@@ -477,9 +428,6 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 	}
 
 	if (error == 0) {
-		this->enableReadSettingsFromEeprom =
-			TL_ENABLE_READ_SETTINGS_FROM_EEPROM_DEFAULT;
-		this->eepromOffset = TL_EEPROM_OFFSET_DEFAULT;
 		buttonStateChangeCallback = NULL;
 	}
 
@@ -574,263 +522,6 @@ uint16_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::crcUpdate(uint16_t
 	return crc & 0xffff;
 }
 
-/* 
- * Older versions of EEPROM library don't have length(). Add function here for
- * compatibility.
- */
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-uint16_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::EEPROM_length(void)
-{
-	#ifdef EEPROM_h
-	return E2END + 1;
-	#else
-	return 0;
-	#endif
-}
-
-/* 
- * Older versions of EEPROM library don't have update(). Add function here for
- * compatibility.
- */
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::EEPROM_update(int
-		addr, uint8_t b)
-{
-	#ifdef EEPROM_h
-	if (EEPROM.read(addr) != b) {
-		EEPROM.write(addr, b);
-	}
-	#endif
-}
-
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-int32_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readFloatFromEeprom(int
-		* addr, uint16_t * crc)
-{
-	#ifdef EEPROM_h
-	int32_t f;
-	uint32_t i = 0;
-	int k;
-	uint8_t tmp;
-
-	for (k = sizeof(int32_t); k > 0; k--) {
-		tmp = EEPROM.read(*addr);
-		*crc = crcUpdate(*crc, tmp);
-		*addr = *addr + 1;
-		i |= (((uint32_t) tmp) << ((k - 1) << 3));
-	}
-
-	memcpy(&f, &i, sizeof(int32_t));
-
-	return f;
-	#else
-	return 0;
-	#endif
-}
-
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeFloatToEeprom(int32_t f,
-		int * addr, uint16_t * crc)
-{
-	#ifdef EEPROM_h
-	int k;
-	uint32_t i;
-	uint8_t tmp;
-
-	memcpy(&i, &f, sizeof(int32_t));
-
-	for (k = sizeof(int32_t); k > 0; k--) {
-		tmp = (i >> ((k - 1) << 3)) & 0xFF;
-		*crc = crcUpdate(*crc, tmp);
-		EEPROM_update(*addr, tmp);
-		*addr = *addr + 1;
-	}
-	#endif
-}
-
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSensorSettingFromEeprom(int n, 
-		int * addr, uint16_t * crc, bool applySettings)
-{
-	#ifdef EEPROM_h
-	if (applySettings) {
-		data[n].releasedToApproachedThreshold =
-			readFloatFromEeprom(addr, crc);
-
-		data[n].approachedToReleasedThreshold =
-			readFloatFromEeprom(addr, crc);
-
-		data[n].approachedToPressedThreshold =
-			readFloatFromEeprom(addr, crc);
-
-		data[n].pressedToApproachedThreshold =
-			readFloatFromEeprom(addr, crc);
-	} else {
-		readFloatFromEeprom(addr, crc);
-		readFloatFromEeprom(addr, crc);
-		readFloatFromEeprom(addr, crc);
-		readFloatFromEeprom(addr, crc);
-	}
-	#endif
-}
-
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSensorSettingToEeprom(int n, 
-		int * addr, uint16_t * crc)
-{
-	#ifdef EEPROM_h
-	int32_t f;
-
-	f = data[n].releasedToApproachedThreshold;
-	writeFloatToEeprom(f, addr, crc);
-	
-	f = data[n].approachedToReleasedThreshold;
-	writeFloatToEeprom(f, addr, crc);
-	
-	f = data[n].approachedToPressedThreshold;
-	writeFloatToEeprom(f, addr, crc);
-	
-	f = data[n].pressedToApproachedThreshold;
-	writeFloatToEeprom(f, addr, crc);
-	#endif
-}
-
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-uint16_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::eepromSizeRequired(void)
-{
-	return nSensors * 4 * sizeof(int32_t) + TL_EEPROM_N_BYTES_OVERHEAD;
-}
-
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::writeSettingsToEeprom(void)
-{
-	#ifdef EEPROM_h
-	int addr = eepromOffset;
-	int n;
-	uint16_t crc = 0;
-	uint8_t tmp;
-
-	if (((nSensors - 1) & TL_EEPROM_N_SENSORS_MASK) != (nSensors - 1)) {
-		error = -28; /* not enough space; return ENOSPC */
-	}
-
-	if (eepromOffset + eepromSizeRequired() > EEPROM_length()) {
-		error = -28; /* not enough space; return ENOSPC */
-	}
-
-	tmp = EEPROM.read(addr);
-	if ((error == 0) && (tmp != TL_EEPROM_KEY) && (tmp != 0xFF)) {
-		error = -5; /* key not found and not empty; return EIO */
-	}
-
-	if (error == 0) {
-		tmp = TL_EEPROM_KEY;
-		EEPROM_update(addr++, tmp);
-		crc = crcUpdate(crc, tmp);
-
-		tmp = (TL_EEPROM_FORMAT_VERSION << TL_EEPROM_FORMAT_SHIFT) |
-			(((nSensors - 1) & TL_EEPROM_N_SENSORS_MASK) << 
-			TL_EEPROM_N_SENSORS_SHIFT);
-		EEPROM_update(addr++, tmp);
-		crc = crcUpdate(crc, tmp);
-
-		for (n = 0; n < nSensors; n++) {
-			writeSensorSettingToEeprom(n, &addr, &crc);
-		}
-
-		EEPROM_update(addr++, (crc >> 8) & 0xFF);
-		EEPROM_update(addr++, crc & 0xFF);
-	}
-	#endif
-}
-
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::readSettingsFromEeprom(void)
-{
-	#ifdef EEPROM_h
-	int addr = eepromOffset;
-	int tmpAddr = eepromOffset + 2;
-	int n;
-	uint16_t crc = 0, crcEeprom = 0;
-	uint8_t tmp;
-	uint8_t formatVersion;
-	uint8_t nSensorsEeprom;
-	uint8_t config = 0;
-	bool b;
-
-	if (((nSensors - 1) & TL_EEPROM_N_SENSORS_MASK) != (nSensors - 1)) {
-		error = -28; /* not enough space; return ENOSPC */
-	}
-
-	if (eepromOffset + eepromSizeRequired() > EEPROM_length()) {
-		error = -28; /* not enough space; return ENOSPC */
-	}
-
-	tmp = EEPROM.read(addr++);
-	crc = crcUpdate(crc, tmp);
-	if ((error == 0) && (tmp != TL_EEPROM_KEY)) {
-		error = -5; /* key not found; return EIO */
-	}
-
-	if (error == 0) {
-		tmp = EEPROM.read(addr++);
-		crc = crcUpdate(crc, tmp);
-		formatVersion = ((tmp >> TL_EEPROM_FORMAT_SHIFT) &
-			TL_EEPROM_FORMAT_MASK);
-		nSensorsEeprom = ((tmp >> TL_EEPROM_N_SENSORS_SHIFT) &
-			TL_EEPROM_N_SENSORS_MASK) + 1;
-
-		config = EEPROM.read(addr++);
-		crc = crcUpdate(crc, tmp);
-
-		if (formatVersion != TL_EEPROM_FORMAT_VERSION) {
-			error = -5; /* incorrect version; return EIO */
-		}
-
-		if (nSensorsEeprom != nSensors) {
-			error = -5; /* incorrect EEPROM setting; return EIO */
-		}
-	}
-
-	if (error == 0) {
-		tmpAddr = addr;
-
-		/* First do a dummy read since we haven't verified CRC yet */
-		for (n = 0; n < nSensors; n++) {
-			readSensorSettingFromEeprom(n, &addr, &crc, false);
-		}
-
-		tmp = EEPROM.read(addr++);
-		crcEeprom = (((uint16_t) tmp) << 8);
-		tmp = EEPROM.read(addr++);
-		crcEeprom |= (uint16_t) tmp;
-
-		if (crc != crcEeprom) {
-			error = -5; /* CRC error; return EIO */
-		}
-	}
-
-	if (error == 0) {
-		addr = tmpAddr;
-
-		/* CRC is valid; read again but now do apply settings */
-		for (n = 0; n < nSensors; n++) {
-			readSensorSettingFromEeprom(n, &addr, &crc, true);
-		}
-
-		/* Apply settings from config */
-		if (config & TL_EEPROM_CONFIG_ENABLE_SLEWRATE_LIMITER) {
-			b = true;
-		} else {
-			b = false;
-		}
-		for (n = 0; n < nSensors; n++) {
-			data[n].enableSlewrateLimiter = b;
-		}
-	}
-	#endif
-}
-
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::~TLSensors(void)
 {
@@ -888,10 +579,6 @@ TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::TLSensors(void)
 			data[n].lastSampledAtTime = 0;
 			data[n].nMeasurementsPerSensor = nMeasurementsPerSensor;
 		}
-	}
-
-	if ((error == 0) && (this->enableReadSettingsFromEeprom)) {
-		readSettingsFromEeprom();
 	}
 }
 
