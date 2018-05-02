@@ -1,4 +1,6 @@
 Version history:
+v0.0.14: Added support for ESP32; removed floating point code; removed EEPROM code
+
 v0.0.8: Updated Example00 to generate code that exports sensor data to Particle cloud (Particle boards only)
 
 v0.0.7: Fixed bug that caused generated code to crash if sensor tuning was skipped
