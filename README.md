@@ -1,6 +1,11 @@
 # TouchLib
 A generic touch library for Arduino and Arduino-like boards, usable for both resistive and capacitive touch.
 
+TouchLib aims to distinguish itself from other capacitive sensing libraries in 3 ways:
+* Robust capacitive sensing: TouchLib contains many filters and an advanced state machine to make capacitive sensing more robust
+* Multi-platform: TouchLib works on a range of different boards and processors
+* Easy to use: TouchLib contains a code generator that will guide you through the tuning process and serves as a decent initial setting for your sensors
+
 # Supported hardware
 TouchLib works on boards with the following processors:
 * Atmel ATmega32 (Arduino UNO or compatible)
