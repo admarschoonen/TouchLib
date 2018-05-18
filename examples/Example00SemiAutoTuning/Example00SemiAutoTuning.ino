@@ -614,25 +614,25 @@ bool askSampleMethod(int n)
 	Serial.println("");
 	Serial.print(F("Is sensor "));
 	Serial.print(n);
-	/*Serial.print(F(" a capacitive sensor using CVD method, a capacitive "
+	Serial.println(F(" a capacitive sensor using CVD method, a capacitive "
 		"sensor using touchRead() method or a resistive sensor using\n"
-		"analogRead() method? "));*/
-	Serial.println(F(" a capacitive sensor using touchRead() method or a "
-		"resistive sensor using analogRead() method? "));
+		"analogRead() method? "));
+	//Serial.println(F(" a capacitive sensor using touchRead() method or a "
+	//	"resistive sensor using analogRead() method? "));
 	do {
-		/*Serial.print(F("Enter c for capacitive using CVD, t for "
-		"capacitive using touchRead() or r for resistive: "));*/
-		Serial.print(F("Enter t for capacitive using touchRead() or r "
-			"for resistive: "));
+		Serial.print(F("Enter c for capacitive using CVD, t for "
+		"capacitive using touchRead() or r for resistive: "));
+		//Serial.print(F("Enter t for capacitive using touchRead() or r "
+		//	"for resistive: "));
 		c = Serial_getChar();
 		Serial.println(c);
-		//if ((lower(c) != 'c') && (lower(c) != 't') && (lower(c) != 'r')) {
-		if ((lower(c) != 't') && (lower(c) != 'r')) {
+		if ((lower(c) != 'c') && (lower(c) != 't') && (lower(c) != 'r')) {
+		//if ((lower(c) != 't') && (lower(c) != 'r')) {
 			Serial.print(F("Illegal sensor type. "));
 		} else {
-			/*if (lower(c) == 'c') {
+			if (lower(c) == 'c') {
 				tlSensors.initialize(n, TLSampleMethodCVD);
-			}*/
+			}
 			if (lower(c) == 't') {
 				tlSensors.initialize(n, TLSampleMethodTouchRead);
 			}
@@ -1434,6 +1434,14 @@ void loop()
 	}
 	Serial.println("");
 
+	Serial.println();
+	for (n = 0; n < nSensors; n++) {
+		Serial.print("sensor ");
+		Serial.print(n);
+		Serial.print(": CVD pin: ");
+		Serial.println(tlSensors.data[n].tlStructSampleMethod.CVD.pin);
+	}
+
 	n = countNSensors(TLSampleMethodCVD);
 	if (n == 1) {
 		Serial.println(F("Error! Detected only 1 capacitive sensor "
@@ -1448,6 +1456,14 @@ void loop()
 
 	Serial.println(F("Next step is to tune the sensors."));
 	noiseTuning();
+	Serial.println();
+	for (n = 0; n < nSensors; n++) {
+		Serial.print("sensor ");
+		Serial.print(n);
+		Serial.print(": CVD pin: ");
+		Serial.println(tlSensors.data[n].tlStructSampleMethod.CVD.pin);
+	}
+	
 	for (n = 0; n < nSensors; n++) {
 		if (touchTuning(n)) {
 			maxTouchTuning(n);
@@ -1457,7 +1473,7 @@ void loop()
 		}
 		Serial.println("");
 	}
-	
+
 	/*
 	 * Disabled forced calibration of resistive sensors. Seems not to be
 	 * needed.
