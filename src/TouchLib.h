@@ -295,8 +295,6 @@ class TLSensors
 		bool anyButtonIsApproached;
 		bool anyButtonIsPressed;
 
-		uint16_t crcUpdate(uint16_t crc, unsigned char c);
-
 		int8_t addChannel(uint8_t ch);
 		void addSample(uint8_t ch, int32_t sample);
 		bool isPressed(TLStruct * d);
@@ -483,43 +481,6 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 	}
 
 	return error;
-}
-
-/**
- * \file
- * Functions and types for CRC checks.
- *
- * Generated on Sun Jun 25 21:01:32 2017
- * by pycrc v0.9, https://pycrc.org
- * using the configuration:
- *  - Width         = 16
- *  - Poly          = 0x1021
- *  - XorIn         = 0x1d0f
- *  - ReflectIn     = False
- *  - XorOut        = 0x0000
- *  - ReflectOut    = False
- *  - Algorithm     = bit-by-bit-fast
- */
-
-template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
-uint16_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::crcUpdate(uint16_t
-		crc, unsigned char c)
-{
-	unsigned int i;
-	bool bit;
-
-	for (i = 0x80; i > 0; i >>= 1) {
-		bit = crc & 0x8000;
-		if (c & i) {
-			bit = !bit;
-		}
-		crc <<= 1;
-		if (bit) {
-			crc ^= 0x1021;
-		}
-	}
-	crc &= 0xffff;
-	return crc & 0xffff;
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
@@ -1298,19 +1259,6 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
 		sample1 = 0;
 		sample2 = 0;
 		ch = scanOrder[pos];
-		/*Serial.print("ch: ");
-		Serial.print(ch);
-		Serial.print("; sampleMethodSample: ");
-		if (data[ch].sampleMethod == NULL) {
-			Serial.print("NULL");
-		} else if (data[ch].sampleMethod == TLSampleMethodCVD) {
-			Serial.print("CVD");
-		} else if (data[ch].sampleMethod == TLSampleMethodResistive) {
-			Serial.print("Resistive");
-		} else if (data[ch].sampleMethod == TLSampleMethodTouchRead) {
-			Serial.print("touchRead");
-		}
-		Serial.println("");*/
 			
 		if (data[ch].sampleType &
 				TLStruct::sampleTypeNormal) {
