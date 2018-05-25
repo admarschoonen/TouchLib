@@ -554,16 +554,6 @@ int32_t TLSampleMethodCVDSample(struct TLStruct * data, uint8_t nSensors,
 		return 0;
 	}
 
-	// FIXME: for debugging only
-	if (ch == 0) {
-		pinMode(17, OUTPUT);
-		digitalWrite(17, HIGH);
-	} else {
-		pinMode(17, OUTPUT);
-		digitalWrite(17, LOW);
-	}
-	analogReadResolution(13);
-
 	TLSetSensorAndReferencePins(ch_pin, ref_pin, inv);
 
 	/* Set sensor pin as analog input. */
@@ -598,9 +588,6 @@ int32_t TLSampleMethodCVDSample(struct TLStruct * data, uint8_t nSensors,
 	}
 
 	TLDischargeSensor(data, nSensors, ch, true);
-
-	// FIXME: for debugging only
-	digitalWrite(17, LOW);
 
 	return sample;
 }
@@ -684,8 +671,7 @@ int TLSampleMethodCVD(struct TLStruct * data, uint8_t nSensors, uint8_t ch)
 		TL_PRESSED_TO_APPROACHED_THRESHOLD_DEFAULT; 
 
 	d->direction = TLStruct::directionPositive;
-	//d->sampleType = TLStruct::sampleTypeDifferential;
-	d->sampleType = TLStruct::sampleTypeNormal;
+	d->sampleType = TLStruct::sampleTypeDifferential;
 
 	d->pin = &(d->tlStructSampleMethod.CVD.pin);
 
