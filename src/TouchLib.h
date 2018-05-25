@@ -36,7 +36,6 @@
 #include <TLSampleMethodResistive.h>
 #include <TLSampleMethodTouchRead.h>
 
-
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 class TLSensors;
 
@@ -159,7 +158,7 @@ struct TLStruct {
 	 * sampleMethod can be set to:
 	 * - TLSampleMethodCVD
 	 * - TLSampleMethodResistive
-	 * - TLSampleMethodTouchRead (Teensy 3.x only)
+	 * - TLSampleMethodTouchRead (Teensy 3.x and ESP32 only)
 	 * - custom method
 	 *
 	 * It is used only during initialization and should set callback
@@ -263,6 +262,7 @@ class TLSensors
 		int initialize(uint8_t ch, int (*sampleMethod)(
 			struct TLStruct * d, uint8_t nSensors, uint8_t ch));
 		int8_t sample(void);
+		int8_t sample(uint8_t nSensorsToScan);
 		int findSensorPair(uint8_t ch, uint8_t chStart);
 		int printBar(uint8_t ch_k, int length);
 		void printScanOrder(void);
@@ -294,6 +294,7 @@ class TLSensors
 		bool useCustomScanOrder;
 		bool anyButtonIsApproached;
 		bool anyButtonIsPressed;
+		uint8_t pos;
 
 		int8_t addChannel(uint8_t ch);
 		void addSample(uint8_t ch, int32_t sample);
@@ -497,6 +498,7 @@ TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::TLSensors(void)
 	unsigned long now;
 	
 	error = 0;
+	pos = 0;
 
 	if (N_SENSORS < 1) {
 		error = -1;
@@ -1234,6 +1236,12 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::resetButtonStateSummaries(
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(void)
+{
+	return sample(nSensors);
+}
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(uint8_t nSensorsToScan)
 {
 	uint16_t length, pos;
 	uint8_t ch;
