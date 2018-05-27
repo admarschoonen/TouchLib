@@ -525,7 +525,10 @@ bool askPower(int timeout)
 	Serial.println("");
 
 	for (n = 0; n < nSensors; n++) {
-		tlSensors.data[n].enableSlewrateLimiter = ret;
+		if (ret) {
+			tlSensors.data[n].filterType =
+				TLStruct::filterTypeSlewrateLimiter;
+		}
 	}
 	
 	return do_reset;
@@ -638,7 +641,8 @@ bool askSampleMethod(int n)
 			}
 			if (lower(c) == 'r') {
 				tlSensors.initialize(n, TLSampleMethodResistive);
-				tlSensors.data[n].enableSlewrateLimiter = false;
+				tlSensors.data[n].filterType =
+					TLStruct::filterTypeAverage;
 			}
 			break;
 		}
@@ -672,7 +676,8 @@ bool askSampleMethod(int n)
 			}
 			if (lower(c) == 'r') {
 				tlSensors.initialize(n, TLSampleMethodResistive);
-				tlSensors.data[n].enableSlewrateLimiter = false;
+				tlSensors.data[n].filterType =
+					TLStruct::filterTypeAverage;
 			}
 			break;
 		}
@@ -1283,12 +1288,21 @@ void printCode(void)
 		Serial.print(F(";\n"));
 		Serial.print(F("        tlSensors.data["));
 		Serial.print(n);
-		Serial.print(F("].enableSlewrateLimiter ="
-			"                      "));
-		if (tlSensors.data[n].enableSlewrateLimiter) {
-			Serial.print(F("true;\n"));
-		} else {
-			Serial.print(F("false;\n"));
+		Serial.print(F("].filterType = filterType"));
+		switch (tlSensors.data[n].filterType) {
+		case TLStruct::filterTypeAverage:
+			Serial.print(F("Average;\n"));
+			break;
+		case TLStruct::filterTypeSlewrateLimiter:
+			Serial.print(F("SlewrateLimiter;\n"));
+			break;
+		case TLStruct::filterTypeMedian:
+			Serial.print(F("Median;\n"));
+			break;
+		default:
+			/* Error? */
+			Serial.print(F("Average;\n"));
+			break;
 		}
 
 		if (tlSensors.data[n].forceCalibrationWhenApproachingFromPressed) {
