@@ -143,11 +143,20 @@ int TLSampleMethodResistivePostSample(struct TLStruct * data, uint8_t nSensors,
 
 	d = &(data[ch]);
 
-	if (d->enableSlewrateLimiter) {
-		scale = ((TL_ADC_MAX + 1) << 2);
-	} else {
+	switch (d->filterType) {
+	case TLStruct::filterTypeAverage:
 		scale = (((int32_t) d->nMeasurementsPerSensor) << 1) * 
 			(TL_ADC_MAX + 1);
+		break;
+	case TLStruct::filterTypeSlewrateLimiter:
+		scale = ((TL_ADC_MAX + 1) << 2);
+		break;
+	case TLStruct::filterTypeMedian:
+		scale = ((TL_ADC_MAX + 1) << 2);
+		break;
+	default:
+		/* Error! */
+		scale = ((TL_ADC_MAX + 1) << 2);
 	}
 
 	#if (USE_CORRECT_TRANSFER_FUNCTION == 1)
@@ -234,8 +243,8 @@ int TLSampleMethodResistive(struct TLStruct * data, uint8_t nSensors,
 		TL_PRESSED_TO_APPROACHED_THRESHOLD_DEFAULT; 
 
 	d->direction = TLStruct::directionNegative;
-
 	d->sampleType = TLStruct::sampleTypeNormal;
+	d->filterType = TLStruct::filterTypeAverage;
 
 	d->pin = &(d->tlStructSampleMethod.resistive.pin);
 

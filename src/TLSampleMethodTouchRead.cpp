@@ -101,11 +101,20 @@ int TLSampleMethodTouchReadPostSample(struct TLStruct * data, uint8_t nSensors,
 
         d = &(data[ch]);
 
-        if (d->enableSlewrateLimiter) {
-                scale = 2;
-        } else {
+	switch (d->filterType) {
+	case TLStruct::filterTypeAverage:
                 scale = (((int32_t) d->nMeasurementsPerSensor) << 1);
-        }
+		break;
+	case TLStruct::filterTypeSlewrateLimiter:
+                scale = 2;
+		break;
+	case TLStruct::filterTypeMedian:
+                scale = 2;
+		break;
+	default:
+		/* Error! */
+		scale = 2;
+	}
 
         tmp = (d->scaleFactor * d->referenceValue * d->raw + (scale >> 1)) / 
 		scale;
@@ -180,6 +189,7 @@ int TLSampleMethodTouchRead(struct TLStruct * data, uint8_t nSensors,
 	#endif
 
 	d->sampleType = TLStruct::sampleTypeNormal;
+	d->filterType = TLStruct::filterTypeAverage;
 
 	d->pin = &(d->tlStructSampleMethod.touchRead.pin);
 

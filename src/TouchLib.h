@@ -36,6 +36,12 @@
 #include <TLSampleMethodResistive.h>
 #include <TLSampleMethodTouchRead.h>
 
+#if !(IS_ATMEGA)
+#define TL_ENABLE_MEDIAN_FILTER
+#include <TLCombSort.h>
+#endif
+
+
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 class TLSensors;
 
@@ -114,6 +120,31 @@ struct TLStruct {
 		sampleTypeDifferential = 3
 	};
 
+	enum FilterType {
+		/*
+		 * filterTypeAverage uses a simple average filter (summation)
+		 *   pro: no reduction in signal strength
+		 *   con: sensitive to spikes and common mode noise
+		 *
+		 * filterTypeSlewrateLimiter uses a simple slewrate limiter 
+		 *   filter
+		 *   pro: relatively robust to spikes and common mode noise
+		 *     (unless spikes occurs at first sample --> requires good
+		 *     debounce filtering!)
+		 *   con: some reduction in signal strength; if spike occurs as
+		 *     first sample, an incorrect output value will be produced
+		 *
+		 * filterTypeMedian uses a median filter
+		 *   pro: no reduction in signal strength, not sensitive to
+		 *     spikes
+		 *   con: requires a buffer with size N_MEASUREMENTS_PER_SENSOR
+		 */
+		filterTypeAverage = 0,
+		filterTypeSlewrateLimiter,
+		filterTypeMedian
+	};
+
+
 	union TLStructSampleMethod {
 		struct TLStructSampleMethodCVD CVD;
 		struct TLStructSampleMethodResistive resistive;
@@ -138,6 +169,7 @@ struct TLStruct {
 	uint32_t approachedToPressedTime;
 	uint32_t pressedToApproachedTime;
 	bool enableSlewrateLimiter;
+	enum FilterType filterType;
 	unsigned long preCalibrationTime;
 	unsigned long calibrationTime;
 	unsigned long approachedTimeout;
@@ -237,6 +269,10 @@ struct TLStruct {
 	bool slewrateFirstSample;
 	bool stateIsBeingChanged;
 	bool disableSensor; /* set to true for dummy sensors */
+	#if defined(TL_ENABLE_MEDIAN_FILTER)
+	uint8_t raw_samples_idx;
+	#endif
+
 };
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
@@ -257,6 +293,9 @@ class TLSensors
 		uint8_t scanOrder[N_SENSORS * N_MEASUREMENTS_PER_SENSOR];
 		uint8_t	nMeasurementsPerSensor;
 		int8_t error;
+		#if defined(TL_ENABLE_MEDIAN_FILTER)
+		int32_t raw_samples[N_SENSORS][N_MEASUREMENTS_PER_SENSOR];
+		#endif
 
 		int8_t setDefaults(void);
 		int initialize(uint8_t ch, int (*sampleMethod)(
@@ -295,8 +334,10 @@ class TLSensors
 		bool anyButtonIsApproached;
 		bool anyButtonIsPressed;
 		uint8_t pos;
-
 		int8_t addChannel(uint8_t ch);
+		void processFilterTypeAverage(uint8_t ch, int32_t sample);
+		void processFilterTypeSlewrateLimiter(uint8_t ch, int32_t sample);
+		void processFilterTypeMedian(uint8_t ch, int32_t sample);
 		void addSample(uint8_t ch, int32_t sample);
 		bool isPressed(TLStruct * d);
 		bool isApproached(TLStruct * d);
@@ -478,7 +519,14 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 				 */
 				data[n].offsetValue = 0;
 			}
+			#if defined(TL_ENABLE_MEDIAN_FILTER)
+			data[n].raw_samples_idx = 0;
+			#endif
 		}
+		#if defined(TL_ENABLE_MEDIAN_FILTER)
+		memset(raw_samples, 0, sizeof(int32_t) * N_SENSORS *
+				N_MEASUREMENTS_PER_SENSOR);
+		#endif
 	}
 
 	return error;
@@ -546,22 +594,68 @@ TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::TLSensors(void)
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processFilterTypeAverage(uint8_t ch, int32_t sample)
+{
+	data[ch].raw += sample;
+}
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processFilterTypeSlewrateLimiter(uint8_t ch, int32_t sample)
+{
+	if (data[ch].slewrateFirstSample) {
+		data[ch].raw = sample;
+		data[ch].slewrateFirstSample = false;
+	} else {
+		if (sample > data[ch].raw) {
+			data[ch].raw++;
+		} 
+		if (sample < data[ch].raw) {
+			data[ch].raw--;
+		}
+	}
+}
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::processFilterTypeMedian(uint8_t ch, int32_t sample)
+{
+	#if defined(TL_ENABLE_MEDIAN_FILTER)
+	raw_samples[ch][data[ch].raw_samples_idx] = sample;
+	if (++data[ch].raw_samples_idx >= N_MEASUREMENTS_PER_SENSOR) {
+		data[ch].raw_samples_idx = 0;
+
+		combSort(raw_samples[ch], N_MEASUREMENTS_PER_SENSOR);
+
+		#if (N_MEASUREMENTS_PER_SENSOR & 0x01)
+		data[ch].raw = raw_samples[ch][(N_MEASUREMENTS_PER_SENSOR - 1)
+			/ 2];
+		#else
+		data[ch].raw = (raw_samples[ch][N_MEASUREMENTS_PER_SENSOR / 2]
+				+ raw_samples[ch][(N_MEASUREMENTS_PER_SENSOR +
+					1) / 2]) >> 1;
+		#endif
+	}
+	#else
+	/* Error! */
+	#endif
+}
+
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::addSample(uint8_t ch, int32_t sample)
 {
-	if (data[ch].enableSlewrateLimiter) {
-		if (data[ch].slewrateFirstSample) {
-			data[ch].raw = sample;
-			data[ch].slewrateFirstSample = false;
-		} else {
-			if (sample > data[ch].raw) {
-				data[ch].raw++;
-			} 
-			if (sample < data[ch].raw) {
-				data[ch].raw--;
-			}
-		}
-	} else {
-		data[ch].raw += sample;
+	switch (data[ch].filterType) {
+	case TLStruct::filterTypeAverage:
+		processFilterTypeAverage(ch, sample);
+		break;
+	case TLStruct::filterTypeSlewrateLimiter:
+		processFilterTypeSlewrateLimiter(ch, sample);
+		break;
+	case TLStruct::filterTypeMedian:
+		processFilterTypeMedian(ch, sample);
+		break;
+	default:
+		/* Error! */
+		break;
 	}
 }
 

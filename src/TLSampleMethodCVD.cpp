@@ -463,11 +463,20 @@ static void correctSample(struct TLStruct * data, uint8_t nSensors, uint8_t ch)
 
 	if (d->tlStructSampleMethod.CVD.nCharges > 1) {
 		/* floating point math */
-		if (d->enableSlewrateLimiter) {
-			scale_f = (float) ((TL_ADC_MAX + 1) << 2);
-		} else {
+		switch (d->filterType) {
+		case TLStruct::filterTypeAverage:
 			scale_f = ((float) (d->nMeasurementsPerSensor << 1)) *
 				((float) (TL_ADC_MAX + 1));
+			break;
+		case TLStruct::filterTypeSlewrateLimiter:
+			scale_f = (float) ((TL_ADC_MAX + 1) << 2);
+			break;
+		case TLStruct::filterTypeMedian:
+			scale_f = (float) ((TL_ADC_MAX + 1) << 2);
+			break;
+		default:
+			/* Error! */
+			scale_f = (float) ((TL_ADC_MAX + 1) << 2);
 		}
 	
 		tmp = 1 - ((float) d->raw) / scale_f;
@@ -484,11 +493,20 @@ static void correctSample(struct TLStruct * data, uint8_t nSensors, uint8_t ch)
 		tmp = (int32_t) (scale_f * tmp * d->scaleFactor / 
 				d->referenceValue);
 	} else {
-		if (d->enableSlewrateLimiter) {
-			scale = (((int32_t) TL_ADC_MAX) + 1) << 2;
-		} else {
+		switch (d->filterType) {
+		case TLStruct::filterTypeAverage:
 			scale = (((int32_t) d->nMeasurementsPerSensor) << 1) *
 				(((int32_t) TL_ADC_MAX) + 1);
+			break;
+		case TLStruct::filterTypeSlewrateLimiter:
+			scale = (((int32_t) TL_ADC_MAX) + 1) << 2;
+			break;
+		case TLStruct::filterTypeMedian:
+			scale = (((int32_t) TL_ADC_MAX) + 1) << 2;
+			break;
+		default:
+			/* Error! */
+			scale = (((int32_t) TL_ADC_MAX) + 1) << 2;
 		}
 		tmp = ((d->referenceValue * d->scaleFactor * (scale - d->raw))
 				+ (scale >> 1)) / scale;
@@ -672,6 +690,7 @@ int TLSampleMethodCVD(struct TLStruct * data, uint8_t nSensors, uint8_t ch)
 
 	d->direction = TLStruct::directionPositive;
 	d->sampleType = TLStruct::sampleTypeDifferential;
+	d->filterType = TLStruct::filterTypeAverage;
 
 	d->pin = &(d->tlStructSampleMethod.CVD.pin);
 
