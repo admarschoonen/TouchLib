@@ -383,6 +383,9 @@ int processSerialDataForPin(int type)
 	char s[20] = {'\0'};
 	int n, k;
 	bool isAnalog = false, isTouch = false, illegalChar, kIsNum;
+	#if IS_ESP32
+	const int pinMap[] = {T0, T1, T2, T3, T4, T5, T6, T7, T8, T9};
+	#endif
 
 	do {
 		n = Serial_getString(s, sizeof(s));
@@ -426,7 +429,7 @@ int processSerialDataForPin(int type)
 				}
 				#if IS_ESP32
 				if (isTouch && (type == PIN_TYPE_TOUCH)) {
-					pin = atoi(&s[1]) + T0;
+					pin = pinMap[atoi(&s[1])];
 				}
 				#endif
 				if (!(isAnalog || isTouch) && ((type == PIN_TYPE_DIGITAL) ||
@@ -1288,7 +1291,7 @@ void printCode(void)
 		Serial.print(F(";\n"));
 		Serial.print(F("        tlSensors.data["));
 		Serial.print(n);
-		Serial.print(F("].filterType = filterType"));
+		Serial.print(F("].filterType = TLStruct::filterType"));
 		switch (tlSensors.data[n].filterType) {
 		case TLStruct::filterTypeAverage:
 			Serial.print(F("Average;\n"));
