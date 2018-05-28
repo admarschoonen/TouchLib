@@ -36,7 +36,13 @@
  * https://www.kickstarter.com/projects/paulstoffregen/teensy-30-32-bit-arm-cortex-m4-usable-in-arduino-a/posts
  */
 #define TL_REFERENCE_VALUE_DEFAULT			((int32_t) 20)
+
+#if IS_ESP32
+#define TL_SCALE_FACTOR_DEFAULT				(16)
+#else
 #define TL_SCALE_FACTOR_DEFAULT				((int32_t) 1)
+#endif
+
 #define TL_OFFSET_VALUE_DEFAULT				((int32_t) 0) /* fF */
 
 #define TL_SET_OFFSET_VALUE_MANUALLY_DEFAULT	    	false
@@ -77,6 +83,16 @@ int32_t TLSampleMethodTouchReadSample(struct TLStruct * data, uint8_t nSensors,
 
 		if (ch_pin >= 0) {
 			sample = touchRead(ch_pin);
+
+			#if (IS_ESP32)
+			if (sample == 0) {
+				/* 
+				 * Workaround for ESP32 which sometimes returns
+				 * 0 
+				 */
+				sample = touchRead(ch_pin);
+			}
+			#endif
 		}
 	}
 	/*Serial.print("ch: ");
