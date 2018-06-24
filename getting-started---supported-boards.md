@@ -19,7 +19,8 @@ Currently TouchLib supports the following boards:
 | [ESP32Dev Board](https://github.com/espressif/arduino-esp32) | ESP32 | touchRead() method | analogRead() method | 32 | |
 
 If a board is not listed but uses the same processor as one of the boards
-listed above, there is a good chance that it will work as well.
+listed above, there is a good chance that it will work as well. If it does not
+work, please let me know.
 
 Notes:
 
