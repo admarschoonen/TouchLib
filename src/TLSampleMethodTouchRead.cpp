@@ -31,6 +31,16 @@
 #include "TouchLib.h"
 #include "TLSampleMethodTouchRead.h"
 
+#if (IS_ESP32)
+/*
+ * Arduino port for ESP32 configures touch peripheral for very large
+ * capacitances and provides no means of reconfiguration so we'll have to
+ * implement our own configuration.
+ */
+#include <soc/sens_reg.h>
+#include <soc/rtc_cntl_reg.h>
+#endif
+
 /* 
  * Teensy has 1/50 pF (== 20 fF) per lsb --> set default reference value to 20
  * https://www.kickstarter.com/projects/paulstoffregen/teensy-30-32-bit-arm-cortex-m4-usable-in-arduino-a/posts
@@ -56,12 +66,122 @@
 #define TL_BAR_LOWER_PCT				40
 #define TL_BAR_UPPER_PCT				80
 
+#if (IS_ESP32)
+static uint16_t __touchSleepCycles = 0x1000;
+
+/*
+ * Increase __touchMeasureCycles to get more counts per measurement (but of
+ * course this will increase the measurement time as well).
+ * The value is the number of counts of an 8 MHz clock, so 0x2000 is 1.024 ms.
+ * */
+static uint16_t __touchMeasureCycles = 0x2000;
+
+typedef void (*voidFuncPtr)(void);
+static voidFuncPtr __touchInterruptHandlers[10] = {0,};
+static intr_handle_t touch_intr_handle = NULL;
+
+void IRAM_ATTR __touchISR(void * arg)
+{
+	uint32_t pad_intr = READ_PERI_REG(SENS_SAR_TOUCH_CTRL2_REG) & 0x3ff;
+	uint32_t rtc_intr = READ_PERI_REG(RTC_CNTL_INT_ST_REG);
+	uint8_t i = 0;
+	//clear interrupt
+	WRITE_PERI_REG(RTC_CNTL_INT_CLR_REG, rtc_intr);
+	SET_PERI_REG_MASK(SENS_SAR_TOUCH_CTRL2_REG, SENS_TOUCH_MEAS_EN_CLR);
+
+	if (rtc_intr & RTC_CNTL_TOUCH_INT_ST) {
+		for (i = 0; i < 10; ++i) {
+			if ((pad_intr >> i) & 0x01) {
+				if(__touchInterruptHandlers[i]){
+					__touchInterruptHandlers[i]();
+				}
+			}
+		}
+	}
+}
+
+void __touchSetCycles(uint16_t measure, uint16_t sleep)
+{
+	__touchSleepCycles = sleep;
+	__touchMeasureCycles = measure;
+	//Touch pad SleepCycle Time
+	SET_PERI_REG_BITS(SENS_SAR_TOUCH_CTRL2_REG, SENS_TOUCH_SLEEP_CYCLES, __touchSleepCycles, SENS_TOUCH_SLEEP_CYCLES_S);
+	//Touch Pad Measure Time
+	SET_PERI_REG_BITS(SENS_SAR_TOUCH_CTRL1_REG, SENS_TOUCH_MEAS_DELAY, __touchMeasureCycles, SENS_TOUCH_MEAS_DELAY_S);
+}
+
+void __touchInit()
+{
+	SET_PERI_REG_BITS(RTC_IO_TOUCH_CFG_REG, RTC_IO_TOUCH_XPD_BIAS, 1, RTC_IO_TOUCH_XPD_BIAS_S);
+
+	/* Configure for lowest upper level and highest lower level. This
+	 * results in a higher oscillation frequency and therefore more counts
+	 * per measurement.
+	 */
+	SET_PERI_REG_BITS(RTC_IO_TOUCH_CFG_REG, RTC_IO_TOUCH_DREFH, 0, RTC_IO_TOUCH_DREFH_S);
+	SET_PERI_REG_BITS(RTC_IO_TOUCH_CFG_REG, RTC_IO_TOUCH_DREFL, 3, RTC_IO_TOUCH_DREFL_S);
+	SET_PERI_REG_MASK(SENS_SAR_TOUCH_CTRL2_REG, SENS_TOUCH_MEAS_EN_CLR);
+	//clear touch enable
+	WRITE_PERI_REG(SENS_SAR_TOUCH_ENABLE_REG, 0x0);
+	SET_PERI_REG_MASK(RTC_CNTL_STATE0_REG, RTC_CNTL_TOUCH_SLP_TIMER_EN);
+
+	__touchSetCycles(__touchMeasureCycles, __touchSleepCycles);
+
+	esp_intr_alloc(ETS_RTC_CORE_INTR_SOURCE, (int)ESP_INTR_FLAG_IRAM, __touchISR, NULL, &touch_intr_handle);
+}
+
+uint16_t esp32TouchRead(uint8_t pin)
+{
+	int8_t pad = digitalPinToTouchChannel(pin);
+
+	if(pad < 0){
+		return 0;
+	}
+
+	pinMode(pin, ANALOG);
+
+	__touchInit();
+
+	uint32_t v0 = READ_PERI_REG(SENS_SAR_TOUCH_ENABLE_REG);
+	//Disable Intr & enable touch pad
+	WRITE_PERI_REG(SENS_SAR_TOUCH_ENABLE_REG,
+			(v0 & ~((1 << (pad + SENS_TOUCH_PAD_OUTEN2_S)) | (1 << (pad + SENS_TOUCH_PAD_OUTEN1_S))))
+			| (1 << (pad + SENS_TOUCH_PAD_WORKEN_S)));
+
+	SET_PERI_REG_MASK(SENS_SAR_TOUCH_ENABLE_REG, (1 << (pad + SENS_TOUCH_PAD_WORKEN_S)));
+
+	uint32_t rtc_tio_reg = RTC_IO_TOUCH_PAD0_REG + pad * 4;
+	WRITE_PERI_REG(rtc_tio_reg, (READ_PERI_REG(rtc_tio_reg)
+					  & ~(RTC_IO_TOUCH_PAD0_DAC_M))
+					  | (7 << RTC_IO_TOUCH_PAD0_DAC_S)//Touch Set Slope
+					  | RTC_IO_TOUCH_PAD0_TIE_OPT_M   //Enable Tie,Init Level
+					  | RTC_IO_TOUCH_PAD0_START_M	 //Enable Touch Pad IO
+					  | RTC_IO_TOUCH_PAD0_XPD_M);	 //Enable Touch Pad Power on
+
+	//force oneTime test start
+	SET_PERI_REG_MASK(SENS_SAR_TOUCH_CTRL2_REG, SENS_TOUCH_START_EN_M|SENS_TOUCH_START_FORCE_M);
+
+	SET_PERI_REG_BITS(SENS_SAR_TOUCH_CTRL1_REG, SENS_TOUCH_XPD_WAIT, 10, SENS_TOUCH_XPD_WAIT_S);
+
+	while (GET_PERI_REG_MASK(SENS_SAR_TOUCH_CTRL2_REG, SENS_TOUCH_MEAS_DONE) == 0) {};
+
+	uint16_t touch_value = READ_PERI_REG(SENS_SAR_TOUCH_OUT1_REG + (pad / 2) * 4) >> ((pad & 1) ? SENS_TOUCH_MEAS_OUT1_S : SENS_TOUCH_MEAS_OUT0_S);
+
+	//clear touch force ,select the Touch mode is Timer
+	CLEAR_PERI_REG_MASK(SENS_SAR_TOUCH_CTRL2_REG, SENS_TOUCH_START_EN_M|SENS_TOUCH_START_FORCE_M);
+
+	//restore previous value
+	WRITE_PERI_REG(SENS_SAR_TOUCH_ENABLE_REG, v0);
+	return touch_value;
+}
+#endif
 
 int TLSampleMethodTouchReadPreSample(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch)
 {
 	return 0;
 }
+
 
 int32_t TLSampleMethodTouchReadSample(struct TLStruct * data, uint8_t nSensors,
 	uint8_t ch, bool inv)
@@ -82,7 +202,16 @@ int32_t TLSampleMethodTouchReadSample(struct TLStruct * data, uint8_t nSensors,
 	} else {
 
 		if (ch_pin >= 0) {
+			#if (IS_ESP32)
+			/* discharge pin */
+			pinMode(ch_pin, OUTPUT);
+			digitalWrite(ch_pin, LOW);
+			sample = esp32TouchRead(ch_pin);
+			pinMode(ch_pin, OUTPUT);
+			digitalWrite(ch_pin, LOW);
+			#else
 			sample = touchRead(ch_pin);
+			#endif
 
 			#if (IS_ESP32)
 			if (sample == 0) {
@@ -90,9 +219,16 @@ int32_t TLSampleMethodTouchReadSample(struct TLStruct * data, uint8_t nSensors,
 				 * Workaround for ESP32 which sometimes returns
 				 * 0 
 				 */
-				sample = touchRead(ch_pin);
+				/* discharge pin */
+				pinMode(ch_pin, OUTPUT);
+				digitalWrite(ch_pin, LOW);
+				sample = esp32TouchRead(ch_pin);
+				pinMode(ch_pin, OUTPUT);
+				digitalWrite(ch_pin, LOW);
 			}
 			#endif
+			Serial.print(sample);
+			Serial.print(" ");
 		}
 	}
 	/*Serial.print("ch: ");
