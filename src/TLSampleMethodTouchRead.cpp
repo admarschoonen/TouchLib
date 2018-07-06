@@ -227,8 +227,6 @@ int32_t TLSampleMethodTouchReadSample(struct TLStruct * data, uint8_t nSensors,
 				digitalWrite(ch_pin, LOW);
 			}
 			#endif
-			Serial.print(sample);
-			Serial.print(" ");
 		}
 	}
 	/*Serial.print("ch: ");
