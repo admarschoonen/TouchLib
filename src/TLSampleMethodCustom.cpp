@@ -90,6 +90,8 @@ int TLSampleMethodCustom(struct TLStruct * data, uint8_t nSensors, uint8_t ch)
 
 	d->direction = TLStruct::directionPositive;
 	d->sampleType = TLStruct::sampleTypeNormal;
+	d->waterRejectPin = -1;
+	d->waterRejectMode = TLStruct::waterRejectModeFloat;
 
 	d->pin = &(d->tlStructSampleMethod.custom.pin);
 

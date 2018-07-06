@@ -206,6 +206,8 @@ int TLSampleMethodTouchRead(struct TLStruct * data, uint8_t nSensors,
 
 	d->sampleType = TLStruct::sampleTypeNormal;
 	d->filterType = TLStruct::filterTypeAverage;
+	d->waterRejectPin = -1;
+	d->waterRejectMode = TLStruct::waterRejectModeFloat;
 
 	d->pin = &(d->tlStructSampleMethod.touchRead.pin);
 

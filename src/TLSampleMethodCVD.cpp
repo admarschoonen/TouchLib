@@ -691,6 +691,8 @@ int TLSampleMethodCVD(struct TLStruct * data, uint8_t nSensors, uint8_t ch)
 	d->direction = TLStruct::directionPositive;
 	d->sampleType = TLStruct::sampleTypeDifferential;
 	d->filterType = TLStruct::filterTypeAverage;
+	d->waterRejectPin = -1;
+	d->waterRejectMode = TLStruct::waterRejectModeFloat;
 
 	d->pin = &(d->tlStructSampleMethod.CVD.pin);
 

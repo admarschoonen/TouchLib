@@ -144,6 +144,14 @@ struct TLStruct {
 		filterTypeMedian
 	};
 
+	enum WaterRejectMode {
+		waterRejectModeFloat = 0,
+		waterRejectModeGnd,
+		waterRejectModeVdd,
+		waterRejectModeSum,
+		waterRejectModeDiff
+	};
+
 	struct FilterParamsAverage {
 	};
 
@@ -179,6 +187,7 @@ struct TLStruct {
 	enum Direction direction;
 	enum SampleType sampleType;
 	int * pin;
+	int waterRejectPin; /* set to -1 to disable */
 	int32_t releasedToApproachedThreshold;
 	int32_t approachedToReleasedThreshold;
 	int32_t approachedToPressedThreshold;
@@ -189,6 +198,7 @@ struct TLStruct {
 	uint32_t approachedToPressedTime;
 	uint32_t pressedToApproachedTime;
 	enum FilterType filterType;
+	enum WaterRejectMode waterRejectMode;
 	unsigned long preCalibrationTime;
 	unsigned long calibrationTime;
 	unsigned long approachedTimeout;
@@ -1368,8 +1378,9 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(uint8_t nSensorsT
 	uint16_t length, pos;
 	uint8_t ch;
 	int32_t sample1 = 0, sample2 = 0;
-	int32_t sum;
+	int32_t total1 = 0, total2 = 0;
 	unsigned long now;
+	enum TLStruct::WaterRejectMode w;
 
 	length = ((uint16_t) nSensors) * ((uint16_t)
 		nMeasurementsPerSensor);
@@ -1402,41 +1413,113 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(uint8_t nSensorsT
 		}
 	}
 
-	for (pos = 0; pos < length; pos++) {
-		sample1 = 0;
-		sample2 = 0;
-		ch = scanOrder[pos];
-			
-		if (data[ch].sampleType &
-				TLStruct::sampleTypeNormal) {
-			if (data[ch].sampleMethodSample != NULL) {
-				sample1 = data[ch].sampleMethodSample(data,
-					nSensors, ch, false);
-			}
-		}
-		if (data[ch].sampleType &
-				TLStruct::sampleTypeInverted) {
-			if (data[ch].sampleMethodSample != NULL) {
-				sample2 = data[ch].sampleMethodSample(data,
-					nSensors, ch, true);
-			}
-		}
+        for (pos = 0; pos < length; pos++) {
+                sample1 = 0;
+                sample2 = 0;
+                ch = scanOrder[pos];
+                        
+                w = data[ch].waterRejectMode;
 
-		/*
-		 * For sampleTypeNormal and sampleTypeInverted: scale by factor
-		 * 2 to get same amplitude as with sampleTypeDifferential.
-		 */
-		if (data[ch].sampleType == TLStruct::sampleTypeNormal) {
-			sample1 = sample1 << 1;
-		}
-		if (data[ch].sampleType == TLStruct::sampleTypeInverted) {
-			sample2 = sample2 << 1;
-		}
+                if (w == TLStruct::waterRejectModeFloat) {
+                        if (data[ch].waterRejectPin >= 0) {
+                                pinMode(data[ch].waterRejectPin, INPUT);
+                                /* disable pullup */
+                                digitalWrite(data[ch].waterRejectPin, LOW);
+                        }
+                } else {
+                        if (data[ch].waterRejectPin >= 0) {
+                                pinMode(data[ch].waterRejectPin, OUTPUT);
+                                if (w == TLStruct::waterRejectModeVdd) {
+                                        digitalWrite(data[ch].waterRejectPin,
+                                                        HIGH);
+                                } else {
+                                        digitalWrite(data[ch].waterRejectPin,
+                                                        LOW);
+                                }
+                        }
+                }
+                if (data[ch].sampleType &
+                                TLStruct::sampleTypeNormal) {
+                        if (data[ch].sampleMethodSample != NULL) {
+                                sample1 = data[ch].sampleMethodSample(data,
+                                        nSensors, ch, false);
+                        }
+                }
+                if (data[ch].sampleType &
+                                TLStruct::sampleTypeInverted) {
+                        if (data[ch].sampleMethodSample != NULL) {
+                                sample2 = data[ch].sampleMethodSample(data,
+                                        nSensors, ch, true);
+                        }
+                }
 
-		sum = sample1 + sample2;
+                /*
+                 * For sampleTypeNormal and sampleTypeInverted: scale by factor
+                 * 2 to get same amplitude as with sampleTypeDifferential.
+                 */
+                if (data[ch].sampleType == TLStruct::sampleTypeNormal) {
+                        sample1 = sample1 << 1;
+                }
+                if (data[ch].sampleType == TLStruct::sampleTypeInverted) {
+                        sample2 = sample2 << 1;
+                }
 
-		addSample(ch, sum);
-	}
+                total1 = sample1 + sample2;
+
+
+
+                if ((w == TLStruct::waterRejectModeSum) ||
+                                (w == TLStruct::waterRejectModeDiff)) {
+                        if (data[ch].waterRejectPin >= 0) {
+                                pinMode(data[ch].waterRejectPin, OUTPUT);
+                                digitalWrite(data[ch].waterRejectPin, HIGH);
+                        }
+                        if (data[ch].sampleType &
+                                        TLStruct::sampleTypeNormal) {
+                                if (data[ch].sampleMethodSample != NULL) {
+                                        sample1 = data[ch].sampleMethodSample(data,
+                                                nSensors, ch, false);
+                                }
+                        }
+                        if (data[ch].sampleType &
+                                        TLStruct::sampleTypeInverted) {
+                                if (data[ch].sampleMethodSample != NULL) {
+                                        sample2 = data[ch].sampleMethodSample(data,
+                                                nSensors, ch, true);
+                                }
+                        }
+        
+                        /*
+                         * For sampleTypeNormal and sampleTypeInverted: scale by factor
+                         * 2 to get same amplitude as with sampleTypeDifferential.
+                         */
+                        if (data[ch].sampleType == TLStruct::sampleTypeNormal) {
+                                sample1 = sample1 << 1;
+                        }
+                        if (data[ch].sampleType == TLStruct::sampleTypeInverted) {
+                                sample2 = sample2 << 1;
+                        }
+                        total2 = sample1 + sample2;
+                }
+
+                switch (w) {
+                case TLStruct::waterRejectModeFloat:
+                        addSample(ch, total1);
+                        break;
+                case TLStruct::waterRejectModeGnd:
+                        addSample(ch, total1);
+                        break;
+                case TLStruct::waterRejectModeVdd:
+                        addSample(ch, total1);
+                        break;
+                case TLStruct::waterRejectModeSum:
+                        addSample(ch, total1 + total2);
+                        break;
+                case TLStruct::waterRejectModeDiff:
+                        addSample(ch, total1 - total2);
+                        break;
+                }
+        }
 	
 	now = millis();
 

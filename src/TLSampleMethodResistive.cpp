@@ -245,6 +245,8 @@ int TLSampleMethodResistive(struct TLStruct * data, uint8_t nSensors,
 	d->direction = TLStruct::directionNegative;
 	d->sampleType = TLStruct::sampleTypeNormal;
 	d->filterType = TLStruct::filterTypeAverage;
+	d->waterRejectPin = -1;
+	d->waterRejectMode = TLStruct::waterRejectModeFloat;
 
 	d->pin = &(d->tlStructSampleMethod.resistive.pin);
 
