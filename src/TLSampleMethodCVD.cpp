@@ -33,29 +33,21 @@
 #include "TLSampleMethodCVD.h"
 #include "BoardID.h"
 
-#if IS_PARTICLE
-#include "pinmap_hal.h"
-#include "stm32f2xx.h"
-#include "stm32f2xx_rcc.h"
+#if IS_ATMEGA
+#include "TLSampleMethodCVDATMega.h"
+#elif IS_TEENSY3X
+#include "TLSampleMethodCVDTeensy3x.h"
+#elif IS_PARTICLE
+#include "TLSampleMethodCVDParticle.h"
+#elif IS_ESP32
+#include "TLSampleMethodCVDEsp32.h"
 #endif
 
-#if IS_TEENSY3X
-#define TL_N_CHARGES_MIN_DEFAULT			4
-#define TL_N_CHARGES_MAX_DEFAULT			4
-#else
-#define TL_N_CHARGES_MIN_DEFAULT			1
-#define TL_N_CHARGES_MAX_DEFAULT			1
+#ifndef TL_METHOD_CVD_SUPPORTED
+#include "TLSampleMethodCVDUnsupported.h"
 #endif
 
 #define TL_USE_N_CHARGES_PADDING_DEFAULT		true
-
-#if IS_TEENSY3X
-#define TL_CHARGE_DELAY_SENSOR_DEFAULT			0
-#define TL_CHARGE_DELAY_ADC_DEFAULT			0
-#else
-#define TL_CHARGE_DELAY_SENSOR_DEFAULT			0
-#define TL_CHARGE_DELAY_ADC_DEFAULT			0
-#endif
 
 #define TL_REFERENCE_VALUE_DEFAULT			((int32_t) 15000) /* 15 pF */
 #define TL_SCALE_FACTOR_DEFAULT				((int32_t) 1)
@@ -67,26 +59,6 @@
 #define TL_APPROACHED_TO_RELEASED_THRESHOLD_DEFAULT	4.0
 #define TL_APPROACHED_TO_PRESSED_THRESHOLD_DEFAULT	10.0
 #define TL_PRESSED_TO_APPROACHED_THRESHOLD_DEFAULT	80.0
-
-#if IS_PARTICLE
-static const unsigned char pin_to_adc_channel[8] = {15, 13, 12, 5, 6, 7, 4, 0};
-#endif
-
-#if IS_PARTICLE
-#define TL_ADC_RESOLUTION_BIT					12
-#define TL_BAR_LOWER_PCT					50
-#define TL_BAR_UPPER_PCT					95
-#elif IS_ATMEGA
-#define TL_ADC_RESOLUTION_BIT					10
-#define TL_BAR_LOWER_PCT					40
-#define TL_BAR_UPPER_PCT					80
-#else
-#define TL_ADC_RESOLUTION_BIT					10
-#define TL_BAR_LOWER_PCT					40
-#define TL_BAR_UPPER_PCT					80
-#endif
-
-#define TL_ADC_MAX                                              ((1 << TL_ADC_RESOLUTION_BIT) - 1)
 
 static uint8_t TLChannelToReference(struct TLStruct * data, uint8_t nSensors,
 		uint8_t ch)
@@ -133,272 +105,6 @@ static void TLSetSensorAndReferencePins(int ch_pin, int ref_pin, bool inv)
 		digitalWrite(ch_pin, LOW);
 	}
 }
-
-bool TLHasMux5(void)
-{
-	#if IS_ATMEGA128X_256X
-	return true;
-	#else
-	return false;
-	#endif
-}
-
-#if IS_AVR
-void TLSetAdcReferencePin(int pin)
-{
-	unsigned char mux;
-
-	if (TLHasMux5()) {
-		if (pin - A0 < 8) {
-			mux = pin - A0;
-		} else {
-			mux = 0x20 + (pin - A0 - 8);
-		}
-
-		ADMUX &= ~0x1F;
-		ADMUX |= (mux & 0x1F);
-		if (mux > 0x1F) {
-			ADCSRB |= 0x08;
-		} else {
-			ADCSRB &= ~0x08;
-		}
-	} else {
-		mux = pin - A0;
-		ADMUX &= ~0x0F;
-		ADMUX |= (mux & 0x0F);
-	}
-}
-
-int TLAnalogRead(int pin)
-{
-	// Arduino UNO seems to accept both Axx and xx notation but official API documentation uses xx
-	return analogRead(pin - A0);
-}
-#elif IS_TEENSY3X
-/*
- * Section below maps pin number to ADC channels and is copied from
- * arduino-1.8.5/hardware/teensy/avr/cores/teensy3/analog.c
- */
-// The SC1A register is used for both software and hardware trigger modes of operation.
-
-#if defined(__MK20DX128__)
-static const uint8_t pin2sc1a[] = {
-	5, 14, 8, 9, 13, 12, 6, 7, 15, 4, 0, 19, 3, 21, // 0-13 -> A0-A13
-	5, 14, 8, 9, 13, 12, 6, 7, 15, 4, // 14-23 are A0-A9
-	255, 255, 255, 255, 255, 255, 255, 255, 255, 255, // 24-33 are digital only
-	0, 19, 3, 21, // 34-37 are A10-A13
-	26,	   // 38 is temp sensor
-	22,	   // 39 is vref
-	23	    // 40 is unused analog pin
-};
-#elif defined(__MK20DX256__)
-static const uint8_t pin2sc1a[] = {
-	5, 14, 8, 9, 13, 12, 6, 7, 15, 4, 0, 19, 3, 19+128, // 0-13 -> A0-A13
-	5, 14, 8, 9, 13, 12, 6, 7, 15, 4, // 14-23 are A0-A9
-	255, 255, // 24-25 are digital only
-	5+192, 5+128, 4+128, 6+128, 7+128, 4+192, // 26-31 are A15-A20
-	255, 255, // 32-33 are digital only
-	0, 19, 3, 19+128, // 34-37 are A10-A13
-	26,     // 38 is temp sensor,
-	18+128, // 39 is vref
-	23      // 40 is A14
-};
-#elif defined(__MKL26Z64__)
-static const uint8_t pin2sc1a[] = {
-	5, 14, 8, 9, 13, 12, 6, 7, 15, 11, 0, 4+64, 23, // 0-12 -> A0-A12
-	255, // 13 is digital only (no A13 alias)
-	5, 14, 8, 9, 13, 12, 6, 7, 15, 11, 0, 4+64, 23, // 14-26 are A0-A12
-	255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, // 27-37 unused
-	26, // 38=temperature
-	27  // 39=bandgap ref (PMC_REGSC |= PMC_REGSC_BGBE)
-};
-#elif defined(__MK64FX512__) || defined(__MK66FX1M0__)
-static const uint8_t pin2sc1a[] = {
-	5, 14, 8, 9, 13, 12, 6, 7, 15, 4, 3, 19+128, 14+128, 15+128, // 0-13 -> A0-A13
-	5, 14, 8, 9, 13, 12, 6, 7, 15, 4, // 14-23 are A0-A9
-	255, 255, 255, 255, 255, 255, 255, // 24-30 are digital only
-	14+128, 15+128, 17, 18, 4+128, 5+128, 6+128, 7+128, 17+128,  // 31-39 are A12-A20
-	255, 255, 255, 255, 255, 255, 255, 255, 255,  // 40-48 are digital only
-	10+128, 11+128, // 49-50 are A23-A24
-	255, 255, 255, 255, 255, 255, 255, // 51-57 are digital only
-	255, 255, 255, 255, 255, 255, // 58-63 (sd card pins) are digital only
-	3, 19+128, // 64-65 are A10-A11
-	23, 23+128,// 66-67 are A21-A22 (DAC pins)
-	1, 1+128,  // 68-69 are A25-A26 (unused USB host port on Teensy 3.5)
-	26,	// 70 is Temperature Sensor
-	18+128     // 71 is Vref
-};
-#endif
-/* End of copied code */
-
-void TLSetAdcReferencePin(int pin)
-{
-	volatile uint32_t * ADCx_CFG2 = &ADC0_CFG2;
-	volatile uint32_t * ADCx_SC1A = &ADC0_SC1A;
-	uint8_t channel;
-
-	if (pin >= sizeof(pin2sc1a))
-		return;
-
-	channel = pin2sc1a[pin];
-
-	if (channel == 255)
-		return;
-
-	#if IS_TEENSY32_WITH_ADC1
-	if ((channel) & 0x80) {
-		*ADCx_CFG2 = ADC1_CFG2;
-		*ADCx_SC1A = ADC1_SC1A;
-	}
-	#endif
-
-	#if IS_TEENSYLC
-	if ((pin - A0) & 0x40) {
-		*ADCx_CFG2 &= ~ADC_CFG2_MUXSEL;
-	} else {
-		*ADCx_CFG2 |= ADC_CFG2_MUXSEL;
-	}
-	#endif
-	*ADCx_SC1A = (channel) & 0x1F;
-}
-
-int TLAnalogRead(int pin)
-{
-	// Teensy accepts both Axx and xx notation; use Axx here
-	return analogRead(pin);
-}
-#elif IS_PARTICLE
-void TLSetAdcReferencePin(int pin)
-{
-	long unsigned int reg;
-	long unsigned int *p;
-
-	p = (long unsigned int *) ADC1_BASE + offsetof(ADC_TypeDef, CR1);
-	reg = *p;
-	reg &= ~(0x1F);
-	//reg |= pin_to_adc_channel[pin - A0];
-	reg |= PIN_MAP[pin].adc_channel;
-	*p = reg;
-}
-
-int ADC_Init(void)
-{
-	ADC_CommonInitTypeDef ADC_CommonInitStructure;
-	ADC_InitTypeDef ADC_InitStructure;
-
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1 | RCC_APB2Periph_ADC2,
-		ENABLE);
-	ADC_DeInit();
-
-	ADC_CommonInitStructure.ADC_Mode = ADC_Mode_Independent;
-	ADC_CommonInitStructure.ADC_Prescaler = ADC_Prescaler_Div2;
-	ADC_CommonInitStructure.ADC_DMAAccessMode = ADC_DMAAccessMode_Disabled;
-	ADC_CommonInitStructure.ADC_TwoSamplingDelay = ADC_TwoSamplingDelay_5Cycles;
-	ADC_CommonInit(&ADC_CommonInitStructure);
-
-	ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
-	ADC_InitStructure.ADC_ScanConvMode = DISABLE;
-	ADC_InitStructure.ADC_ContinuousConvMode = DISABLE;
-	ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
-	ADC_InitStructure.ADC_ExternalTrigConv = 0;
-	ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
-	ADC_InitStructure.ADC_NbrOfConversion = 1;
-
-	ADC_Init(ADC1, &ADC_InitStructure);
-
-	//ADC_Init(ADC2, &ADC_InitStructure);
-
-	ADC_Cmd(ADC1, ENABLE);
-
-	return 0;
-}
-
-int ADC_ReInit(void)
-{
-	ADC_CommonInitTypeDef ADC_CommonInitStructure;
-	ADC_InitTypeDef ADC_InitStructure;
-
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1 | RCC_APB2Periph_ADC2,
-		ENABLE);
-	ADC_DeInit();
-
-	/* ADC Common Init */
-	ADC_CommonInitStructure.ADC_Mode = ADC_DualMode_RegSimult;
-	ADC_CommonInitStructure.ADC_Prescaler = ADC_Prescaler_Div2;
-	ADC_CommonInitStructure.ADC_DMAAccessMode = ADC_DMAAccessMode_1;
-	ADC_CommonInitStructure.ADC_TwoSamplingDelay = ADC_TwoSamplingDelay_5Cycles;
-	ADC_CommonInit(&ADC_CommonInitStructure);
-
-	// ADC1 configuration
-	ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
-	ADC_InitStructure.ADC_ScanConvMode = ENABLE;
-	ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;
-	ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
-	ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_CC1;
-	ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
-	ADC_InitStructure.ADC_NbrOfConversion = 1;
-	ADC_Init(ADC1, &ADC_InitStructure);
-
-	// ADC2 configuration
-	ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
-	ADC_InitStructure.ADC_ScanConvMode = ENABLE;
-	ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;
-	ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
-	ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_CC1;
-	ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
-	ADC_InitStructure.ADC_NbrOfConversion = 1;
-	ADC_Init(ADC2, &ADC_InitStructure);
-
-	return 0;
-}
-
-int TLAnalogRead(int pin)
-{
-	/*
-	 * Cannot use analogRead() here since Photons analogRead() reads 10 ADC
-	 * samples at once. This influences the capacitive signal too much.
-	 */
-	uint8_t adc_ch;
-	uint8_t ADC_Sample_Time = ADC_SampleTime_3Cycles;
-	uint8_t ADC_Sample_Time_Default = ADC_SampleTime_480Cycles;
-	int value;
-
-	adc_ch = PIN_MAP[pin].adc_channel;
-
-	ADC_Init();
-
-	HAL_Pin_Mode(pin, AN_INPUT);
-	ADC_RegularChannelConfig(ADC1, adc_ch, 1, ADC_Sample_Time);
-	// ADC_RegularChannelConfig(ADC2, adc_ch, 1, ADC_Sample_Time);
-
-	ADC_SoftwareStartConv(ADC1);
-	while(ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC) == RESET);
-
-	value = ADC_GetConversionValue(ADC1);
-
-	ADC_ReInit();
-
-	ADC_RegularChannelConfig(ADC1, adc_ch, 1, ADC_Sample_Time_Default);
-	ADC_RegularChannelConfig(ADC2, adc_ch, 1, ADC_Sample_Time_Default);
-
-	return value;
-}
-#elif IS_ESP32
-/* ESP32 does not yet have CVD support */
-void TLSetAdcReferencePin(int pin)
-{
-}
-
-int TLAnalogRead(int pin)
-{
-	return 0;
-}
-#else
-#warning CVD sensors has not yet been ported to this architecture. Please inform the author.
-void TLSetAdcReferencePin(int pin)
-{
-}
-#endif
 
 static void TLChargeADC(struct TLStruct * data, uint8_t nSensors, uint8_t ch, 
 		int ref_pin, bool delay)
