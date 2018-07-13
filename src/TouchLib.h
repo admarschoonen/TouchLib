@@ -342,6 +342,10 @@ class TLSensors
 		bool isReleased(int n);
 		bool isCalibrating(int n);
 		bool anyButtonIsCalibrating(void);
+		bool anyButtonIsReleased(void);
+		bool anyButtonIsApproached(void);
+		bool anyButtonIsPressed(void);
+		int getSensorWithLargestDelta(void);
 		const char * getStateLabel(int n);
 		enum TLStruct::ButtonState getState(int n);
 		bool checkForMajorChange(enum TLStruct::ButtonState oldState,
@@ -357,8 +361,8 @@ class TLSensors
 
 	private:
 		bool useCustomScanOrder;
-		bool anyButtonIsApproached;
-		bool anyButtonIsPressed;
+		bool anyButtonIsApproachedVar;
+		bool anyButtonIsPressedVar;
 		uint8_t pos;
 		int8_t addChannel(uint8_t ch);
 		void processFilterTypeAverage(uint8_t ch, int32_t sample);
@@ -480,8 +484,8 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::setDefaults(void)
 	}
 
 	if (error == 0) {
-		this->anyButtonIsApproached = false;
-		this->anyButtonIsPressed = false;
+		this->anyButtonIsApproachedVar = false;
+		this->anyButtonIsPressedVar = false;
 	}
 
 	if (error == 0) {
@@ -714,6 +718,78 @@ bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::anyButtonIsCalibrating(voi
 }
 
 template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::anyButtonIsReleased(void)
+{
+	bool ret = false;
+	uint8_t n;
+
+	for (n = 0; n < N_SENSORS; n++) {
+		if (isReleased(&(data[n]))) {
+			ret = true;
+			break;
+		}
+	}
+
+	return ret;
+}
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::anyButtonIsApproached(void)
+{
+	bool ret = false;
+	uint8_t n;
+
+	for (n = 0; n < N_SENSORS; n++) {
+		if (isApproached(&(data[n]))) {
+			ret = true;
+			break;
+		}
+	}
+
+	return ret;
+}
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::anyButtonIsPressed(void)
+{
+	bool ret = false;
+	uint8_t n;
+
+	for (n = 0; n < N_SENSORS; n++) {
+		if (isPressed(&(data[n]))) {
+			ret = true;
+			break;
+		}
+	}
+
+	return ret;
+}
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
+int TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::getSensorWithLargestDelta(void)
+{
+	int32_t n, max_n;
+	int32_t maxDelta, tmp;
+
+	if (!anyButtonIsPressed()) {
+		return -1;
+	}
+
+	/* initialize maxDelta to -1; any pressed sensor has a delta > 0 */
+	maxDelta = -1;
+	max_n = 0;
+	for (n = 0; n < N_SENSORS; n++) {
+		tmp = getDelta(n);
+		if (tmp > maxDelta) {
+			maxDelta = tmp;
+			max_n = n;
+		}
+	}
+
+	return max_n;
+}
+
+template <uint8_t N_SENSORS, uint8_t N_MEASUREMENTS_PER_SENSOR>
 bool TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::isCalibrating(TLStruct * d)
 {
 	bool ret = false;
@@ -796,13 +872,13 @@ void TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::updateAvg(uint8_t ch)
 	if (!d->forcedCal && (d->buttonState >=
 			TLStruct::buttonStateReleased) && 
 			(d->disableUpdateIfAnyButtonIsApproached &&
-			this->anyButtonIsApproached)) {
+			this->anyButtonIsApproachedVar)) {
 		return;
 	}
 	if (!d->forcedCal && (d->buttonState >=
 			TLStruct::buttonStateReleased) &&
 			(d->disableUpdateIfAnyButtonIsPressed &&
-			this->anyButtonIsPressed)) {
+			this->anyButtonIsPressedVar)) {
 		return;
 	}
 
@@ -1531,8 +1607,8 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(uint8_t nSensorsT
 		processSample(ch);
 	}
 
-	this->anyButtonIsApproached = false;
-	this->anyButtonIsPressed = false;
+	this->anyButtonIsApproachedVar = false;
+	this->anyButtonIsPressedVar = false;
 	for (ch = 0; ch < nSensors; ch++) {
 		resetButtonStateSummaries(ch);
 		if (data[ch].buttonState <=
@@ -1546,11 +1622,11 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(uint8_t nSensorsT
 		}
 		if (data[ch].buttonState >= TLStruct::buttonStateApproached) {
 			data[ch].buttonIsApproached = true;
-			this->anyButtonIsApproached = true;
+			this->anyButtonIsApproachedVar = true;
 		}
 		if (data[ch].buttonState >= TLStruct::buttonStatePressed) {
 			data[ch].buttonIsPressed = true;
-			this->anyButtonIsPressed = true;
+			this->anyButtonIsPressedVar = true;
 		}
 	}
 
