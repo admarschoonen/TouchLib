@@ -41,6 +41,11 @@
 #include <soc/rtc_cntl_reg.h>
 #endif
 
+/* Disabled extra sensitive settings for ESP32; seems not to work for T8 and
+ * T9? */
+
+#define ESP32_EXTRA_SENSITIVE 0
+
 /* 
  * Teensy has 1/50 pF (== 20 fF) per lsb --> set default reference value to 20
  * https://www.kickstarter.com/projects/paulstoffregen/teensy-30-32-bit-arm-cortex-m4-usable-in-arduino-a/posts
@@ -66,7 +71,7 @@
 #define TL_BAR_LOWER_PCT				40
 #define TL_BAR_UPPER_PCT				80
 
-#if (IS_ESP32)
+#if (IS_ESP32 && ESP32_EXTRA_SENSITIVE)
 static uint16_t __touchSleepCycles = 0x1000;
 
 /*
@@ -206,7 +211,11 @@ int32_t TLSampleMethodTouchReadSample(struct TLStruct * data, uint8_t nSensors,
 			/* discharge pin */
 			pinMode(ch_pin, OUTPUT);
 			digitalWrite(ch_pin, LOW);
+			#if (ESP32_EXTRA_SENSITIVE)
 			sample = esp32TouchRead(ch_pin);
+			#else
+			sample = touchRead(ch_pin);
+			#endif
 			pinMode(ch_pin, OUTPUT);
 			digitalWrite(ch_pin, LOW);
 			#else
@@ -222,7 +231,11 @@ int32_t TLSampleMethodTouchReadSample(struct TLStruct * data, uint8_t nSensors,
 				/* discharge pin */
 				pinMode(ch_pin, OUTPUT);
 				digitalWrite(ch_pin, LOW);
+				#if (ESP32_EXTRA_SENSITIVE)
 				sample = esp32TouchRead(ch_pin);
+				#else
+				sample = touchRead(ch_pin);
+				#endif
 				pinMode(ch_pin, OUTPUT);
 				digitalWrite(ch_pin, LOW);
 			}
@@ -332,7 +345,7 @@ int TLSampleMethodTouchRead(struct TLStruct * data, uint8_t nSensors,
 	d->pressedToApproachedThreshold =
 		TL_PRESSED_TO_APPROACHED_THRESHOLD_DEFAULT;
 
-	#if IS_ESP32
+	#if (IS_ESP32)
 	d->direction = TLStruct::directionNegative;
 	#else
 	d->direction = TLStruct::directionPositive;
