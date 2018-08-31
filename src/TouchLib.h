@@ -359,6 +359,23 @@ class TLSensors
 			enum TLStruct::ButtonState oldState,
 			enum TLStruct::ButtonState newState);
 
+		/* 
+		 * buttonMeasurementProgressCallback is called every time a 
+		 * measurement of a single channel is started or finished.
+		 * Argument isStarted is true when a measurement is started,
+		 * false when it is stopped.
+		 * */
+		int (*buttonMeasurementProgressCallback)(uint8_t ch, bool isStarted);
+
+		/* 
+		 * sequenceMeasurementProgressCallback is called every time a 
+		 * new sequence of measurements is started or finished.
+		 * Argument isStarted is true when a measurement is started,
+		 * false when it is stopped. For now, this means it is called
+		 * at the start and finish of the sample() method.
+		 * */
+		int (*sequenceMeasurementProgressCallback)(bool isStarted);
+
 	private:
 		bool useCustomScanOrder;
 		bool anyButtonIsApproachedVar;
@@ -1461,6 +1478,10 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(uint8_t nSensorsT
 	length = ((uint16_t) nSensors) * ((uint16_t)
 		nMeasurementsPerSensor);
 
+	if (sequenceMeasurementProgressCallback != NULL) {
+		sequenceMeasurementProgressCallback(true);
+	}
+
 	for (ch = 0; ch < nSensors; ch++) {
 		data[ch].raw = 0;
 
@@ -1494,6 +1515,10 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(uint8_t nSensorsT
                 sample2 = 0;
                 ch = scanOrder[pos];
                         
+		if (buttonMeasurementProgressCallback!= NULL) {
+			buttonMeasurementProgressCallback(ch, true);
+		}
+
                 w = data[ch].waterRejectMode;
 
                 if (w == TLStruct::waterRejectModeFloat) {
@@ -1595,6 +1620,10 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(uint8_t nSensorsT
                         addSample(ch, total1 - total2);
                         break;
                 }
+
+		if (buttonMeasurementProgressCallback!= NULL) {
+			buttonMeasurementProgressCallback(ch, false);
+		}
         }
 	
 	now = millis();
@@ -1628,6 +1657,10 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(uint8_t nSensorsT
 			data[ch].buttonIsPressed = true;
 			this->anyButtonIsPressedVar = true;
 		}
+	}
+
+	if (sequenceMeasurementProgressCallback != NULL) {
+		sequenceMeasurementProgressCallback(false);
 	}
 
 	return error;
