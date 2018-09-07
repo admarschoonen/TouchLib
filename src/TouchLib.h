@@ -362,18 +362,21 @@ class TLSensors
 		/* 
 		 * buttonMeasurementProgressCallback is called every time a 
 		 * measurement of a single channel is started or finished.
-		 * Argument isStarted is true when a measurement is started,
-		 * false when it is stopped.
-		 * */
-		int (*buttonMeasurementProgressCallback)(uint8_t ch, bool isStarted);
+		 * Arguments:
+		 *   idx:       index in scanning order array
+		 *   ch:        channel that is being measured
+		 *   isStarted: is true when a measurement is started,
+		 *              false when it is stopped
+		 */
+		int (*buttonMeasurementProgressCallback)(uint16_t idx, uint8_t ch, bool isStarted);
 
 		/* 
 		 * sequenceMeasurementProgressCallback is called every time a 
 		 * new sequence of measurements is started or finished.
-		 * Argument isStarted is true when a measurement is started,
-		 * false when it is stopped. For now, this means it is called
-		 * at the start and finish of the sample() method.
-		 * */
+		 * Arguments:
+		 *   isStarted: is true when a measurement is started,
+		 *              false when it is stopped
+		 */
 		int (*sequenceMeasurementProgressCallback)(bool isStarted);
 
 	private:
@@ -1516,7 +1519,7 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(uint8_t nSensorsT
                 ch = scanOrder[pos];
                         
 		if (buttonMeasurementProgressCallback!= NULL) {
-			buttonMeasurementProgressCallback(ch, true);
+			buttonMeasurementProgressCallback(pos, ch, true);
 		}
 
                 w = data[ch].waterRejectMode;
@@ -1622,7 +1625,7 @@ int8_t TLSensors<N_SENSORS, N_MEASUREMENTS_PER_SENSOR>::sample(uint8_t nSensorsT
                 }
 
 		if (buttonMeasurementProgressCallback!= NULL) {
-			buttonMeasurementProgressCallback(ch, false);
+			buttonMeasurementProgressCallback(pos, ch, false);
 		}
         }
 	
