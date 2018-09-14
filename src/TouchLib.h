@@ -368,7 +368,7 @@ class TLSensors
 		 *   isStarted: is true when a measurement is started,
 		 *              false when it is stopped
 		 */
-		int (*buttonMeasurementProgressCallback)(uint16_t idx, uint8_t ch, bool isStarted);
+		void (*buttonMeasurementProgressCallback)(uint16_t idx, uint8_t ch, bool isStarted);
 
 		/* 
 		 * sequenceMeasurementProgressCallback is called every time a 
@@ -377,7 +377,7 @@ class TLSensors
 		 *   isStarted: is true when a measurement is started,
 		 *              false when it is stopped
 		 */
-		int (*sequenceMeasurementProgressCallback)(bool isStarted);
+		void (*sequenceMeasurementProgressCallback)(bool isStarted);
 
 	private:
 		bool useCustomScanOrder;
