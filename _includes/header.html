@@ -19,15 +19,15 @@
 	{% else %}
         	<a class="book-link" href="../../getting-started/introduction/">Getting started</a>
 	{% endif %}
-	{% if page.in_book == 2 %}
-        	<a class="active-book-link" href="../../api/introduction/">API</a>
-	{% else %}
-        	<a class="book-link" href="../../api/introduction/">API</a>
-	{% endif %}
 	{% if page.in_book == 3 %}
         	<a class="active-book-link" href="../../signal-processing/introduction/">Signal processing</a>
 	{% else %}
         	<a class="book-link" href="../../signal-processing/introduction/">Signal processing</a>
+	{% endif %}
+	{% if page.in_book == 2 %}
+        	<a class="active-book-link" href="../../api/introduction/">API</a>
+	{% else %}
+        	<a class="book-link" href="../../api/introduction/">API</a>
 	{% endif %}
 	{% if page.in_book == 4 %}
         	<a class="active-book-link" href="../../examples/introduction/">Examples</a>
