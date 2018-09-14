@@ -1,10 +1,10 @@
 ---
 layout: page
 title: Signal processing
-permalink: /touchlib-api/signal-processing/
+permalink: /signal-processing/introduction/
 in_menu: true
 weight: 20
-in_book: 2
+in_book: 3
 ---
 
 * pseudo-differential sampling

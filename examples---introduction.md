@@ -1,10 +1,10 @@
 ---
 layout: page
 title: Examples
-permalink: /touchlib-api/exampled/
+permalink: /examples/introduction/
 in_menu: true
 weight: 40
-in_book: 2
+in_book: 4
 ---
 
 Capacitive sensor using CVD
