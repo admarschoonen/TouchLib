@@ -14,8 +14,8 @@ int initialize(uint8_t channel, int (*sampleMethod)(struct TLStruct *d, uint8_t 
 ```
 Inizialize channel `ch` with sample method `sampleMethod`. `sampleMethod` can be:
 * `TLSampleMethodCVD`: for capacitive sensing with CVD method function (if CVD is implemented for the target platform)
-* `TLSampleMethodTouchRead`: for capacitive sensing with native touchRead() function (if supported by the target platform)
-* `TLSampleMethodResistive`: for resistive sensing with native analogRead() function
+* `TLSampleMethodTouchRead`: for capacitive sensing with native `touchRead()` function (if supported by the target platform)
+* `TLSampleMethodResistive`: for resistive sensing with native `analogRead()` function
 
 See [supported boards](../../getting-started/supported-boards/) for which methods are supported on your hardware.
 
