@@ -3,7 +3,7 @@ layout: page
 title: Functions
 permalink: /api/functions/
 in_menu: true
-weight: 50
+weight: 70
 in_book: 2
 ---
 
@@ -28,8 +28,25 @@ Return value: 0 on success, negative value on error.
 ```C++
 bool anyButtonIsCalibrating()
 ```
-Returns true if one or more channels are in calibrating state. Repeatedly call
-the `sample()` function until no more channels are in calibrating state.
+Returns true if one or more channels are in calibrating state. 
+
+A common usage is to repeatedly call the `sample` function in the ```setup``` function until no more
+channels are in calibrating state:
+
+```C++
+void setup() 
+{
+	... 
+	
+	/* configure sensors here */
+
+	...
+
+	while (tlSensors.anyButtonIsCalibrating()) {
+		tlSensors.sample();
+	}
+}
+```
 
 ---
 
@@ -85,3 +102,15 @@ int getSensorWithLargestDelta()
 ```
 If one or more sensors are in pressed state, this function returns the sensor
 with the largest delta level. If no sensors are pressed, it returns -1.
+
+---
+
+### printBar
+```C++
+int printBar(uint8_t ch_k, int length)
+```
+
+Prints a visualization of the current delta value of the sensor on the serial
+monitor. The maximum value is determined by the ```calibratedMaxDelta```
+property of the sensor and the actual mapping is specific to the sample method.
+

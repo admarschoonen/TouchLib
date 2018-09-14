@@ -7,4 +7,4 @@ weight: 10
 in_book: 2
 ---
 
-blabla
+On these pages you can find documentation of the variables and functions of TouchLib.

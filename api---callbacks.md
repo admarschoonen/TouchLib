@@ -3,7 +3,7 @@ layout: page
 title: Callbacks
 permalink: /api/callbacks/
 in_menu: true
-weight: 60
+weight: 80
 in_book: 2
 ---
 

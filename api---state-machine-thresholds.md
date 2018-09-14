@@ -3,7 +3,7 @@ layout: page
 title: State machine thresholds
 permalink: /api/state-machine-thresholds/
 in_menu: true
-weight: 20
+weight: 40
 in_book: 2
 ---
 

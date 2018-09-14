@@ -3,13 +3,11 @@ layout: page
 title: Properties of sample methods
 permalink: /api/properties-of-sample-methods/
 in_menu: true
-weight: 40
+weight: 60
 in_book: 2
 ---
 
-Besides general properties such as [state machine
-thesholds](../state-machine-thresholds) or [state machine
-timing](../state-machine-timing) there exist also properties which are specific
+Besides general properties there exist also properties which are specific
 to a certain sample method. These properties can be accessed 
 via ```tlSensors.data[<n>].tlStructSampleMethod.<sampleMethod>.<property>```,
 for example ```tlSensors.data[0].tlStructSampleMethod.touchRead.pin```.

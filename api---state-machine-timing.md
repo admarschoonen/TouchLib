@@ -3,7 +3,7 @@ layout: page
 title: State machine timing
 permalink: /api/state-machine-timing/
 in_menu: true
-weight: 30
+weight: 50
 in_book: 2
 ---
 
