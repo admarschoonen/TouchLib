@@ -14,7 +14,90 @@ to a certain sample method. These properties can be accessed
 via ```tlSensors.data[<n>].tlStructSampleMethod.<sampleMethod>.<property>```,
 for example ```tlSensors.data[0].tlStructSampleMethod.touchRead.pin```.
 
-Sample method Resistive
+Sample method CVD
+---
+
+### pin
+
+```C++
+int tlSensors.data[<n>].tlStructSampleMethod.CVD.pin
+```
+
+Pin to which the sensor is connected.
+
+---
+
+### useNChargesPadding
+
+```C++
+bool tlSensors.data[<n>].tlStructSampleMethod.CVD.useNChargesPadding
+```
+
+Set to true to ensure that the CVD method always takes the same amount of time.
+This means that TouchLib will always use ```nChargesMax``` measurements, even
+if fewer measurements would be sufficient.
+
+Default: true.
+
+---
+
+### nChargesMin
+
+```C++
+bool tlSensors.data[<n>].tlStructSampleMethod.CVD.nChargesMin
+```
+
+Minimum number of measurements that the CVD method should take.
+
+Default: depends on processor; see table below.
+
+---
+
+### nChargesMax
+
+```C++
+bool tlSensors.data[<n>].tlStructSampleMethod.CVD.nChargesMax
+```
+
+Maximum number of measurements that the CVD method should take.
+
+Default: depends on processor; see table below.
+
+---
+
+### chargeDelaySensor
+
+```C++
+bool tlSensors.data[<n>].tlStructSampleMethod.CVD.chargeDelaySensor
+```
+
+Delay in microseconds during charging or discharging the sensor.
+
+Default: depends on processor; see table below.
+
+---
+
+### chargeDelayADC
+
+```C++
+bool tlSensors.data[<n>].tlStructSampleMethod.CVD.chargeDelayADC
+```
+
+Delay in microseconds during charging or discharging the sensor.
+
+Default: depends on processor; see table below.
+
+---
+
+| Processor | default for nChargesMin | default for nChargesMax | default for chargeDelaySensor | default for chargeDelayADC |
+|-----|-----|-----|-----|-----|
+| ATmega (Arduino UNO, Mega, Lilypad USB etc) | 1 | 1 | 0 | 0 |
+| STM32F20x (Particle Photon etc) | 1 | 1 | 0 | 0 |
+| Freescale MK20DX256 (Teensy 3.2) | 4 | 4 | 0 | 0 |
+
+---
+
+Sample method resistive
 ---
 
 ### pin
@@ -65,4 +148,23 @@ a capacitive sensor and enable it to use it as a resistive sensor.
 ```C++
 int32_t valueMax
 ```
+
+Maximum value that sensor should report. If actual value of the sensor is
+larger than this, the value will be clipped to ```valueMax```. 
+
+This property is currently not used.
+
+
+---
+
+Sample method touchRead
+---
+
+### pin
+
+```C++
+int tlSensors.data[<n>].tlStructSampleMethod.touchRead.pin
+```
+
+Pin to which the sensor is connected.
 
