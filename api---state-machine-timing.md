@@ -7,6 +7,40 @@ weight: 50
 in_book: 2
 ---
 
+The properties listed on this page determine the timing upon which the state
+machine determines to change a sensor from one state to the next. The state
+transition diagram is shown here as a reminder; for more information on the
+state machine see FIXME.
+
+![state transition diagram](../../state-machine.svg)
+
+---
+
+### preCalibrationTime
+
+```C++
+uint32_t tlSensors.data[<n>].preCalibrationTime
+```
+If a sensor is in preCalibrating state, it will automatically transfer to
+calibrating state after `preCalibrationTime` milliseconds. This allows for
+settling of power supplies etc.
+
+Default: 100 ms
+
+---
+
+### calibrationTime
+
+```C++
+uint32_t tlSensors.data[<n>].calibrationTime
+```
+If a sensor is in calibrating state, it will transfer to noisePowerMeasurement
+state after `calibrationTime` milliseconds. During this time, call the
+`sample()` function as often as possible so TouchLib can determine the
+background level of this sensor.
+
+Default: 500 ms
+
 ### releasedToApproachedTime
 
 ```C++
@@ -78,31 +112,6 @@ back to approached.
 Default: 10 ms
 
 ---
-
-### preCalibrationTime
-
-```C++
-uint32_t tlSensors.data[<n>].preCalibrationTime
-```
-If a sensor is in preCalibrating state, it will automatically transfer to
-calibrating state after `preCalibrationTime` milliseconds. This allows for
-settling of power supplies etc.
-
-Default: 100 ms
-
----
-
-### calibrationTime
-
-```C++
-uint32_t tlSensors.data[<n>].calibrationTime
-```
-If a sensor is in calibrating state, it will transfer to noisePowerMeasurement
-state after `calibrationTime` milliseconds. During this time, call the
-`sample()` function as often as possible so TouchLib can determine the
-background level of this sensor.
-
-Default: 500 ms
 
 ### approachedTimeout
 

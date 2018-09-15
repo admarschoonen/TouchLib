@@ -7,6 +7,15 @@ weight: 40
 in_book: 2
 ---
 
+The properties listed on this page determine the levels of the delta values
+upon which the state machine determines to change a sensor from one state to
+the next. The state transition diagram is shown here as a reminder; for more
+information on the state machine see FIXME.
+
+![state transition diagram](../../state-machine.svg)
+
+---
+
 ### releasedToApproachedThreshold
 
 ```C++
