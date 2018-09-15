@@ -16,3 +16,4 @@ in_book: 3
 * low pass filter to update background level
 * button state machine
 
+![button state machine](../../state-machine.svg)
