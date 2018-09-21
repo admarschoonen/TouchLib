@@ -7,4 +7,4 @@ weight: 10
 in_book: 2
 ---
 
-On these pages you can find documentation of the variables and functions of TouchLib.
+On these pages you can find how to create a TouchLib object as well as documentation of the variables and functions of TouchLib.
